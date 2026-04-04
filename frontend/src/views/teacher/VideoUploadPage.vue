@@ -11,7 +11,7 @@
         <button type="button" class="video-upload-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="video-upload-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
         <button type="button" class="video-upload-nav__item is-active">视频上传</button>
-        <button type="button" class="video-upload-nav__item is-disabled" disabled>我的资源</button>
+        <button type="button" class="video-upload-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
       </nav>
     </aside>
 

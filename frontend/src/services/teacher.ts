@@ -88,6 +88,83 @@ export async function uploadTeacherMaterial(payload: TeacherMaterialUploadPayloa
   return response.data.data
 }
 
+export interface TeacherResourceStats {
+  total: number
+  materialCount: number
+  videoCount: number
+  interactionCount: number
+}
+
+export interface TeacherOwnedResourceItem {
+  id: number
+  type: 'material' | 'video'
+  title: string
+  courseId: number
+  courseName: string
+  description: string
+  fileName: string
+  fileSize: number
+  format: string
+  duration: number | null
+  uploadTime: string
+  interactionCount: number
+  previewUrl: string
+}
+
+export interface TeacherResourceListData {
+  stats: TeacherResourceStats
+  list: TeacherOwnedResourceItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: TeacherCourseOption[]
+  }
+}
+
+export interface TeacherResourceQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  type?: 'all' | 'material' | 'video'
+}
+
+export interface TeacherResourceUpdatePayload {
+  title: string
+  courseId: string
+  description: string
+}
+
+export async function getTeacherResources(params: TeacherResourceQuery) {
+  const response = await http.get<ApiSuccess<TeacherResourceListData>>('/teacher/resources', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function getTeacherResourceDetail(type: 'material' | 'video', resourceId: number) {
+  const response = await http.get<ApiSuccess<TeacherOwnedResourceItem>>(`/teacher/resources/${type}/${resourceId}`)
+  return response.data.data
+}
+
+export async function updateTeacherResource(type: 'material' | 'video', resourceId: number, payload: TeacherResourceUpdatePayload) {
+  const response = await http.put<ApiSuccess<{ id: number; type: 'material' | 'video'; title: string; courseId: number; courseName: string; description: string }>>(
+    `/teacher/resources/${type}/${resourceId}`,
+    payload,
+  )
+  return response.data.data
+}
+
+export async function deleteTeacherResource(type: 'material' | 'video', resourceId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; type: 'material' | 'video' }>>(`/teacher/resources/${type}/${resourceId}`)
+  return response.data.data
+}
+
+
 export interface TeacherVideoUploadPayload {
   courseId: string
   videoTitle: string

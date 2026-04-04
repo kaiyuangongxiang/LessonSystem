@@ -3,10 +3,14 @@ import {
   createTeacherMessage,
   createTeacherMessageReply,
   createTeacherVideo,
+  deleteTeacherResource,
   getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherMessageDetail,
   getTeacherMessageList,
+  getTeacherResourceDetail,
+  getTeacherResourceList,
+  updateTeacherResource,
 } from '../services/teacher.service.js'
 
 export async function getDashboard(req, res, next) {
@@ -73,6 +77,78 @@ export async function postVideo(req, res, next) {
   }
 }
 
+
+export async function getResources(req, res, next) {
+  try {
+    const result = await getTeacherResourceList({
+      teacherId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取我的资源成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getResourceDetail(req, res, next) {
+  try {
+    const result = await getTeacherResourceDetail({
+      teacherId: req.auth.userId,
+      type: req.params.type,
+      resourceId: req.params.resourceId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取资源详情成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateResource(req, res, next) {
+  try {
+    const result = await updateTeacherResource({
+      teacherId: req.auth.userId,
+      type: req.params.type,
+      resourceId: req.params.resourceId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新资源成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function removeResource(req, res, next) {
+  try {
+    const result = await deleteTeacherResource({
+      teacherId: req.auth.userId,
+      type: req.params.type,
+      resourceId: req.params.resourceId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除资源成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 export async function getMessages(req, res, next) {
   try {
     const result = await getTeacherMessageList({

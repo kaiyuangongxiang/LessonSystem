@@ -231,9 +231,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "video-upload-nav__item is-active" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/resources');
+        } },
     type: "button",
-    ...{ class: "video-upload-nav__item is-disabled" },
-    disabled: true,
+    ...{ class: "video-upload-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "video-upload-main" },
@@ -484,7 +486,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['video-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['video-upload-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['video-upload-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['video-upload-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['video-upload-head__eyebrow']} */ ;

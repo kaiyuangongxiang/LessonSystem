@@ -160,9 +160,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "material-upload-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/resources');
+        } },
     type: "button",
-    ...{ class: "material-upload-nav__item is-disabled" },
-    disabled: true,
+    ...{ class: "material-upload-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "material-upload-main" },
@@ -341,7 +343,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head__eyebrow']} */ ;

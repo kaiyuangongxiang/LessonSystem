@@ -20,6 +20,24 @@ export async function uploadTeacherMaterial(payload) {
     });
     return response.data.data;
 }
+export async function getTeacherResources(params) {
+    const response = await http.get('/teacher/resources', {
+        params,
+    });
+    return response.data.data;
+}
+export async function getTeacherResourceDetail(type, resourceId) {
+    const response = await http.get(`/teacher/resources/${type}/${resourceId}`);
+    return response.data.data;
+}
+export async function updateTeacherResource(type, resourceId, payload) {
+    const response = await http.put(`/teacher/resources/${type}/${resourceId}`, payload);
+    return response.data.data;
+}
+export async function deleteTeacherResource(type, resourceId) {
+    const response = await http.delete(`/teacher/resources/${type}/${resourceId}`);
+    return response.data.data;
+}
 export async function uploadTeacherVideo(payload) {
     const formData = new FormData();
     formData.append('courseId', payload.courseId);

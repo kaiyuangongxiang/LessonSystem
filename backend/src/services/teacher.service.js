@@ -107,18 +107,101 @@ function normalizeVideoTitle(value) {
   return videoTitle
 }
 
-function normalizeDuration(value) {
-  if (value === undefined || value === null || value === '') {
-    return null
+function normalizeContent(value, label = '内容') {
+  const content = typeof value === 'string' ? value.trim() : ''
+  if (!content) {
+    throw badRequest(`${label}不能为空`)
   }
 
-  const duration = Number(value)
-  if (!Number.isFinite(duration) || duration < 0) {
-    throw badRequest('视频时长不合法')
+  if (content.length > 5000) {
+    throw badRequest(`${label}不能超过5000个字`)
   }
 
-  return Math.round(duration)
+  return content
 }
+
+function normalizeResourceId(value) {
+  const resourceId = Number(value)
+  if (!Number.isInteger(resourceId) || resourceId <= 0) {
+    throw badRequest('资源ID不合法')
+  }
+
+  return resourceId
+}
+
+function normalizeResourceType(value) {
+  if (value === 'material' || value === 'video') {
+    return value
+  }
+
+  throw badRequest('资源类型不合法')
+}
+
+function normalizeResourceFilterType(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  return normalizeResourceType(value)
+}
+
+function extractFileFormat(fileName, fallback = '') {
+  const extension = path.extname(String(fileName || '')).replace('.', '').trim().toUpperCase()
+  return extension || fallback
+}
+
+function buildResourcePreviewUrl(type, resourceId) {
+  return type === 'material' ? `/portal/materials/${resourceId}/download` : `/portal/videos/${resourceId}/play`
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date(value))
+    .replace(/\//g, '-')
+}
+
+function mapMaterialResourceItem(item) {
+  return {
+    id: item.id,
+    type: 'material',
+    title: item.title,
+    courseId: Number(item.courseId || 0),
+    courseName: item.courseName,
+    description: item.description || '',
+    fileName: item.fileName || item.title,
+    fileSize: Number(item.fileSize || 0),
+    format: extractFileFormat(item.fileName, String(item.materialType || 'DOCUMENT').toUpperCase()),
+    duration: null,
+    uploadTime: item.uploadTime,
+    interactionCount: Number(item.downloadCount || 0),
+    previewUrl: buildResourcePreviewUrl('material', item.id),
+    sortTime: item.sortTime,
+  }
+}
+
+function mapVideoResourceItem(item) {
+  return {
+    id: item.id,
+    type: 'video',
+    title: item.title,
+    courseId: Number(item.courseId || 0),
+    courseName: item.courseName,
+    description: item.description || '',
+    fileName: item.fileName || item.title,
+    fileSize: Number(item.fileSize || 0),
+    format: extractFileFormat(item.videoPath, 'VIDEO'),
+    duration: item.duration === null || item.duration === undefined ? null : Number(item.duration),
+    uploadTime: item.uploadTime,
+    interactionCount: Number(item.playCount || 0),
+    previewUrl: buildResourcePreviewUrl('video', item.id),
+    sortTime: item.sortTime,
+  }
+}
+
 
 function getUploadFile(files, fieldName) {
   if (!files || typeof files !== 'object') {
@@ -537,6 +620,343 @@ export async function createTeacherVideo({ teacherId, payload, files }) {
     })
 
     throw error
+  }
+}
+
+
+export async function getTeacherResourceList({ teacherId, query }) {
+  await getTeacherProfile(teacherId)
+
+  const keyword = normalizeKeyword(query.keyword)
+  const type = normalizeResourceFilterType(query.type)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
+  const keywordPattern = keyword ? `%${keyword}%` : ''
+  const params = [teacherId]
+  let materialWhereSql = 'm.teacher_id = ? AND m.status = 1'
+  let videoWhereSql = 'v.teacher_id = ? AND v.status = 1'
+
+  if (courseId) {
+    materialWhereSql += ' AND m.course_id = ?'
+    videoWhereSql += ' AND v.course_id = ?'
+    params.push(courseId)
+  }
+
+  if (keyword) {
+    materialWhereSql += ' AND (m.material_name LIKE ? OR COALESCE(m.description, \'\') LIKE ? OR COALESCE(m.file_name, \'\') LIKE ?)'
+    videoWhereSql += ' AND (v.video_title LIKE ? OR COALESCE(v.description, \'\') LIKE ?)'
+  }
+
+  const materialParams = keyword ? [...params, keywordPattern, keywordPattern, keywordPattern] : [...params]
+  const videoParams = keyword ? [...params, keywordPattern, keywordPattern] : [...params]
+
+  const [materialRows] =
+    type === 'video'
+      ? [[]]
+      : await pool.query(
+          `SELECT m.material_id AS id,
+                  m.course_id AS courseId,
+                  m.material_name AS title,
+                  COALESCE(c.course_name, '未关联课程') AS courseName,
+                  COALESCE(m.description, '') AS description,
+                  COALESCE(NULLIF(m.file_name, ''), m.material_name) AS fileName,
+                  m.file_size AS fileSize,
+                  m.material_type AS materialType,
+                  m.download_count AS downloadCount,
+                  DATE_FORMAT(m.upload_time, '%Y-%m-%d') AS uploadTime,
+                  m.upload_time AS sortTime
+           FROM material m
+           LEFT JOIN course_intro c ON c.course_id = m.course_id
+           WHERE ${materialWhereSql}
+           ORDER BY m.upload_time DESC, m.material_id DESC`,
+          materialParams,
+        )
+
+  const [videoRows] =
+    type === 'material'
+      ? [[]]
+      : await pool.query(
+          `SELECT v.video_id AS id,
+                  v.course_id AS courseId,
+                  v.video_title AS title,
+                  COALESCE(c.course_name, '未关联课程') AS courseName,
+                  COALESCE(v.description, '') AS description,
+                  v.file_size AS fileSize,
+                  v.duration AS duration,
+                  v.play_count AS playCount,
+                  v.video_path AS videoPath,
+                  DATE_FORMAT(v.upload_time, '%Y-%m-%d') AS uploadTime,
+                  v.upload_time AS sortTime
+           FROM course_video v
+           LEFT JOIN course_intro c ON c.course_id = v.course_id
+           WHERE ${videoWhereSql}
+           ORDER BY v.upload_time DESC, v.video_id DESC`,
+          videoParams,
+        )
+
+  const mergedList = [...materialRows.map(mapMaterialResourceItem), ...videoRows.map(mapVideoResourceItem)].sort(
+    (left, right) => new Date(right.sortTime).getTime() - new Date(left.sortTime).getTime(),
+  )
+
+  const total = mergedList.length
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+  const list = mergedList.slice(offset, offset + pageSize).map(({ sortTime, ...item }) => item)
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1) +
+        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1) AS total,
+        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1) AS materialCount,
+        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1) AS videoCount,
+        COALESCE((SELECT SUM(download_count) FROM material WHERE teacher_id = ? AND status = 1), 0) +
+        COALESCE((SELECT SUM(play_count) FROM course_video WHERE teacher_id = ? AND status = 1), 0) AS interactionCount`,
+    [teacherId, teacherId, teacherId, teacherId, teacherId, teacherId],
+  )
+
+  const [courseRows] = await pool.query(
+    `SELECT course_id AS id, course_name AS name
+     FROM course_intro
+     WHERE teacher_id = ? AND status = 1
+     ORDER BY update_time DESC, course_id DESC`,
+    [teacherId],
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    materialCount: 0,
+    videoCount: 0,
+    interactionCount: 0,
+  }
+
+  logger.info('teacher_resource_list_loaded', {
+    teacherId,
+    keyword,
+    courseId,
+    type,
+    page,
+    pageSize,
+    total,
+    resultCount: list.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      materialCount: Number(statsRow.materialCount || 0),
+      videoCount: Number(statsRow.videoCount || 0),
+      interactionCount: Number(statsRow.interactionCount || 0),
+    },
+    list,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    filters: {
+      courses: courseRows,
+    },
+  }
+}
+
+async function getOwnedMaterialResourceRow(resourceId, teacherId) {
+  const [rows] = await pool.query(
+    `SELECT m.material_id AS id,
+            m.course_id AS courseId,
+            m.teacher_id AS teacherId,
+            m.material_name AS title,
+            COALESCE(c.course_name, '未关联课程') AS courseName,
+            COALESCE(m.description, '') AS description,
+            COALESCE(NULLIF(m.file_name, ''), m.material_name) AS fileName,
+            m.file_size AS fileSize,
+            m.material_type AS materialType,
+            m.download_count AS downloadCount,
+            m.status AS status,
+            m.upload_time AS uploadTime
+     FROM material m
+     LEFT JOIN course_intro c ON c.course_id = m.course_id
+     WHERE m.material_id = ? AND m.teacher_id = ? AND m.status = 1
+     LIMIT 1`,
+    [resourceId, teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('资源不存在或无权操作')
+  }
+
+  return rows[0]
+}
+
+async function getOwnedVideoResourceRow(resourceId, teacherId) {
+  const [rows] = await pool.query(
+    `SELECT v.video_id AS id,
+            v.course_id AS courseId,
+            v.teacher_id AS teacherId,
+            v.video_title AS title,
+            COALESCE(c.course_name, '未关联课程') AS courseName,
+            COALESCE(v.description, '') AS description,
+            v.file_size AS fileSize,
+            v.duration AS duration,
+            v.play_count AS playCount,
+            v.status AS status,
+            v.upload_time AS uploadTime,
+            v.video_path AS videoPath
+     FROM course_video v
+     LEFT JOIN course_intro c ON c.course_id = v.course_id
+     WHERE v.video_id = ? AND v.teacher_id = ? AND v.status = 1
+     LIMIT 1`,
+    [resourceId, teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('资源不存在或无权操作')
+  }
+
+  return rows[0]
+}
+
+export async function getTeacherResourceDetail({ teacherId, type, resourceId }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedType = normalizeResourceType(type)
+  const normalizedResourceId = normalizeResourceId(resourceId)
+  const resource =
+    normalizedType === 'material'
+      ? await getOwnedMaterialResourceRow(normalizedResourceId, teacherId)
+      : await getOwnedVideoResourceRow(normalizedResourceId, teacherId)
+
+  const detail = {
+    id: resource.id,
+    type: normalizedType,
+    title: resource.title,
+    courseId: Number(resource.courseId || 0),
+    courseName: resource.courseName,
+    description: resource.description || '',
+    fileName: resource.fileName || resource.title,
+    fileSize: Number(resource.fileSize || 0),
+    format:
+      normalizedType === 'material'
+        ? extractFileFormat(resource.fileName, String(resource.materialType || 'DOCUMENT').toUpperCase())
+        : extractFileFormat(resource.videoPath, 'VIDEO'),
+    duration: normalizedType === 'video' ? (resource.duration === null || resource.duration === undefined ? null : Number(resource.duration)) : null,
+    uploadTime: formatDate(resource.uploadTime),
+    interactionCount: Number(normalizedType === 'material' ? resource.downloadCount || 0 : resource.playCount || 0),
+    previewUrl: buildResourcePreviewUrl(normalizedType, normalizedResourceId),
+  }
+
+  logger.info('teacher_resource_detail_loaded', {
+    teacherId,
+    type: normalizedType,
+    resourceId: normalizedResourceId,
+    courseId: Number(resource.courseId || 0),
+  })
+
+  return detail
+}
+
+export async function updateTeacherResource({ teacherId, type, resourceId, payload }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedType = normalizeResourceType(type)
+  const normalizedResourceId = normalizeResourceId(resourceId)
+  const courseId = normalizeCourseId(payload.courseId)
+  const description = normalizeDescription(payload.description, '资源描述')
+  const course = await getOwnedCourseRow(courseId, teacherId)
+
+  if (normalizedType === 'material') {
+    await getOwnedMaterialResourceRow(normalizedResourceId, teacherId)
+    const title = normalizeMaterialName(payload.title)
+
+    await pool.query(
+      `UPDATE material
+       SET material_name = ?, course_id = ?, description = ?, update_time = CURRENT_TIMESTAMP
+       WHERE material_id = ? AND teacher_id = ? AND status = 1`,
+      [title, courseId, description || null, normalizedResourceId, teacherId],
+    )
+
+    logger.info('teacher_resource_updated', {
+      teacherId,
+      type: normalizedType,
+      resourceId: normalizedResourceId,
+      courseId,
+    })
+
+    return {
+      id: normalizedResourceId,
+      type: normalizedType,
+      title,
+      courseId,
+      courseName: course.name,
+      description,
+    }
+  }
+
+  await getOwnedVideoResourceRow(normalizedResourceId, teacherId)
+  const title = normalizeVideoTitle(payload.title)
+
+  await pool.query(
+    `UPDATE course_video
+     SET video_title = ?, course_id = ?, description = ?, update_time = CURRENT_TIMESTAMP
+     WHERE video_id = ? AND teacher_id = ? AND status = 1`,
+    [title, courseId, description || null, normalizedResourceId, teacherId],
+  )
+
+  logger.info('teacher_resource_updated', {
+    teacherId,
+    type: normalizedType,
+    resourceId: normalizedResourceId,
+    courseId,
+  })
+
+  return {
+    id: normalizedResourceId,
+    type: normalizedType,
+    title,
+    courseId,
+    courseName: course.name,
+    description,
+  }
+}
+
+export async function deleteTeacherResource({ teacherId, type, resourceId }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedType = normalizeResourceType(type)
+  const normalizedResourceId = normalizeResourceId(resourceId)
+  const resource =
+    normalizedType === 'material'
+      ? await getOwnedMaterialResourceRow(normalizedResourceId, teacherId)
+      : await getOwnedVideoResourceRow(normalizedResourceId, teacherId)
+
+  if (normalizedType === 'material') {
+    await pool.query(
+      `UPDATE material
+       SET status = 0, update_time = CURRENT_TIMESTAMP
+       WHERE material_id = ? AND teacher_id = ? AND status = 1`,
+      [normalizedResourceId, teacherId],
+    )
+  } else {
+    await pool.query(
+      `UPDATE course_video
+       SET status = 0, update_time = CURRENT_TIMESTAMP
+       WHERE video_id = ? AND teacher_id = ? AND status = 1`,
+      [normalizedResourceId, teacherId],
+    )
+  }
+
+  logger.info('teacher_resource_deleted', {
+    teacherId,
+    type: normalizedType,
+    resourceId: normalizedResourceId,
+    courseId: Number(resource.courseId || 0),
+  })
+
+  return {
+    id: normalizedResourceId,
+    type: normalizedType,
   }
 }
 

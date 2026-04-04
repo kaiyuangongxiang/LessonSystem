@@ -4,10 +4,14 @@ import {
   getDashboard,
   getMessageDetail,
   getMessages,
+  getResourceDetail,
+  getResources,
   postMaterial,
   postMessage,
   postMessageReply,
   postVideo,
+  removeResource,
+  updateResource,
 } from '../controllers/teacher.controller.js'
 import { authenticate, requireRole } from '../middleware/auth.js'
 import { uploadMaterialFile, uploadVideoFiles } from '../middleware/upload.js'
@@ -26,6 +30,10 @@ router.post(
   ]),
   postVideo,
 )
+router.get('/resources', getResources)
+router.get('/resources/:type/:resourceId', getResourceDetail)
+router.put('/resources/:type/:resourceId', updateResource)
+router.delete('/resources/:type/:resourceId', removeResource)
 router.get('/messages', getMessages)
 router.post('/messages', postMessage)
 router.get('/messages/:messageId', getMessageDetail)

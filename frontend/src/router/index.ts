@@ -50,6 +50,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'teacher' },
     },
     {
+      path: '/teacher/resources',
+      name: 'teacher-resources',
+      component: () => import('@/views/teacher/MyResourcesPage.vue'),
+      meta: { requiresAuth: true, role: 'teacher' },
+    },
+    {
       path: '/teacher/messages',
       name: 'teacher-messages',
       component: () => import('@/views/teacher/OnlineMessagePage.vue'),

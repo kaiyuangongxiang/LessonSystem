@@ -11,7 +11,7 @@
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
-        <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>我的资源</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
       </nav>
 
       <section class="teacher-dashboard-reminder-card">
@@ -54,7 +54,7 @@
               <div class="teacher-dashboard-panel__eyebrow">RECENT UPLOADS</div>
               <h3>最近上传资源</h3>
             </div>
-            <button type="button" class="course-chip course-chip--soft" disabled>查看全部</button>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/teacher/resources')">查看全部</button>
           </div>
 
           <div v-if="dashboard?.recentUploads.length" class="teacher-dashboard-upload-list">

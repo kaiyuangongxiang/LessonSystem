@@ -102,9 +102,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/resources');
+        } },
     type: "button",
-    ...{ class: "teacher-dashboard-nav__item is-disabled" },
-    disabled: true,
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-reminder-card" },
@@ -186,9 +188,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/resources');
+        } },
     type: "button",
     ...{ class: "course-chip course-chip--soft" },
-    disabled: true,
 });
 if (__VLS_ctx.dashboard?.recentUploads.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -331,7 +335,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-reminder-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-reminder-card__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
