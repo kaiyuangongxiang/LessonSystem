@@ -45,6 +45,10 @@ const pendingText = computed(() => {
     }
     return '可先进入教学交流查看讨论，再逐步补充资料与视频资源。';
 });
+function handleLogout() {
+    authStore.logout();
+    router.push('/login');
+}
 async function loadDashboard() {
     errorMessage.value = '';
     try {
@@ -146,9 +150,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn auth-btn--secondary" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
-        } },
+    ...{ onClick: (__VLS_ctx.handleLogout) },
     type: "button",
     ...{ class: "auth-btn" },
 });
@@ -398,6 +400,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             metricCards: metricCards,
             reminderTexts: reminderTexts,
             pendingText: pendingText,
+            handleLogout: handleLogout,
         };
     },
 });

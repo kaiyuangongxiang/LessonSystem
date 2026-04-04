@@ -33,7 +33,7 @@
         <div class="teacher-dashboard-head__actions">
           <span class="course-chip course-chip--soft">本周概览</span>
           <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回首页</button>
-          <button type="button" class="auth-btn" @click="router.push('/teacher/messages')">进入教学交流</button>
+          <button type="button" class="auth-btn" @click="handleLogout">退出登录</button>
         </div>
       </header>
 
@@ -192,6 +192,11 @@ const pendingText = computed(() => {
 
   return '可先进入教学交流查看讨论，再逐步补充资料与视频资源。'
 })
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
 
 async function loadDashboard() {
   errorMessage.value = ''
