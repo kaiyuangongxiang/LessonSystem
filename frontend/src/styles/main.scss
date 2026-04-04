@@ -2196,8 +2196,320 @@ input {
   .teacher-dashboard-head__actions {
     display: grid;
   }
+}
 
-  .teacher-dashboard-upload-item__meta {
-    justify-items: start;
+.material-upload-page {
+  width: min(1160px, calc(100% - 32px));
+  min-height: calc(100vh - 32px);
+  margin: 16px auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.material-upload-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  padding: 30px 22px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #173f7d 0%, #2358a1 100%);
+  color: #fff;
+}
+
+.material-upload-sidebar h1 {
+  margin: 8px 0 0;
+  color: #fff;
+  font-size: 32px;
+}
+
+.material-upload-sidebar__eyebrow,
+.material-upload-head__eyebrow,
+.material-upload-panel__eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.material-upload-nav {
+  display: grid;
+  gap: 10px;
+}
+
+.material-upload-nav__item {
+  height: 52px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 18px;
+  text-align: left;
+  cursor: pointer;
+  color: #dbe6ff;
+  background: transparent;
+  font-weight: 700;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.material-upload-nav__item:hover {
+  transform: translateY(-1px);
+}
+
+.material-upload-nav__item.is-active {
+  color: $text-main;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.material-upload-nav__item.is-disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.material-upload-main {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.material-upload-head,
+.material-upload-panel {
+  border: 1px solid rgba(217, 228, 239, 0.92);
+  box-shadow: 0 14px 34px rgba(18, 56, 109, 0.08);
+}
+
+.material-upload-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.material-upload-head__eyebrow,
+.material-upload-panel__eyebrow {
+  color: #6d88a8;
+}
+
+.material-upload-head h2,
+.material-upload-panel h3 {
+  margin: 8px 0 0;
+}
+
+.material-upload-head p {
+  margin: 8px 0 0;
+  color: $text-muted;
+  line-height: 1.6;
+}
+
+.material-upload-feedback {
+  margin: 0;
+}
+
+.material-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.material-upload-panel {
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.material-upload-panel__head {
+  margin-bottom: 14px;
+}
+
+.material-upload-form {
+  display: grid;
+  gap: 14px;
+}
+
+.material-upload-form__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr);
+  gap: 14px;
+}
+
+.material-upload-field {
+  display: grid;
+  gap: 8px;
+}
+
+.material-upload-field span {
+  color: #3b5c86;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.material-upload-field input,
+.material-upload-field textarea,
+.material-upload-field select {
+  width: 100%;
+  border: 1px solid #d7e3f2;
+  border-radius: 16px;
+  background: #f8fbff;
+  color: $text-main;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.material-upload-field textarea {
+  resize: none;
+  min-height: 112px;
+}
+
+.material-upload-field input:focus,
+.material-upload-field textarea:focus,
+.material-upload-field select:focus {
+  border-color: #2a7dd2;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(42, 125, 210, 0.12);
+}
+
+.material-upload-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.material-upload-field--file {
+  position: relative;
+}
+
+.material-upload-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 88px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid #cdddf0;
+  background: linear-gradient(135deg, #fbfdff 0%, #f1f7ff 100%);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.material-upload-dropzone:hover {
+  transform: translateY(-1px);
+  border-color: #8eb8ea;
+  box-shadow: 0 12px 26px rgba(42, 125, 210, 0.12);
+}
+
+.material-upload-dropzone__main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.material-upload-dropzone__icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #195ec8;
+  background: rgba(25, 94, 200, 0.1);
+}
+
+.material-upload-dropzone__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.material-upload-dropzone strong {
+  display: block;
+  color: $text-main;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.material-upload-dropzone p {
+  margin: 6px 0 0;
+  color: $text-muted;
+  line-height: 1.5;
+}
+
+.material-upload-dropzone__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.material-upload-file-button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #2468cf 0%, #195ec8 100%);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(25, 94, 200, 0.18);
+}
+
+.material-upload-file-tag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eaf4ff;
+  color: #195ec8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.material-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 980px) {
+  .material-upload-page {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 16px;
+    grid-template-columns: 1fr;
+  }
+
+  .material-upload-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .material-upload-dropzone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .material-upload-dropzone__actions {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .material-upload-sidebar,
+  .material-upload-head,
+  .material-upload-panel {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .material-upload-head,
+  .material-upload-actions {
+    display: grid;
+  }
+
+  .material-upload-dropzone__main {
+    align-items: flex-start;
   }
 }

@@ -41,7 +41,7 @@ const pendingText = computed(() => {
         return '当前还没有课程数据，后续可在课程与资源模块中继续完善。';
     }
     if (!stats.materialCount && !stats.videoCount) {
-        return '已有课程，但还没有上传资料或视频，可在后续页面继续补充。';
+        return '已有课程，但还没有上传资料或视频，可先从资料上传开始补充。';
     }
     return '可先进入教学交流查看讨论，再逐步补充资料与视频资源。';
 });
@@ -88,9 +88,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/materials');
+        } },
     type: "button",
-    ...{ class: "teacher-dashboard-nav__item is-disabled" },
-    disabled: true,
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
@@ -240,9 +242,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/materials');
+        } },
     type: "button",
     ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: true,
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
@@ -321,7 +325,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;

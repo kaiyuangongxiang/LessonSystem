@@ -38,7 +38,51 @@ export interface TeacherDashboardData {
   }
 }
 
+export interface TeacherCourseOption {
+  id: number
+  name: string
+}
+
+export interface TeacherMaterialUploadPayload {
+  courseId: string
+  materialName: string
+  description: string
+  file: File
+}
+
+export interface TeacherMaterialUploadResult {
+  id: number
+  materialName: string
+  courseId: number
+  courseName: string
+  fileName: string
+  fileSize: number
+  materialType: string
+  uploadTime: string
+}
+
 export async function getTeacherDashboard() {
   const response = await http.get<ApiSuccess<TeacherDashboardData>>('/teacher/dashboard')
+  return response.data.data
+}
+
+export async function getTeacherCourseOptions() {
+  const response = await http.get<ApiSuccess<TeacherCourseOption[]>>('/teacher/courses/options')
+  return response.data.data
+}
+
+export async function uploadTeacherMaterial(payload: TeacherMaterialUploadPayload) {
+  const formData = new FormData()
+  formData.append('courseId', payload.courseId)
+  formData.append('materialName', payload.materialName)
+  formData.append('description', payload.description)
+  formData.append('file', payload.file)
+
+  const response = await http.post<ApiSuccess<TeacherMaterialUploadResult>>('/teacher/materials', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
   return response.data.data
 }

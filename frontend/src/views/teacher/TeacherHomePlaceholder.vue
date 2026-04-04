@@ -9,7 +9,7 @@
       <nav class="teacher-dashboard-nav">
         <button type="button" class="teacher-dashboard-nav__item is-active">工作台首页</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
-        <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>资料上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
         <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>视频上传</button>
         <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>我的资源</button>
       </nav>
@@ -84,7 +84,7 @@
 
           <div class="teacher-dashboard-action-list">
             <button type="button" class="auth-btn" @click="router.push('/teacher/messages')">查看教学交流</button>
-            <button type="button" class="auth-btn auth-btn--secondary" disabled>上传课程资料</button>
+            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/materials')">上传课程资料</button>
             <button type="button" class="auth-btn auth-btn--secondary" disabled>上传课程视频</button>
           </div>
 
@@ -187,7 +187,7 @@ const pendingText = computed(() => {
   }
 
   if (!stats.materialCount && !stats.videoCount) {
-    return '已有课程，但还没有上传资料或视频，可在后续页面继续补充。'
+    return '已有课程，但还没有上传资料或视频，可先从资料上传开始补充。'
   }
 
   return '可先进入教学交流查看讨论，再逐步补充资料与视频资源。'

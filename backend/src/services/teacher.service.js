@@ -1,8 +1,14 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { pool } from '../config/db.js'
 import { logger } from '../utils/logger.js'
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url))
+const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
+const MAX_DESCRIPTION_LENGTH = 2000
 
 function badRequest(message) {
   const error = new Error(message)
@@ -44,6 +50,15 @@ function normalizeMessageId(value) {
   return messageId
 }
 
+function normalizeCourseId(value, label = '课程') {
+  const courseId = Number(value)
+  if (!Number.isInteger(courseId) || courseId <= 0) {
+    throw badRequest(`${label}ID不合法`)
+  }
+
+  return courseId
+}
+
 function normalizeTitle(value) {
   const title = typeof value === 'string' ? value.trim() : ''
   if (!title) {
@@ -55,6 +70,28 @@ function normalizeTitle(value) {
   }
 
   return title
+}
+
+function normalizeMaterialName(value) {
+  const materialName = typeof value === 'string' ? value.trim() : ''
+  if (!materialName) {
+    throw badRequest('资料名称不能为空')
+  }
+
+  if (materialName.length > 200) {
+    throw badRequest('资料名称不能超过200个字')
+  }
+
+  return materialName
+}
+
+function normalizeDescription(value) {
+  const description = typeof value === 'string' ? value.trim() : ''
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    throw badRequest('资料说明不能超过2000个字')
+  }
+
+  return description
 }
 
 function normalizeContent(value, label = '内容') {
@@ -82,6 +119,27 @@ function getStatusLabel(status) {
   return '讨论中'
 }
 
+function buildStoredFilePath(filePath) {
+  const normalizedPath = path.normalize(filePath)
+  if (normalizedPath.startsWith(`${projectRoot}${path.sep}`)) {
+    return path.relative(projectRoot, normalizedPath).replace(/\\/g, '/')
+  }
+
+  return normalizedPath.replace(/\\/g, '/')
+}
+
+async function cleanupUploadedFile(filePath) {
+  if (!filePath) {
+    return
+  }
+
+  try {
+    await fs.unlink(filePath)
+  } catch {
+    // ignore cleanup failure
+  }
+}
+
 async function getTeacherProfile(teacherId) {
   const [rows] = await pool.query(
     `SELECT teacher_id AS id,
@@ -95,6 +153,22 @@ async function getTeacherProfile(teacherId) {
 
   if (!rows.length) {
     throw notFound('教师账号不存在或不可用')
+  }
+
+  return rows[0]
+}
+
+async function getOwnedCourseRow(courseId, teacherId) {
+  const [rows] = await pool.query(
+    `SELECT course_id AS id, course_name AS name
+     FROM course_intro
+     WHERE course_id = ? AND teacher_id = ? AND status = 1
+     LIMIT 1`,
+    [courseId, teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('课程不存在或无权操作')
   }
 
   return rows[0]
@@ -115,7 +189,6 @@ async function getOwnedMessageRow(messageId, teacherId) {
 
   return rows[0]
 }
-
 
 export async function getTeacherDashboardData(teacherId) {
   const teacher = await getTeacherProfile(teacherId)
@@ -243,6 +316,99 @@ export async function getTeacherDashboardData(teacherId) {
       videoCount: Number(weeklyRow.videoCount || 0),
       topicCount: Number(weeklyRow.topicCount || 0),
     },
+  }
+}
+
+export async function getTeacherCourseOptions(teacherId) {
+  await getTeacherProfile(teacherId)
+
+  const [rows] = await pool.query(
+    `SELECT course_id AS id, course_name AS name
+     FROM course_intro
+     WHERE teacher_id = ? AND status = 1
+     ORDER BY update_time DESC, course_id DESC`,
+    [teacherId],
+  )
+
+  logger.info('teacher_course_options_loaded', {
+    teacherId,
+    courseCount: rows.length,
+  })
+
+  return rows
+}
+
+export async function createTeacherMaterial({ teacherId, payload, file }) {
+  await getTeacherProfile(teacherId)
+
+  if (!file) {
+    throw badRequest('请先选择资料文件')
+  }
+
+  let courseId = null
+
+  try {
+    courseId = normalizeCourseId(payload.courseId)
+    const materialName = normalizeMaterialName(payload.materialName)
+    const description = normalizeDescription(payload.description)
+    const course = await getOwnedCourseRow(courseId, teacherId)
+    const storedPath = buildStoredFilePath(file.path)
+    const fileExtension = path.extname(file.originalname || '').replace('.', '').toLowerCase() || 'document'
+
+    const [result] = await pool.query(
+      `INSERT INTO material (
+        material_name,
+        material_type,
+        teacher_id,
+        course_id,
+        file_path,
+        file_name,
+        file_size,
+        description,
+        download_count,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+      [materialName, fileExtension, teacherId, courseId, storedPath, file.originalname, Number(file.size || 0), description || null],
+    )
+
+    logger.info('teacher_material_created', {
+      teacherId,
+      materialId: result.insertId,
+      courseId,
+      originalFileName: file.originalname,
+      storedFileName: path.basename(file.path),
+      fileSize: Number(file.size || 0),
+    })
+
+    return {
+      id: result.insertId,
+      materialName,
+      courseId,
+      courseName: course.name,
+      fileName: file.originalname,
+      fileSize: Number(file.size || 0),
+      materialType: fileExtension,
+      uploadTime: new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+        .format(new Date())
+        .replace(/\//g, '-'),
+    }
+  } catch (error) {
+    await cleanupUploadedFile(file.path)
+
+    logger.error('teacher_material_create_failed', {
+      teacherId,
+      courseId,
+      originalFileName: file.originalname,
+      storedFileName: path.basename(file.path),
+      fileSize: Number(file.size || 0),
+      error: error.message,
+    })
+
+    throw error
   }
 }
 

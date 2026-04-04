@@ -1,6 +1,8 @@
 import {
+  createTeacherMaterial,
   createTeacherMessage,
   createTeacherMessageReply,
+  getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherMessageDetail,
   getTeacherMessageList,
@@ -13,6 +15,38 @@ export async function getDashboard(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取教师工作台成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getCourseOptions(req, res, next) {
+  try {
+    const result = await getTeacherCourseOptions(req.auth.userId)
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师课程选项成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postMaterial(req, res, next) {
+  try {
+    const result = await createTeacherMaterial({
+      teacherId: req.auth.userId,
+      payload: req.body,
+      file: req.file,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '上传资料成功',
       data: result,
     })
   } catch (error) {
