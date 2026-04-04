@@ -95,9 +95,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/videos');
+        } },
     type: "button",
-    ...{ class: "teacher-dashboard-nav__item is-disabled" },
-    disabled: true,
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
@@ -249,9 +251,11 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn auth-btn--secondary" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/videos');
+        } },
     type: "button",
     ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: true,
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-dashboard-note" },
@@ -326,7 +330,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-reminder-card']} */ ;

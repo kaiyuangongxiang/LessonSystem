@@ -10,7 +10,7 @@
         <button type="button" class="material-upload-nav__item" @click="router.push('/teacher')">工作台首页</button>
         <button type="button" class="material-upload-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="material-upload-nav__item is-active">资料上传</button>
-        <button type="button" class="material-upload-nav__item is-disabled" disabled>视频上传</button>
+        <button type="button" class="material-upload-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="material-upload-nav__item is-disabled" disabled>我的资源</button>
       </nav>
     </aside>

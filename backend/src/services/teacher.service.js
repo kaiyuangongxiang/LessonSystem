@@ -85,27 +85,58 @@ function normalizeMaterialName(value) {
   return materialName
 }
 
-function normalizeDescription(value) {
+function normalizeDescription(value, label = '资料说明') {
   const description = typeof value === 'string' ? value.trim() : ''
   if (description.length > MAX_DESCRIPTION_LENGTH) {
-    throw badRequest('资料说明不能超过2000个字')
+    throw badRequest(`${label}不能超过2000个字`)
   }
 
   return description
 }
 
-function normalizeContent(value, label = '内容') {
-  const content = typeof value === 'string' ? value.trim() : ''
-  if (!content) {
-    throw badRequest(`${label}不能为空`)
+function normalizeVideoTitle(value) {
+  const videoTitle = typeof value === 'string' ? value.trim() : ''
+  if (!videoTitle) {
+    throw badRequest('视频标题不能为空')
   }
 
-  if (content.length > 5000) {
-    throw badRequest(`${label}不能超过5000个字`)
+  if (videoTitle.length > 200) {
+    throw badRequest('视频标题不能超过200个字')
   }
 
-  return content
+  return videoTitle
 }
+
+function normalizeDuration(value) {
+  if (value === undefined || value === null || value === '') {
+    return null
+  }
+
+  const duration = Number(value)
+  if (!Number.isFinite(duration) || duration < 0) {
+    throw badRequest('视频时长不合法')
+  }
+
+  return Math.round(duration)
+}
+
+function getUploadFile(files, fieldName) {
+  if (!files || typeof files !== 'object') {
+    return null
+  }
+
+  const fileList = files[fieldName]
+  if (!Array.isArray(fileList) || fileList.length === 0) {
+    return null
+  }
+
+  return fileList[0]
+}
+
+async function cleanupUploadedFiles(filePaths) {
+  await Promise.all(filePaths.filter(Boolean).map((filePath) => cleanupUploadedFile(filePath)))
+}
+
 
 function getStatusLabel(status) {
   if (status === 'archived') {
@@ -405,6 +436,103 @@ export async function createTeacherMaterial({ teacherId, payload, file }) {
       originalFileName: file.originalname,
       storedFileName: path.basename(file.path),
       fileSize: Number(file.size || 0),
+      error: error.message,
+    })
+
+    throw error
+  }
+}
+
+export async function createTeacherVideo({ teacherId, payload, files }) {
+  await getTeacherProfile(teacherId)
+
+  const videoFile = getUploadFile(files, 'video')
+  const coverFile = getUploadFile(files, 'cover')
+
+  if (!videoFile) {
+    throw badRequest('请先选择视频文件')
+  }
+
+  let courseId = null
+  let storedVideoPath = ''
+  let storedCoverPath = null
+
+  try {
+    courseId = normalizeCourseId(payload.courseId)
+    const videoTitle = normalizeVideoTitle(payload.videoTitle)
+    const description = normalizeDescription(payload.description, '视频描述')
+    const duration = normalizeDuration(payload.duration)
+    const course = await getOwnedCourseRow(courseId, teacherId)
+
+    storedVideoPath = buildStoredFilePath(videoFile.path)
+    storedCoverPath = coverFile ? buildStoredFilePath(coverFile.path) : null
+
+    const [result] = await pool.query(
+      `INSERT INTO course_video (
+        video_title,
+        course_id,
+        teacher_id,
+        video_path,
+        cover_path,
+        duration,
+        file_size,
+        description,
+        play_count,
+        download_count,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1)`,
+      [
+        videoTitle,
+        courseId,
+        teacherId,
+        storedVideoPath,
+        storedCoverPath,
+        duration,
+        Number(videoFile.size || 0),
+        description || null,
+      ],
+    )
+
+    logger.info('teacher_video_created', {
+      teacherId,
+      videoId: result.insertId,
+      courseId,
+      originalVideoName: videoFile.originalname,
+      storedVideoName: path.basename(videoFile.path),
+      fileSize: Number(videoFile.size || 0),
+      hasCover: Boolean(coverFile),
+      storedCoverName: coverFile ? path.basename(coverFile.path) : null,
+      duration,
+    })
+
+    return {
+      id: result.insertId,
+      videoTitle,
+      courseId,
+      courseName: course.name,
+      fileName: videoFile.originalname,
+      fileSize: Number(videoFile.size || 0),
+      coverFileName: coverFile?.originalname || '',
+      duration,
+      uploadTime: new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+        .format(new Date())
+        .replace(/\//g, '-'),
+    }
+  } catch (error) {
+    await cleanupUploadedFiles([videoFile.path, coverFile?.path])
+
+    logger.error('teacher_video_create_failed', {
+      teacherId,
+      courseId,
+      originalVideoName: videoFile.originalname,
+      storedVideoName: path.basename(videoFile.path),
+      fileSize: Number(videoFile.size || 0),
+      hasCover: Boolean(coverFile),
+      storedCoverName: coverFile ? path.basename(coverFile.path) : null,
       error: error.message,
     })
 

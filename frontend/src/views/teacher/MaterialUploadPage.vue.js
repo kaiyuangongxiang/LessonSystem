@@ -1,6 +1,8 @@
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { getTeacherCourseOptions, uploadTeacherMaterial } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
+const router = useRouter();
 const authStore = useAuthStore();
 const courseOptions = ref([]);
 const selectedFile = ref(null);
@@ -120,6 +122,47 @@ let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "material-upload-page" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
+    ...{ class: "material-upload-sidebar" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "material-upload-sidebar__eyebrow" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
+    ...{ class: "material-upload-nav" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher');
+        } },
+    type: "button",
+    ...{ class: "material-upload-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/messages');
+        } },
+    type: "button",
+    ...{ class: "material-upload-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "material-upload-nav__item is-active" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/videos');
+        } },
+    type: "button",
+    ...{ class: "material-upload-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "material-upload-nav__item is-disabled" },
+    disabled: true,
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "material-upload-main" },
@@ -289,6 +332,16 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     disabled: (__VLS_ctx.submitting),
 });
 /** @type {__VLS_StyleScopedClasses['material-upload-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-sidebar']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-sidebar__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-disabled']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head__eyebrow']} */ ;
@@ -324,6 +377,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            router: router,
             courseOptions: courseOptions,
             selectedFile: selectedFile,
             fileInputRef: fileInputRef,

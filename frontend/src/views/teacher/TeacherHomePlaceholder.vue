@@ -10,7 +10,7 @@
         <button type="button" class="teacher-dashboard-nav__item is-active">工作台首页</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
-        <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>视频上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="teacher-dashboard-nav__item is-disabled" disabled>我的资源</button>
       </nav>
 
@@ -85,7 +85,7 @@
           <div class="teacher-dashboard-action-list">
             <button type="button" class="auth-btn" @click="router.push('/teacher/messages')">查看教学交流</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/materials')">上传课程资料</button>
-            <button type="button" class="auth-btn auth-btn--secondary" disabled>上传课程视频</button>
+            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/videos')">上传课程视频</button>
           </div>
 
           <div class="teacher-dashboard-note">

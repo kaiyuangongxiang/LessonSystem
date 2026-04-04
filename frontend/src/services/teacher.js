@@ -20,3 +20,23 @@ export async function uploadTeacherMaterial(payload) {
     });
     return response.data.data;
 }
+export async function uploadTeacherVideo(payload) {
+    const formData = new FormData();
+    formData.append('courseId', payload.courseId);
+    formData.append('videoTitle', payload.videoTitle);
+    formData.append('description', payload.description);
+    if (payload.duration !== undefined && payload.duration !== null) {
+        formData.append('duration', String(payload.duration));
+    }
+    formData.append('video', payload.video);
+    if (payload.cover) {
+        formData.append('cover', payload.cover);
+    }
+    const response = await http.post('/teacher/videos', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30 * 60 * 1000,
+    });
+    return response.data.data;
+}

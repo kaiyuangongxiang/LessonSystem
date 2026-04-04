@@ -2,6 +2,7 @@ import {
   createTeacherMaterial,
   createTeacherMessage,
   createTeacherMessageReply,
+  createTeacherVideo,
   getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherMessageDetail,
@@ -47,6 +48,24 @@ export async function postMaterial(req, res, next) {
     res.status(201).json({
       code: 201,
       message: '上传资料成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postVideo(req, res, next) {
+  try {
+    const result = await createTeacherVideo({
+      teacherId: req.auth.userId,
+      payload: req.body,
+      files: req.files,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '上传视频成功',
       data: result,
     })
   } catch (error) {
