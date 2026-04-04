@@ -1,0 +1,6 @@
+*
+!/.gitignore
+!/backend/
+!/backend/**
+!/frontend/
+!/frontend/**

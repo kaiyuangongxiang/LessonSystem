@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/vite-env.d.ts","./src/router/index.ts","./src/services/http.ts","./src/stores/auth.ts","./src/app.vue","./src/layouts/authlayout.vue","./src/views/admin/adminhomeplaceholder.vue","./src/views/auth/loginpage.vue","./src/views/auth/registerpage.vue","./src/views/teacher/teacherhomeplaceholder.vue"],"version":"5.9.3"}
