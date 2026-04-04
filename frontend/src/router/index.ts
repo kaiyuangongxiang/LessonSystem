@@ -6,7 +6,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      name: 'portal-home',
+      component: () => import('@/views/portal/HomePage.vue'),
     },
     {
       path: '/login',
