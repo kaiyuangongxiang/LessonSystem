@@ -25,7 +25,7 @@
         <button type="button" class="is-active" @click="scrollToTop">首页</button>
         <button type="button" @click="router.push('/courses')">课程中心</button>
         <button type="button" @click="scrollToSection('resources')">资源库</button>
-        <button type="button" @click="scrollToSection('notices')">教学交流</button>
+        <button type="button" @click="goTeachingMessages">教学交流</button>
       </nav>
 
       <button class="portal-login-btn" type="button" @click="goPrimaryAction">
@@ -41,8 +41,8 @@
 
         <div class="portal-hero__actions">
           <button class="portal-hero__btn" type="button" @click="router.push('/courses')">浏览课程</button>
-          <button class="portal-hero__btn portal-hero__btn--ghost" type="button" @click="scrollToSection('resources')">
-            查看最新资源
+          <button class="portal-hero__btn portal-hero__btn--ghost" type="button" @click="goTeachingMessages">
+            进入教学交流
           </button>
         </div>
       </div>
@@ -325,6 +325,20 @@ function goPrimaryAction() {
   }
 
   router.push(authStore.role === 'admin' ? '/admin' : '/teacher')
+}
+
+function goTeachingMessages() {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+
+  if (authStore.role === 'teacher') {
+    router.push('/teacher/messages')
+    return
+  }
+
+  router.push('/admin')
 }
 
 function formatDuration(duration: number | null) {

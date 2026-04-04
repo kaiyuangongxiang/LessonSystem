@@ -107,6 +107,17 @@ function goPrimaryAction() {
     }
     router.push(authStore.role === 'admin' ? '/admin' : '/teacher');
 }
+function goTeachingMessages() {
+    if (!authStore.isAuthenticated) {
+        router.push('/login');
+        return;
+    }
+    if (authStore.role === 'teacher') {
+        router.push('/teacher/messages');
+        return;
+    }
+    router.push('/admin');
+}
 function formatDuration(duration) {
     if (!duration) {
         return '待更新';
@@ -199,9 +210,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "button",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('notices');
-        } },
+    ...{ onClick: (__VLS_ctx.goTeachingMessages) },
     type: "button",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
@@ -234,9 +243,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "button",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('resources');
-        } },
+    ...{ onClick: (__VLS_ctx.goTeachingMessages) },
     ...{ class: "portal-hero__btn portal-hero__btn--ghost" },
     type: "button",
 });
@@ -486,6 +493,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             goCourseListWithKeyword: goCourseListWithKeyword,
             goCourseDetail: goCourseDetail,
             goPrimaryAction: goPrimaryAction,
+            goTeachingMessages: goTeachingMessages,
             formatDuration: formatDuration,
         };
     },

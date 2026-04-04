@@ -38,6 +38,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'teacher' },
     },
     {
+      path: '/teacher/messages',
+      name: 'teacher-messages',
+      component: () => import('@/views/teacher/OnlineMessagePage.vue'),
+      meta: { requiresAuth: true, role: 'teacher' },
+    },
+    {
       path: '/admin',
       name: 'admin-home',
       component: () => import('@/views/admin/AdminHomePlaceholder.vue'),
