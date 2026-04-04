@@ -6,7 +6,7 @@
         <div class="portal-brand__title">{{ home.profile.systemName }}</div>
       </div>
 
-      <div class="portal-search">
+      <form class="portal-search" @submit.prevent="goCourseListWithKeyword">
         <input v-model.trim="searchKeyword" type="text" placeholder="搜索课程 / 资料 / 视频" />
         <span class="portal-search__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -19,11 +19,11 @@
             />
           </svg>
         </span>
-      </div>
+      </form>
 
       <nav class="portal-links">
         <button type="button" class="is-active" @click="scrollToTop">首页</button>
-        <button type="button" @click="scrollToSection('courses')">课程中心</button>
+        <button type="button" @click="router.push('/courses')">课程中心</button>
         <button type="button" @click="scrollToSection('resources')">资源库</button>
         <button type="button" @click="scrollToSection('notices')">教学交流</button>
       </nav>
@@ -40,7 +40,7 @@
         <p>{{ home.profile.systemIntro }}</p>
 
         <div class="portal-hero__actions">
-          <button class="portal-hero__btn" type="button" @click="scrollToSection('courses')">浏览课程</button>
+          <button class="portal-hero__btn" type="button" @click="router.push('/courses')">浏览课程</button>
           <button class="portal-hero__btn portal-hero__btn--ghost" type="button" @click="scrollToSection('resources')">
             查看最新资源
           </button>
@@ -89,13 +89,15 @@
             <div class="portal-section-head__eyebrow">COURSE PICKS</div>
             <h2>推荐课程</h2>
           </div>
+          <button class="portal-section-head__link" type="button" @click="router.push('/courses')">查看全部</button>
         </div>
 
         <div class="portal-course-grid">
-          <article v-for="course in visibleCourses" :key="course.id" class="portal-course-card">
+          <article v-for="course in visibleCourses" :key="course.id" class="portal-course-card" @click="goCourseDetail(course.id)">
             <div class="portal-course-card__tag">{{ course.teacherName }}</div>
             <h3>{{ course.name }}</h3>
             <p>{{ course.summary }}</p>
+            <button type="button" class="portal-course-card__btn" @click.stop="goCourseDetail(course.id)">查看详情</button>
           </article>
         </div>
       </article>
@@ -296,6 +298,24 @@ function scrollToSection(section: 'notices' | 'courses' | 'resources') {
         : resourceSectionRef.value
 
   target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function goCourseListWithKeyword() {
+  router.push({
+    path: '/courses',
+    query: {
+      keyword: searchKeyword.value || undefined,
+    },
+  })
+}
+
+function goCourseDetail(courseId: number) {
+  if (!courseId) {
+    router.push('/courses')
+    return
+  }
+
+  router.push(`/courses/${courseId}`)
 }
 
 function goPrimaryAction() {

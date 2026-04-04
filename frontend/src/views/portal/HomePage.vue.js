@@ -85,6 +85,21 @@ function scrollToSection(section) {
             : resourceSectionRef.value;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+function goCourseListWithKeyword() {
+    router.push({
+        path: '/courses',
+        query: {
+            keyword: searchKeyword.value || undefined,
+        },
+    });
+}
+function goCourseDetail(courseId) {
+    if (!courseId) {
+        router.push('/courses');
+        return;
+    }
+    router.push(`/courses/${courseId}`);
+}
 function goPrimaryAction() {
     if (!authStore.isAuthenticated) {
         router.push('/login');
@@ -138,7 +153,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "portal-brand__title" },
 });
 (__VLS_ctx.home.profile.systemName);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+    ...{ onSubmit: (__VLS_ctx.goCourseListWithKeyword) },
     ...{ class: "portal-search" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
@@ -146,11 +162,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     type: "text",
     placeholder: "搜索课程 / 资料 / 视频",
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('resources');
-        } },
-    type: "button",
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "portal-search__icon" },
+    'aria-hidden': "true",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.svg, __VLS_intrinsicElements.svg)({
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+    d: "M10.5 18a7.5 7.5 0 1 1 5.303-12.803A7.5 7.5 0 0 1 10.5 18Zm0-13.2a5.7 5.7 0 1 0 0 11.4 5.7 5.7 0 0 0 0-11.4Zm10.064 14.791-4.076-4.075",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+    'stroke-linecap': "round",
+    'stroke-linejoin': "round",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
     ...{ class: "portal-links" },
@@ -162,7 +188,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('courses');
+            __VLS_ctx.router.push('/courses');
         } },
     type: "button",
 });
@@ -202,7 +228,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('courses');
+            __VLS_ctx.router.push('/courses');
         } },
     ...{ class: "portal-hero__btn" },
     type: "button",
@@ -242,7 +268,7 @@ if (__VLS_ctx.errorMessage) {
     (__VLS_ctx.errorMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "portal-content-grid" },
+    ...{ class: "portal-grid" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ref: "noticeSectionRef",
@@ -284,11 +310,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "portal-section-head__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/courses');
+        } },
+    ...{ class: "portal-section-head__link" },
+    type: "button",
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "portal-course-grid" },
 });
 for (const [course] of __VLS_getVForSourceType((__VLS_ctx.visibleCourses))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+        ...{ onClick: (...[$event]) => {
+                __VLS_ctx.goCourseDetail(course.id);
+            } },
         key: (course.id),
         ...{ class: "portal-course-card" },
     });
@@ -300,12 +336,22 @@ for (const [course] of __VLS_getVForSourceType((__VLS_ctx.visibleCourses))) {
     (course.name);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     (course.summary);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                __VLS_ctx.goCourseDetail(course.id);
+            } },
+        type: "button",
+        ...{ class: "portal-course-card__btn" },
+    });
 }
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ref: "resourceSectionRef",
-    ...{ class: "portal-panel portal-panel--materials" },
+    ...{ class: "portal-grid portal-grid--bottom" },
 });
 /** @type {typeof __VLS_ctx.resourceSectionRef} */ ;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "portal-panel portal-panel--materials" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "portal-section-head" },
 });
@@ -371,6 +417,7 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-brand__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-brand__title']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-search']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-search__icon']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-links']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-login-btn']} */ ;
@@ -386,7 +433,7 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-stat-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-stat-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-feedback']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-content-grid']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel--notice']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
@@ -396,9 +443,13 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-panel--courses']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-section-head__link']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-course-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-course-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-course-card__tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-course-card__btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-grid']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-grid--bottom']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel--materials']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
@@ -417,6 +468,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            router: router,
             searchKeyword: searchKeyword,
             errorMessage: errorMessage,
             noticeSectionRef: noticeSectionRef,
@@ -431,6 +483,8 @@ const __VLS_self = (await import('vue')).defineComponent({
             visibleVideos: visibleVideos,
             scrollToTop: scrollToTop,
             scrollToSection: scrollToSection,
+            goCourseListWithKeyword: goCourseListWithKeyword,
+            goCourseDetail: goCourseDetail,
             goPrimaryAction: goPrimaryAction,
             formatDuration: formatDuration,
         };

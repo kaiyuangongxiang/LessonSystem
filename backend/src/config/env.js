@@ -15,6 +15,7 @@ export const env = {
   port: Number(process.env.PORT || 3000),
   jwtSecret: process.env.JWT_SECRET || 'replace-with-a-strong-secret',
   frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  resourceRoot: process.env.RESOURCE_ROOT || '',
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 3307),

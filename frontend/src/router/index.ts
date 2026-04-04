@@ -10,6 +10,16 @@ const router = createRouter({
       component: () => import('@/views/portal/HomePage.vue'),
     },
     {
+      path: '/courses',
+      name: 'course-list',
+      component: () => import('@/views/portal/CourseListPage.vue'),
+    },
+    {
+      path: '/courses/:courseId',
+      name: 'course-detail',
+      component: () => import('@/views/portal/CourseDetailPage.vue'),
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginPage.vue'),

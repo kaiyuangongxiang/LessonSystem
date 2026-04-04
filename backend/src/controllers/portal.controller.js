@@ -1,4 +1,5 @@
-import { getPortalHomeData } from '../services/portal.service.js'
+import path from 'node:path'
+import { getPortalCourseDetailData, getPortalCourseListData, getPortalHomeData, getPortalMaterialDownloadData, getPortalVideoPlayData } from '../services/portal.service.js'
 
 export async function getPortalHome(req, res, next) {
   try {
@@ -8,6 +9,51 @@ export async function getPortalHome(req, res, next) {
       message: '获取首页数据成功',
       data: result,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPortalCourses(req, res, next) {
+  try {
+    const result = await getPortalCourseListData(req.query)
+    res.status(200).json({
+      code: 200,
+      message: '获取课程列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPortalCourseDetail(req, res, next) {
+  try {
+    const result = await getPortalCourseDetailData(req.params.courseId)
+    res.status(200).json({
+      code: 200,
+      message: '获取课程详情成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function downloadPortalMaterial(req, res, next) {
+  try {
+    const result = await getPortalMaterialDownloadData(req.params.materialId)
+    res.download(result.filePath, result.downloadName)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function playPortalVideo(req, res, next) {
+  try {
+    const result = await getPortalVideoPlayData(req.params.videoId)
+    res.type(path.extname(result.fileName) || 'mp4')
+    res.sendFile(result.filePath)
   } catch (error) {
     next(error)
   }
