@@ -85,6 +85,7 @@ function getStatusLabel(status) {
 async function getTeacherProfile(teacherId) {
   const [rows] = await pool.query(
     `SELECT teacher_id AS id,
+            username AS username,
             COALESCE(NULLIF(teacher_name, ''), username, '未署名教师') AS name
      FROM teacher_user
      WHERE teacher_id = ? AND status = 1
@@ -113,6 +114,136 @@ async function getOwnedMessageRow(messageId, teacherId) {
   }
 
   return rows[0]
+}
+
+
+export async function getTeacherDashboardData(teacherId) {
+  const teacher = await getTeacherProfile(teacherId)
+
+  const [statRows] = await pool.query(
+    `SELECT
+        (SELECT COUNT(*) FROM course_intro WHERE teacher_id = ? AND status = 1) AS courseCount,
+        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1) AS materialCount,
+        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1) AS videoCount,
+        (SELECT COUNT(*) FROM message_topic WHERE teacher_id = ?) AS topicCount`,
+    [teacherId, teacherId, teacherId, teacherId],
+  )
+
+  const [recentMaterials] = await pool.query(
+    `SELECT m.material_id AS id,
+            'material' AS type,
+            m.material_name AS title,
+            COALESCE(c.course_name, '未关联课程') AS courseName,
+            DATE_FORMAT(m.upload_time, '%Y-%m-%d') AS uploadDate,
+            m.upload_time AS sortTime
+     FROM material m
+     LEFT JOIN course_intro c ON c.course_id = m.course_id
+     WHERE m.teacher_id = ? AND m.status = 1
+     ORDER BY m.upload_time DESC, m.material_id DESC
+     LIMIT 5`,
+    [teacherId],
+  )
+
+  const [recentVideos] = await pool.query(
+    `SELECT v.video_id AS id,
+            'video' AS type,
+            v.video_title AS title,
+            COALESCE(c.course_name, '未关联课程') AS courseName,
+            DATE_FORMAT(v.upload_time, '%Y-%m-%d') AS uploadDate,
+            v.upload_time AS sortTime
+     FROM course_video v
+     LEFT JOIN course_intro c ON c.course_id = v.course_id
+     WHERE v.teacher_id = ? AND v.status = 1
+     ORDER BY v.upload_time DESC, v.video_id DESC
+     LIMIT 5`,
+    [teacherId],
+  )
+
+  const recentUploads = [...recentMaterials, ...recentVideos]
+    .sort((left, right) => new Date(right.sortTime).getTime() - new Date(left.sortTime).getTime())
+    .slice(0, 5)
+    .map(({ sortTime, ...item }) => item)
+
+  const [hotCourses] = await pool.query(
+    `SELECT c.course_id AS id,
+            c.course_name AS name,
+            COALESCE(material_stats.materialCount, 0) AS materialCount,
+            COALESCE(video_stats.videoCount, 0) AS videoCount
+     FROM course_intro c
+     LEFT JOIN (
+       SELECT course_id, COUNT(*) AS materialCount
+       FROM material
+       WHERE teacher_id = ? AND status = 1
+       GROUP BY course_id
+     ) material_stats ON material_stats.course_id = c.course_id
+     LEFT JOIN (
+       SELECT course_id, COUNT(*) AS videoCount
+       FROM course_video
+       WHERE teacher_id = ? AND status = 1
+       GROUP BY course_id
+     ) video_stats ON video_stats.course_id = c.course_id
+     WHERE c.teacher_id = ? AND c.status = 1
+     ORDER BY (COALESCE(material_stats.materialCount, 0) + COALESCE(video_stats.videoCount, 0) * 2) DESC,
+              c.update_time DESC,
+              c.course_id DESC
+     LIMIT 3`,
+    [teacherId, teacherId, teacherId],
+  )
+
+  const [weeklyRows] = await pool.query(
+    `SELECT
+        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1 AND upload_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS materialCount,
+        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1 AND upload_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS videoCount,
+        (SELECT COUNT(*) FROM message_topic WHERE teacher_id = ? AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS topicCount`,
+    [teacherId, teacherId, teacherId],
+  )
+
+  const statsRow = statRows[0] || {
+    courseCount: 0,
+    materialCount: 0,
+    videoCount: 0,
+    topicCount: 0,
+  }
+  const weeklyRow = weeklyRows[0] || {
+    materialCount: 0,
+    videoCount: 0,
+    topicCount: 0,
+  }
+
+  logger.info('teacher_dashboard_loaded', {
+    teacherId,
+    courseCount: Number(statsRow.courseCount || 0),
+    materialCount: Number(statsRow.materialCount || 0),
+    videoCount: Number(statsRow.videoCount || 0),
+    topicCount: Number(statsRow.topicCount || 0),
+    recentUploadCount: recentUploads.length,
+    hotCourseCount: hotCourses.length,
+  })
+
+  return {
+    profile: {
+      id: teacher.id,
+      name: teacher.name,
+      username: teacher.username,
+    },
+    stats: {
+      courseCount: Number(statsRow.courseCount || 0),
+      materialCount: Number(statsRow.materialCount || 0),
+      videoCount: Number(statsRow.videoCount || 0),
+      topicCount: Number(statsRow.topicCount || 0),
+    },
+    recentUploads,
+    hotCourses: hotCourses.map((item) => ({
+      ...item,
+      materialCount: Number(item.materialCount || 0),
+      videoCount: Number(item.videoCount || 0),
+    })),
+    weeklyActivity: {
+      materialCount: Number(weeklyRow.materialCount || 0),
+      videoCount: Number(weeklyRow.videoCount || 0),
+      topicCount: Number(weeklyRow.topicCount || 0),
+    },
+  }
 }
 
 export async function getTeacherMessageList({ teacherId, query }) {

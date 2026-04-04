@@ -1,9 +1,24 @@
 import {
   createTeacherMessage,
   createTeacherMessageReply,
+  getTeacherDashboardData,
   getTeacherMessageDetail,
   getTeacherMessageList,
 } from '../services/teacher.service.js'
+
+export async function getDashboard(req, res, next) {
+  try {
+    const result = await getTeacherDashboardData(req.auth.userId)
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师工作台成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 
 export async function getMessages(req, res, next) {
   try {

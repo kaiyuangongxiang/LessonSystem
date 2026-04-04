@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  getDashboard,
   getMessageDetail,
   getMessages,
   postMessage,
@@ -10,6 +11,7 @@ import { authenticate, requireRole } from '../middleware/auth.js'
 const router = Router()
 
 router.use(authenticate, requireRole('teacher'))
+router.get('/dashboard', getDashboard)
 router.get('/messages', getMessages)
 router.post('/messages', postMessage)
 router.get('/messages/:messageId', getMessageDetail)
