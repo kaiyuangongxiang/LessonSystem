@@ -7,6 +7,41 @@ export async function getTeacherCourseOptions() {
     const response = await http.get('/teacher/courses/options');
     return response.data.data;
 }
+export async function getTeacherAssets(params) {
+    const response = await http.get('/teacher/assets', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createTeacherAsset(payload) {
+    const formData = new FormData();
+    formData.append('type', payload.type);
+    formData.append('courseId', payload.courseId);
+    formData.append('title', payload.title);
+    formData.append('description', payload.description);
+    formData.append('content', payload.content);
+    if (payload.file) {
+        formData.append('file', payload.file);
+    }
+    const response = await http.post('/teacher/assets', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data.data;
+}
+export async function getTeacherAssetDetail(assetId) {
+    const response = await http.get(`/teacher/assets/${assetId}`);
+    return response.data.data;
+}
+export async function updateTeacherAssetDetail(assetId, payload) {
+    const response = await http.put(`/teacher/assets/${assetId}`, payload);
+    return response.data.data;
+}
+export async function deleteTeacherAssetDetail(assetId) {
+    const response = await http.delete(`/teacher/assets/${assetId}`);
+    return response.data.data;
+}
 export async function getTeacherProfile() {
     const response = await http.get('/teacher/profile');
     return response.data.data;

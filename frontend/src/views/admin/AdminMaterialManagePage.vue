@@ -13,6 +13,7 @@
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
         <button type="button" class="admin-dashboard-nav__item is-active">资料管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>

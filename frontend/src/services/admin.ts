@@ -329,6 +329,53 @@ export interface AdminCourseMutationData extends AdminCourseItem {
   formOptions: AdminCourseFormOptions
 }
 
+export type AdminAssetType = 'image' | 'audio' | 'text' | 'question' | 'template'
+
+export interface AdminAssetStats {
+  total: number
+  courseCount: number
+  teacherCount: number
+  fileCount: number
+}
+
+export interface AdminAssetItem {
+  id: number
+  type: AdminAssetType
+  teacherId: number
+  courseId: number
+  title: string
+  courseName: string
+  teacherName: string
+  description: string
+  content: string
+  fileName: string
+  fileSize: number
+  uploadTime: string
+  previewUrl: string
+}
+
+export interface AdminAssetListData {
+  stats: AdminAssetStats
+  list: AdminAssetItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: AdminCourseOption[]
+  }
+}
+
+export interface AdminAssetQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  type?: AdminAssetType | 'all'
+}
+
 export interface AdminResourceStats {
   total: number
   courseCount: number
@@ -637,6 +684,18 @@ export async function updateAdminCourse(courseId: number, payload: AdminCoursePa
 
 export async function deleteAdminCourse(courseId: number) {
   const response = await http.delete<ApiSuccess<{ id: number; name: string }>>(`/admin/courses/${courseId}`)
+  return response.data.data
+}
+
+export async function getAdminAssetList(params: AdminAssetQuery) {
+  const response = await http.get<ApiSuccess<AdminAssetListData>>('/admin/assets', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function deleteAdminAsset(assetId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; type: AdminAssetType; title: string }>>(`/admin/assets/${assetId}`)
   return response.data.data
 }
 

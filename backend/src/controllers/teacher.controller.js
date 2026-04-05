@@ -1,13 +1,18 @@
 import {
+  createTeacherAsset,
   createTeacherMaterial,
   createTeacherResourceBundle,
   createTeacherVideo,
+  deleteTeacherAsset,
   deleteTeacherResource,
+  getTeacherAssetDetail,
+  getTeacherAssetList,
   getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherProfileDetail,
   getTeacherResourceDetail,
   getTeacherResourceList,
+  updateTeacherAsset,
   updateTeacherProfileInfo,
   updateTeacherResource,
 } from '../services/teacher.service.js'
@@ -41,6 +46,93 @@ export async function getCourseOptions(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取教师课程选项成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getAssets(req, res, next) {
+  try {
+    const result = await getTeacherAssetList({
+      teacherId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师素材库成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postAsset(req, res, next) {
+  try {
+    const result = await createTeacherAsset({
+      teacherId: req.auth.userId,
+      payload: req.body,
+      file: req.file,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建素材成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getAssetDetail(req, res, next) {
+  try {
+    const result = await getTeacherAssetDetail({
+      teacherId: req.auth.userId,
+      assetId: req.params.assetId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取素材详情成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateAsset(req, res, next) {
+  try {
+    const result = await updateTeacherAsset({
+      teacherId: req.auth.userId,
+      assetId: req.params.assetId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新素材成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteAsset(req, res, next) {
+  try {
+    const result = await deleteTeacherAsset({
+      teacherId: req.auth.userId,
+      assetId: req.params.assetId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除素材成功',
       data: result,
     })
   } catch (error) {

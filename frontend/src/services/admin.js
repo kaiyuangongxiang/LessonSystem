@@ -113,6 +113,16 @@ export async function deleteAdminCourse(courseId) {
     const response = await http.delete(`/admin/courses/${courseId}`);
     return response.data.data;
 }
+export async function getAdminAssetList(params) {
+    const response = await http.get('/admin/assets', {
+        params,
+    });
+    return response.data.data;
+}
+export async function deleteAdminAsset(assetId) {
+    const response = await http.delete(`/admin/assets/${assetId}`);
+    return response.data.data;
+}
 export async function getAdminMaterialList(params) {
     const response = await http.get('/admin/materials', {
         params,

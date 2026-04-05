@@ -1,4 +1,5 @@
 import {
+  deleteAdminAsset,
   createAdminAccount,
   createAdminCollege,
   createAdminCourse,
@@ -12,6 +13,7 @@ import {
   deleteAdminResource,
   deleteAdminStudentUser,
   deleteAdminTeacherUser,
+  getAdminAssetList,
   getAdminAccountList,
   getAdminCollegeList,
   getAdminCourseList,
@@ -474,6 +476,40 @@ export async function deleteCourse(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '删除课程成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getAssetList(req, res, next) {
+  try {
+    const result = await getAdminAssetList({
+      adminId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取素材库管理列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteAsset(req, res, next) {
+  try {
+    const result = await deleteAdminAsset({
+      adminId: req.auth.userId,
+      assetId: req.params.assetId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除素材成功',
       data: result,
     })
   } catch (error) {

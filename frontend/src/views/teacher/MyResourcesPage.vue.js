@@ -246,6 +246,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/assets');
+        } },
+    type: "button",
+    ...{ class: "teacher-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "teacher-dashboard-nav__item is-active" },
 });
@@ -602,6 +609,7 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;

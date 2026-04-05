@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS asset_library (
+  asset_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '素材ID',
+  asset_type VARCHAR(20) NOT NULL COMMENT '素材类型:image/audio/text/question/template',
+  teacher_id BIGINT NOT NULL COMMENT '上传教师ID',
+  course_id BIGINT NOT NULL COMMENT '所属课程ID',
+  asset_title VARCHAR(200) NOT NULL COMMENT '素材标题',
+  asset_description TEXT NULL COMMENT '素材说明',
+  asset_content TEXT NULL COMMENT '文本类素材内容',
+  file_path VARCHAR(500) NULL COMMENT '文件存储路径',
+  file_name VARCHAR(255) NULL COMMENT '原始文件名',
+  file_size BIGINT NOT NULL DEFAULT 0 COMMENT '文件大小',
+  status TINYINT NOT NULL DEFAULT 1 COMMENT '状态:1正常 0删除',
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  CONSTRAINT fk_asset_library_teacher FOREIGN KEY (teacher_id) REFERENCES teacher_user(teacher_id),
+  CONSTRAINT fk_asset_library_course FOREIGN KEY (course_id) REFERENCES course_intro(course_id),
+  INDEX idx_asset_library_teacher_status (teacher_id, status),
+  INDEX idx_asset_library_course_status (course_id, status),
+  INDEX idx_asset_library_type_status (asset_type, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教学素材库';

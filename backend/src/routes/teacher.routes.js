@@ -1,7 +1,10 @@
 import { Router } from 'express'
 import {
+  deleteAsset,
   deleteMessage,
   deleteMessageReply,
+  getAssetDetail,
+  getAssets,
   getCourseOptions,
   getDashboard,
   getMessageDetail,
@@ -9,23 +12,30 @@ import {
   getProfile,
   getResourceDetail,
   getResources,
+  postAsset,
   postMaterial,
   postResourceBundle,
   postMessage,
   postMessageReply,
   postVideo,
   removeResource,
+  updateAsset,
   updateProfile,
   updateResource,
 } from '../controllers/teacher.controller.js'
 import { authenticate, requireRole } from '../middleware/auth.js'
-import { uploadMaterialFile, uploadResourceFiles, uploadVideoFiles } from '../middleware/upload.js'
+import { uploadAssetFile, uploadMaterialFile, uploadResourceFiles, uploadVideoFiles } from '../middleware/upload.js'
 
 const router = Router()
 
 router.use(authenticate, requireRole('teacher'))
 router.get('/dashboard', getDashboard)
 router.get('/courses/options', getCourseOptions)
+router.get('/assets', getAssets)
+router.post('/assets', uploadAssetFile.single('file'), postAsset)
+router.get('/assets/:assetId', getAssetDetail)
+router.put('/assets/:assetId', updateAsset)
+router.delete('/assets/:assetId', deleteAsset)
 router.get('/profile', getProfile)
 router.put('/profile', updateProfile)
 router.post(

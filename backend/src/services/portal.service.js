@@ -138,6 +138,20 @@ function resolveStoredFilePath(storedPath) {
   return [...new Set(candidates)].find((candidate) => fs.existsSync(candidate)) || null
 }
 
+async function ensureAssetLibraryReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'asset_library'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw notFound('素材库尚未初始化')
+  }
+}
+
 export async function getPortalHomeData() {
   const heroTitleSupported = await getSystemHeroTitleSchemaSupport()
   const [profiles] = await pool.query(
@@ -398,6 +412,49 @@ export async function getPortalCourseDetailData(courseIdValue) {
   }
 }
 
+export async function getPortalCourseAssetsData(courseIdValue) {
+  const courseId = normalizeCourseId(courseIdValue)
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.asset_type AS type,
+            a.asset_title AS title,
+            COALESCE(a.asset_description, '') AS description,
+            COALESCE(a.asset_content, '') AS content,
+            COALESCE(a.file_name, '') AS fileName,
+            COALESCE(a.file_size, 0) AS fileSize,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d') AS uploadTime,
+            COALESCE(t.teacher_name, t.username, '未命名教师') AS teacherName
+     FROM asset_library a
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     INNER JOIN course_intro c ON c.course_id = a.course_id AND c.status = 1
+     WHERE a.course_id = ? AND a.status = 1
+     ORDER BY a.update_time DESC, a.asset_id DESC`,
+    [courseId],
+  )
+
+  logger.info('portal_course_assets_loaded', {
+    courseId,
+    assetCount: rows.length,
+  })
+
+  return {
+    list: rows.map((item) => ({
+      id: Number(item.id),
+      type: item.type,
+      title: item.title,
+      description: item.description || '',
+      content: item.content || '',
+      fileName: item.fileName || '',
+      fileSize: Number(item.fileSize || 0),
+      uploadTime: item.uploadTime,
+      teacherName: item.teacherName,
+      previewUrl: item.fileName ? `/portal/assets/${Number(item.id)}/file` : '',
+    })),
+  }
+}
+
 export async function getPortalMaterialDownloadData(materialIdValue) {
   const materialId = normalizeCourseId(materialIdValue, '资料')
 
@@ -440,6 +497,51 @@ export async function getPortalMaterialDownloadData(materialIdValue) {
   return {
     filePath: resolvedPath,
     downloadName: material.fileName || path.basename(resolvedPath),
+  }
+}
+
+export async function getPortalAssetFileData(assetIdValue) {
+  const assetId = normalizeCourseId(assetIdValue, '素材')
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.course_id AS courseId,
+            a.asset_type AS type,
+            COALESCE(a.file_name, a.asset_title) AS fileName,
+            a.file_path AS storedPath
+     FROM asset_library a
+     INNER JOIN course_intro c ON c.course_id = a.course_id AND c.status = 1
+     WHERE a.asset_id = ? AND a.status = 1
+     LIMIT 1`,
+    [assetId],
+  )
+
+  const asset = rows[0]
+  if (!asset) {
+    logger.warn('portal_asset_missing', { assetId })
+    throw notFound('素材不存在或已下线')
+  }
+
+  const resolvedPath = resolveStoredFilePath(asset.storedPath)
+  if (!resolvedPath) {
+    logger.warn('portal_asset_file_missing', {
+      assetId,
+      courseId: asset.courseId,
+      storedPath: asset.storedPath,
+    })
+    throw notFound('素材文件不存在')
+  }
+
+  logger.info('portal_asset_file_ready', {
+    assetId,
+    courseId: asset.courseId,
+    type: asset.type,
+  })
+
+  return {
+    filePath: resolvedPath,
+    fileName: asset.fileName || path.basename(resolvedPath),
   }
 }
 

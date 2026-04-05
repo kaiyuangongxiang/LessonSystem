@@ -4,6 +4,9 @@ import { logger } from '../utils/logger.js'
 
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
+const ASSET_FILE_TYPES = new Set(['image', 'audio'])
+const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
+const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
 let replySchemaSupportPromise = null
 function badRequest(message) {
   const error = new Error(message)
@@ -563,6 +566,28 @@ function normalizeResourceType(value) {
   throw badRequest('资源类型不合法')
 }
 
+function normalizeAssetId(value) {
+  const assetId = Number(value)
+  if (!Number.isInteger(assetId) || assetId <= 0) {
+    throw badRequest('素材ID不合法')
+  }
+
+  return assetId
+}
+
+function normalizeAssetType(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  const assetType = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (ASSET_TYPES.includes(assetType)) {
+    return assetType
+  }
+
+  throw badRequest('素材类型不合法')
+}
+
 function formatDate(value) {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -575,6 +600,24 @@ function formatDate(value) {
 
 function buildResourcePreviewUrl(type, resourceId) {
   return type === 'material' ? `/portal/materials/${resourceId}/download` : `/portal/videos/${resourceId}/play`
+}
+
+function buildAssetPreviewUrl(assetId) {
+  return `/portal/assets/${assetId}/file`
+}
+
+async function ensureAssetLibraryReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'asset_library'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw badRequest('当前数据库尚未初始化素材库表，请先执行素材库升级 SQL')
+  }
 }
 
 function getStatusLabel(status) {
@@ -1339,6 +1382,37 @@ async function getAdminVideoRow(videoId) {
 
   if (!rows.length) {
     throw notFound('视频不存在或已删除')
+  }
+
+  return rows[0]
+}
+
+async function getAdminAssetRow(assetId) {
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.asset_type AS type,
+            a.teacher_id AS teacherId,
+            a.course_id AS courseId,
+            a.asset_title AS title,
+            COALESCE(a.asset_description, '') AS description,
+            COALESCE(a.asset_content, '') AS content,
+            COALESCE(a.file_name, '') AS fileName,
+            COALESCE(a.file_size, 0) AS fileSize,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d') AS uploadTime,
+            COALESCE(ci.course_name, '未关联课程') AS courseName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未命名教师') AS teacherName
+     FROM asset_library a
+     LEFT JOIN course_intro ci ON ci.course_id = a.course_id
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     WHERE a.asset_id = ? AND a.status = 1
+     LIMIT 1`,
+    [assetId],
+  )
+
+  if (!rows.length) {
+    throw notFound('素材不存在或已删除')
   }
 
   return rows[0]
@@ -2707,6 +2781,176 @@ export async function deleteAdminCourse({ adminId, courseId }) {
   return {
     id: normalizedCourseId,
     name: course.name,
+  }
+}
+
+export async function getAdminAssetList({ adminId, query }) {
+  await getAdminProfile(adminId)
+  await ensureAssetLibraryReady()
+
+  const keyword = normalizeKeyword(query.keyword)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
+  const type = normalizeAssetType(query.type)
+  const params = []
+  let whereSql = 'a.status = 1'
+
+  if (courseId) {
+    whereSql += ' AND a.course_id = ?'
+    params.push(courseId)
+  }
+
+  if (type !== 'all') {
+    whereSql += ' AND a.asset_type = ?'
+    params.push(type)
+  }
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    whereSql += ` AND (
+      a.asset_title LIKE ?
+      OR COALESCE(a.asset_description, '') LIKE ?
+      OR COALESCE(a.asset_content, '') LIKE ?
+      OR COALESCE(a.file_name, '') LIKE ?
+      OR COALESCE(t.teacher_name, '') LIKE ?
+      OR COALESCE(t.username, '') LIKE ?
+    )`
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+  }
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM asset_library a
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [listRows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.asset_type AS type,
+            a.teacher_id AS teacherId,
+            a.course_id AS courseId,
+            a.asset_title AS title,
+            COALESCE(a.asset_description, '') AS description,
+            COALESCE(a.asset_content, '') AS content,
+            COALESCE(a.file_name, '') AS fileName,
+            COALESCE(a.file_size, 0) AS fileSize,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d') AS uploadTime,
+            COALESCE(ci.course_name, '未关联课程') AS courseName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未命名教师') AS teacherName
+     FROM asset_library a
+     LEFT JOIN course_intro ci ON ci.course_id = a.course_id
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     WHERE ${whereSql}
+     ORDER BY a.update_time DESC, a.asset_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        COUNT(*) AS total,
+        COUNT(DISTINCT course_id) AS courseCount,
+        COUNT(DISTINCT teacher_id) AS teacherCount,
+        SUM(CASE WHEN asset_type IN ('image', 'audio') THEN 1 ELSE 0 END) AS fileCount
+     FROM asset_library
+     WHERE status = 1`,
+  )
+
+  const [courseRows] = await pool.query(
+    `SELECT course_id AS id, course_name AS name
+     FROM course_intro
+     WHERE status = 1
+     ORDER BY update_time DESC, course_id DESC`,
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    courseCount: 0,
+    teacherCount: 0,
+    fileCount: 0,
+  }
+
+  logger.info('admin_asset_list_loaded', {
+    adminId,
+    keyword,
+    courseId,
+    type,
+    page,
+    pageSize,
+    total,
+    resultCount: listRows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      courseCount: Number(statsRow.courseCount || 0),
+      teacherCount: Number(statsRow.teacherCount || 0),
+      fileCount: Number(statsRow.fileCount || 0),
+    },
+    list: listRows.map((item) => ({
+      id: Number(item.id),
+      type: item.type,
+      teacherId: Number(item.teacherId || 0),
+      courseId: Number(item.courseId || 0),
+      title: item.title,
+      description: item.description || '',
+      content: item.content || '',
+      fileName: item.fileName || '',
+      fileSize: Number(item.fileSize || 0),
+      uploadTime: item.uploadTime,
+      courseName: item.courseName,
+      teacherName: item.teacherName,
+      previewUrl: ASSET_FILE_TYPES.has(item.type) ? buildAssetPreviewUrl(Number(item.id)) : '',
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    filters: {
+      courses: courseRows.map((item) => ({
+        id: Number(item.id),
+        name: item.name,
+      })),
+    },
+  }
+}
+
+export async function deleteAdminAsset({ adminId, assetId }) {
+  await getAdminProfile(adminId)
+  await ensureAssetLibraryReady()
+
+  const normalizedAssetId = normalizeAssetId(assetId)
+  const asset = await getAdminAssetRow(normalizedAssetId)
+
+  await pool.query(
+    `UPDATE asset_library
+     SET status = 0, update_time = CURRENT_TIMESTAMP
+     WHERE asset_id = ? AND status = 1`,
+    [normalizedAssetId],
+  )
+
+  logger.info('admin_asset_deleted', {
+    adminId,
+    assetId: normalizedAssetId,
+    teacherId: Number(asset.teacherId || 0),
+    courseId: Number(asset.courseId || 0),
+  })
+
+  return {
+    id: normalizedAssetId,
+    type: asset.type,
+    title: asset.title,
   }
 }
 

@@ -8,6 +8,8 @@ const projectRoot = path.resolve(currentDir, '../../..')
 const materialUploadRoot = path.resolve(projectRoot, 'uploads', 'materials')
 const videoUploadRoot = path.resolve(projectRoot, 'uploads', 'videos')
 const videoCoverUploadRoot = path.resolve(projectRoot, 'uploads', 'video-covers')
+const assetImageUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'images')
+const assetAudioUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'audios')
 
 const materialExtensions = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx'])
 const materialMimeTypes = new Set([
@@ -28,6 +30,19 @@ const videoMimeTypes = new Set([
 
 const coverExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp'])
 const coverMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const assetImageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
+const assetImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const assetAudioExtensions = new Set(['.mp3', '.wav', '.ogg', '.m4a'])
+const assetAudioMimeTypes = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/x-m4a',
+  'application/octet-stream',
+])
 
 function ensureUploadDir(uploadRoot) {
   fs.mkdirSync(uploadRoot, { recursive: true })
@@ -82,6 +97,14 @@ const resourceStorage = createStorage({
     return file.fieldname === 'cover' ? videoCoverUploadRoot : videoUploadRoot
   },
   fallbackBaseName: 'resource',
+})
+
+const assetStorage = createStorage({
+  destinationRoot(req) {
+    const assetType = String(req.body?.type || '').trim().toLowerCase()
+    return assetType === 'audio' ? assetAudioUploadRoot : assetImageUploadRoot
+  },
+  fallbackBaseName: 'asset',
 })
 
 function materialFileFilter(req, file, callback) {
@@ -149,6 +172,47 @@ export const uploadVideoFiles = multer({
   },
 })
 
+function assetFileFilter(req, file, callback) {
+  if (file.fieldname !== 'file') {
+    const error = new Error('不支持的上传字段')
+    error.status = 400
+    callback(error)
+    return
+  }
+
+  const assetType = String(req.body?.type || '').trim().toLowerCase()
+  const extension = path.extname(file.originalname || '').toLowerCase()
+  const mimeType = String(file.mimetype || '').toLowerCase()
+
+  if (assetType === 'image') {
+    if (!assetImageExtensions.has(extension) || !assetImageMimeTypes.has(mimeType)) {
+      const error = new Error('图片素材仅支持 JPG、JPEG、PNG、WEBP、GIF 格式')
+      error.status = 400
+      callback(error)
+      return
+    }
+
+    callback(null, true)
+    return
+  }
+
+  if (assetType === 'audio') {
+    if (!assetAudioExtensions.has(extension) || !assetAudioMimeTypes.has(mimeType)) {
+      const error = new Error('音频素材仅支持 MP3、WAV、OGG、M4A 格式')
+      error.status = 400
+      callback(error)
+      return
+    }
+
+    callback(null, true)
+    return
+  }
+
+  const error = new Error('当前素材类型不支持文件上传')
+  error.status = 400
+  callback(error)
+}
+
 function resourceFileFilter(req, file, callback) {
   if (file.fieldname === 'material') {
     materialFileFilter(req, file, callback)
@@ -171,5 +235,14 @@ export const uploadResourceFiles = multer({
   limits: {
     files: 3,
     fileSize: 500 * 1024 * 1024,
+  },
+})
+
+export const uploadAssetFile = multer({
+  storage: assetStorage,
+  fileFilter: assetFileFilter,
+  limits: {
+    files: 1,
+    fileSize: 100 * 1024 * 1024,
   },
 })

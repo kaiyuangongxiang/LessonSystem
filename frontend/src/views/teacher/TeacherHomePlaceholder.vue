@@ -9,6 +9,7 @@
       <nav class="teacher-dashboard-nav">
         <button type="button" class="teacher-dashboard-nav__item is-active">总览首页</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/assets')">素材库</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
@@ -75,6 +76,7 @@
 
           <div class="teacher-dashboard-action-list">
             <button type="button" class="auth-btn" @click="router.push('/teacher/materials')">上传课程资源</button>
+            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/assets')">管理素材库</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/resources')">查看我的资源</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/profile')">维护个人资料</button>
           </div>

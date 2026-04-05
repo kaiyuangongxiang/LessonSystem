@@ -6,6 +6,7 @@ import {
   createCourse,
   createTeacherUser,
   createStudentUser,
+  deleteAsset,
   createNotice,
   deleteAdmin,
   deleteCollege,
@@ -20,6 +21,7 @@ import {
   getAdminList,
   getCollegeList,
   getCourseList,
+  getAssetList,
   getDashboard,
   getMaterialList,
   getMessageDetail,
@@ -69,6 +71,8 @@ router.get('/courses', getCourseList)
 router.post('/courses', createCourse)
 router.put('/courses/:courseId', updateCourse)
 router.delete('/courses/:courseId', deleteCourse)
+router.get('/assets', getAssetList)
+router.delete('/assets/:assetId', deleteAsset)
 router.get('/materials', getMaterialList)
 router.delete('/materials/:materialId', deleteMaterial)
 router.get('/videos', getVideoList)

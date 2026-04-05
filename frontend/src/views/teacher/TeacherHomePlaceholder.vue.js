@@ -86,6 +86,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/assets');
+        } },
+    type: "button",
+    ...{ class: "teacher-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/resources');
         } },
     type: "button",
@@ -226,6 +233,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/assets');
+        } },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/resources');
         } },
     type: "button",
@@ -311,6 +325,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head__eyebrow']} */ ;
@@ -342,6 +357,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-action-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;

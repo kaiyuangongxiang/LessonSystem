@@ -1,5 +1,13 @@
 import path from 'node:path'
-import { getPortalCourseDetailData, getPortalCourseListData, getPortalHomeData, getPortalMaterialDownloadData, getPortalVideoPlayData } from '../services/portal.service.js'
+import {
+  getPortalAssetFileData,
+  getPortalCourseAssetsData,
+  getPortalCourseDetailData,
+  getPortalCourseListData,
+  getPortalHomeData,
+  getPortalMaterialDownloadData,
+  getPortalVideoPlayData,
+} from '../services/portal.service.js'
 
 export async function getPortalHome(req, res, next) {
   try {
@@ -27,6 +35,19 @@ export async function getPortalCourses(req, res, next) {
   }
 }
 
+export async function getPortalCourseAssets(req, res, next) {
+  try {
+    const result = await getPortalCourseAssetsData(req.params.courseId)
+    res.status(200).json({
+      code: 200,
+      message: '获取课程素材成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function getPortalCourseDetail(req, res, next) {
   try {
     const result = await getPortalCourseDetailData(req.params.courseId)
@@ -44,6 +65,16 @@ export async function downloadPortalMaterial(req, res, next) {
   try {
     const result = await getPortalMaterialDownloadData(req.params.materialId)
     res.download(result.filePath, result.downloadName)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPortalAssetFile(req, res, next) {
+  try {
+    const result = await getPortalAssetFileData(req.params.assetId)
+    res.type(path.extname(result.fileName) || 'application/octet-stream')
+    res.sendFile(result.filePath)
   } catch (error) {
     next(error)
   }

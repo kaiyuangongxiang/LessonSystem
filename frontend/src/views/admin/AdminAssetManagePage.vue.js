@@ -1,25 +1,26 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { deleteAdminMaterial, deleteAdminVideo, getAdminMaterialList, } from '@/services/admin';
+import { deleteAdminAsset, getAdminAssetList } from '@/services/admin';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const loading = ref(false);
-const deletingKey = ref('');
+const deletingId = ref(null);
 const errorMessage = ref('');
 const successMessage = ref('');
 const courseOptions = ref([]);
-const resourceList = ref([]);
-const form = reactive({
-    keyword: '',
-    courseId: '',
-});
+const assetList = ref([]);
 const stats = reactive({
     total: 0,
     courseCount: 0,
     teacherCount: 0,
-    interactionCount: 0,
+    fileCount: 0,
+});
+const filters = reactive({
+    keyword: '',
+    courseId: '',
+    type: 'all',
 });
 const pagination = reactive({
     page: 1,
@@ -27,14 +28,17 @@ const pagination = reactive({
     total: 0,
     totalPages: 0,
 });
+const assetTypeOptions = [
+    { value: 'image', label: '图片素材' },
+    { value: 'audio', label: '音频素材' },
+    { value: 'text', label: '文本片段' },
+    { value: 'question', label: '题目卡片' },
+    { value: 'template', label: '页面模板' },
+];
 const headerText = computed(() => {
-    const name = authStore.profile?.name || authStore.profile?.username || '管理员';
-    return `${name}，这里统一管理教师上传的资料与视频资源。`;
+    const name = authStore.profile?.name || authStore.profile?.username || '系统管理员';
+    return `${name}，这里统一查看教师上传的图片、音频和文本类教学素材。`;
 });
-const reminderTexts = computed(() => [
-    stats.total > 0 ? `当前共有 ${stats.total} 条资源处于有效状态。` : '当前还没有可管理的资源。',
-    stats.interactionCount > 0 ? `累计下载和播放次数为 ${stats.interactionCount} 次。` : '当前资源尚未产生互动记录。',
-]);
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
     return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
@@ -43,45 +47,19 @@ function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
 }
-function formatFileSize(size) {
-    if (size >= 1024 * 1024 * 1024) {
-        return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    }
-    if (size >= 1024 * 1024) {
-        return `${(size / 1024 / 1024).toFixed(2)} MB`;
-    }
-    return `${(size / 1024).toFixed(2)} KB`;
-}
-function formatDuration(duration) {
-    if (!duration || duration <= 0) {
-        return '未标注';
-    }
-    const totalSeconds = Math.floor(duration);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes} 分 ${String(seconds).padStart(2, '0')} 秒`;
-}
-function resourceTypeLabel(type) {
-    return type === 'material' ? '资料' : '视频';
-}
-function resourceMetaText(item) {
-    return item.format;
-}
-function clearMessages() {
-    errorMessage.value = '';
-    successMessage.value = '';
-}
-function syncFormWithRoute() {
-    form.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
-    form.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : '';
+function syncFiltersWithRoute() {
+    filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
+    filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : '';
+    filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? route.query.type : 'all';
 }
 function updateRoute(page = 1) {
     router.push({
-        path: '/admin/materials',
+        path: '/admin/assets',
         query: {
             page: String(page),
-            ...(form.keyword ? { keyword: form.keyword } : {}),
-            ...(form.courseId ? { courseId: form.courseId } : {}),
+            ...(filters.keyword ? { keyword: filters.keyword } : {}),
+            ...(filters.courseId ? { courseId: filters.courseId } : {}),
+            ...(filters.type !== 'all' ? { type: filters.type } : {}),
         },
     });
 }
@@ -89,95 +67,100 @@ function applySearch() {
     updateRoute(1);
 }
 function resetFilters() {
-    clearMessages();
-    form.keyword = '';
-    form.courseId = '';
+    filters.keyword = '';
+    filters.courseId = '';
+    filters.type = 'all';
     updateRoute(1);
 }
 function changePage(page) {
     updateRoute(page);
 }
-function openResource(path) {
-    if (!path) {
-        return;
+function clearMessages() {
+    errorMessage.value = '';
+    successMessage.value = '';
+}
+function assetTypeLabel(type) {
+    return assetTypeOptions.find((item) => item.value === type)?.label || type;
+}
+function formatFileSize(size) {
+    if (size >= 1024 * 1024) {
+        return `${(size / 1024 / 1024).toFixed(2)} MB`;
     }
+    return `${(size / 1024).toFixed(2)} KB`;
+}
+function previewAsset(path) {
+    if (!path)
+        return;
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
     window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
 }
-function handlePrimaryAction(item) {
-    openResource(item.previewUrl);
-}
-async function removeResource(item) {
+async function removeAsset(item) {
     clearMessages();
-    if (!window.confirm(`确认删除${resourceTypeLabel(item.type)}《${item.title}》吗？`)) {
+    if (!window.confirm(`确认删除素材“${item.title}”吗？`)) {
         return;
     }
-    deletingKey.value = `${item.type}-${item.id}`;
+    deletingId.value = item.id;
     try {
-        if (item.type === 'material') {
-            await deleteAdminMaterial(item.id);
-        }
-        else {
-            await deleteAdminVideo(item.id);
-        }
-        successMessage.value = `${resourceTypeLabel(item.type)}《${item.title}》已删除。`;
-        await loadResources();
+        await deleteAdminAsset(item.id);
+        successMessage.value = `素材“${item.title}”已删除。`;
+        await loadAssets();
     }
     catch (error) {
-        errorMessage.value = error?.response?.data?.message || `${resourceTypeLabel(item.type)}删除失败`;
+        errorMessage.value = error?.response?.data?.message || '素材删除失败';
     }
     finally {
-        deletingKey.value = '';
+        deletingId.value = null;
     }
 }
-async function loadResources() {
+async function loadAssets() {
     loading.value = true;
     clearMessages();
-    syncFormWithRoute();
+    syncFiltersWithRoute();
     try {
-        const data = await getAdminMaterialList({
+        const data = await getAdminAssetList({
             page: normalizePage(route.query.page),
             pageSize: 6,
-            keyword: form.keyword,
-            courseId: form.courseId,
+            keyword: filters.keyword,
+            courseId: filters.courseId,
+            type: filters.type,
         });
-        resourceList.value = data.list;
         courseOptions.value = data.filters.courses;
+        assetList.value = data.list;
         stats.total = data.stats.total;
         stats.courseCount = data.stats.courseCount;
         stats.teacherCount = data.stats.teacherCount;
-        stats.interactionCount = data.stats.interactionCount;
+        stats.fileCount = data.stats.fileCount;
         pagination.page = data.pagination.page;
         pagination.pageSize = data.pagination.pageSize;
         pagination.total = data.pagination.total;
         pagination.totalPages = data.pagination.totalPages;
     }
     catch (error) {
-        resourceList.value = [];
         courseOptions.value = [];
+        assetList.value = [];
         stats.total = 0;
         stats.courseCount = 0;
         stats.teacherCount = 0;
-        stats.interactionCount = 0;
+        stats.fileCount = 0;
         pagination.page = 1;
         pagination.pageSize = 6;
         pagination.total = 0;
         pagination.totalPages = 0;
-        errorMessage.value = error?.response?.data?.message || '资源管理列表加载失败';
+        errorMessage.value = error?.response?.data?.message || '素材管理列表加载失败';
     }
     finally {
         loading.value = false;
     }
 }
 watch(() => route.fullPath, () => {
-    loadResources();
+    loadAssets();
 }, { immediate: true });
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "admin-manage-page" },
+    ...{ class: "admin-manage-page asset-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
     ...{ class: "admin-dashboard-sidebar" },
@@ -199,14 +182,14 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin');
+            __VLS_ctx.router.push('/admin/teachers');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/teachers');
+            __VLS_ctx.router.push('/admin/students');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -233,15 +216,15 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "admin-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item is-active" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/assets');
+            __VLS_ctx.router.push('/admin/materials');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item is-active" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
@@ -250,17 +233,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-dashboard-reminder-card admin-dashboard-reminder-card--manage" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-dashboard-reminder-card__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-(__VLS_ctx.reminderTexts[0]);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-(__VLS_ctx.reminderTexts[1]);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-main" },
 });
@@ -274,19 +246,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 (__VLS_ctx.headerText);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-head__actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-    ...{ class: "course-chip course-chip--soft" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin');
-        } },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-});
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
@@ -299,67 +258,6 @@ if (__VLS_ctx.successMessage) {
     });
     (__VLS_ctx.successMessage);
 }
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-filter-panel" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-filter-panel__head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__meta" },
-});
-(__VLS_ctx.pagination.total);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-    ...{ onSubmit: (__VLS_ctx.applySearch) },
-    ...{ class: "admin-manage-filter-form admin-manage-filter-form--resource" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "admin-manage-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    value: (__VLS_ctx.form.keyword),
-    type: "text",
-    maxlength: "200",
-    placeholder: "搜索资源标题、描述或文件名",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "admin-manage-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.form.courseId),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-    value: "",
-});
-for (const [course] of __VLS_getVForSourceType((__VLS_ctx.courseOptions))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (course.id),
-        value: (String(course.id)),
-    });
-    (course.name);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-filter-actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.resetFilters) },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: (__VLS_ctx.loading),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "submit",
-    ...{ class: "auth-btn" },
-    disabled: (__VLS_ctx.loading),
-});
-(__VLS_ctx.loading ? '加载中...' : '搜索资源');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-stats" },
 });
@@ -389,8 +287,86 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElemen
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.interactionCount);
+(__VLS_ctx.stats.fileCount);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+    ...{ class: "admin-manage-filter-panel" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "admin-manage-filter-panel__head" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "admin-manage-panel__eyebrow" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "admin-manage-panel__meta" },
+});
+(__VLS_ctx.pagination.total);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+    ...{ onSubmit: (__VLS_ctx.applySearch) },
+    ...{ class: "admin-manage-filter-form admin-manage-filter-form--resource" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "admin-manage-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    value: (__VLS_ctx.filters.keyword),
+    type: "text",
+    maxlength: "200",
+    placeholder: "搜索标题、说明、内容、文件名或教师姓名",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "admin-manage-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.filters.courseId),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "",
+});
+for (const [course] of __VLS_getVForSourceType((__VLS_ctx.courseOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (course.id),
+        value: (String(course.id)),
+    });
+    (course.name);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "admin-manage-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.filters.type),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "all",
+});
+for (const [option] of __VLS_getVForSourceType((__VLS_ctx.assetTypeOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (option.value),
+        value: (option.value),
+    });
+    (option.label);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "admin-manage-filter-actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.resetFilters) },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+    disabled: (__VLS_ctx.loading),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "submit",
+    ...{ class: "auth-btn" },
+    disabled: (__VLS_ctx.loading),
+});
+(__VLS_ctx.loading ? '加载中...' : '搜索素材');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-panel" },
 });
@@ -405,106 +381,81 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "admin-manage-panel__meta" },
 });
-if (__VLS_ctx.resourceList.length) {
+if (__VLS_ctx.assetList.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "admin-manage-table" },
+        ...{ class: "asset-manage-list" },
     });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "admin-manage-table__head admin-manage-table__head--resource" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.resourceList))) {
+    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.assetList))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-            key: (`${item.type}-${item.id}`),
-            ...{ class: "admin-manage-row admin-manage-row--resource" },
+            key: (item.id),
+            ...{ class: "asset-manage-item asset-manage-item--admin" },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__title" },
+            ...{ class: "asset-manage-item__head" },
         });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.title);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (item.description || `${__VLS_ctx.resourceTypeLabel(item.type)} · ${item.fileName}`);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
-        });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__label" },
+            ...{ class: "teacher-dashboard-tag" },
         });
+        (__VLS_ctx.assetTypeLabel(item.type));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__value" },
-        });
-        (item.courseName);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__label" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__value" },
-        });
-        (item.teacherName);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__label" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__value" },
-        });
-        (__VLS_ctx.resourceMetaText(item));
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__label" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__value" },
+            ...{ class: "asset-manage-item__time" },
         });
         (item.uploadTime);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+            ...{ class: "asset-manage-item__meta" },
+        });
+        (item.courseName);
+        (item.teacherName);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+            ...{ class: "asset-manage-item__meta" },
+        });
+        (item.description || '暂无素材说明');
+        if (item.content) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+                ...{ class: "asset-manage-item__content" },
+            });
+            (item.content);
+        }
+        else {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+                ...{ class: "asset-manage-item__meta" },
+            });
+            (item.fileName || '无文件名');
+            if (item.fileSize) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+                (__VLS_ctx.formatFileSize(item.fileSize));
+            }
+        }
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
+            ...{ class: "asset-manage-item__actions" },
         });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__label" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "admin-manage-row__value" },
-        });
-        (item.interactionCount);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__actions" },
-        });
+        if (item.previewUrl) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                ...{ onClick: (...[$event]) => {
+                        if (!(__VLS_ctx.assetList.length))
+                            return;
+                        if (!(item.previewUrl))
+                            return;
+                        __VLS_ctx.previewAsset(item.previewUrl);
+                    } },
+                type: "button",
+                ...{ class: "course-chip course-chip--soft" },
+            });
+        }
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
             ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.resourceList.length))
+                    if (!(__VLS_ctx.assetList.length))
                         return;
-                    __VLS_ctx.handlePrimaryAction(item);
-                } },
-            type: "button",
-            ...{ class: "course-chip course-chip--soft" },
-        });
-        (item.type === 'material' ? '下载' : '查看');
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.resourceList.length))
-                        return;
-                    __VLS_ctx.removeResource(item);
+                    __VLS_ctx.removeAsset(item);
                 } },
             type: "button",
             ...{ class: "course-chip admin-manage-delete-btn" },
-            disabled: (__VLS_ctx.deletingKey === `${item.type}-${item.id}`),
+            disabled: (__VLS_ctx.deletingId === item.id),
         });
-        (__VLS_ctx.deletingKey === `${item.type}-${item.id}` ? '删除中...' : '删除');
+        (__VLS_ctx.deletingId === item.id ? '删除中...' : '删除');
     }
 }
 else if (!__VLS_ctx.loading) {
@@ -545,6 +496,7 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
     (pageNumber);
 }
 /** @type {__VLS_StyleScopedClasses['admin-manage-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
@@ -556,24 +508,22 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card--manage']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-head__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-head__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-feedback']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stats']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-filter-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-filter-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__eyebrow']} */ ;
@@ -582,47 +532,26 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-filter-form--resource']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-filter-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-table']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-table__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-table__head--resource']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row--resource']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__title']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-row__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item--admin']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__time']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__content']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-item__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
@@ -638,24 +567,24 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             router: router,
             loading: loading,
-            deletingKey: deletingKey,
+            deletingId: deletingId,
             errorMessage: errorMessage,
             successMessage: successMessage,
             courseOptions: courseOptions,
-            resourceList: resourceList,
-            form: form,
+            assetList: assetList,
             stats: stats,
+            filters: filters,
             pagination: pagination,
+            assetTypeOptions: assetTypeOptions,
             headerText: headerText,
-            reminderTexts: reminderTexts,
             pageNumbers: pageNumbers,
-            resourceTypeLabel: resourceTypeLabel,
-            resourceMetaText: resourceMetaText,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,
-            handlePrimaryAction: handlePrimaryAction,
-            removeResource: removeResource,
+            assetTypeLabel: assetTypeLabel,
+            formatFileSize: formatFileSize,
+            previewAsset: previewAsset,
+            removeAsset: removeAsset,
         };
     },
 });

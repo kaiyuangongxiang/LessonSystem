@@ -129,6 +129,108 @@ export async function getTeacherCourseOptions() {
   return response.data.data
 }
 
+export type TeacherAssetType = 'image' | 'audio' | 'text' | 'question' | 'template'
+
+export interface TeacherAssetItem {
+  id: number
+  type: TeacherAssetType
+  courseId: number
+  courseName: string
+  title: string
+  description: string
+  content: string
+  fileName: string
+  fileSize: number
+  uploadTime?: string
+  previewUrl: string
+}
+
+export interface TeacherAssetStats {
+  total: number
+  imageCount: number
+  audioCount: number
+  contentCount: number
+}
+
+export interface TeacherAssetListData {
+  stats: TeacherAssetStats
+  list: TeacherAssetItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: TeacherCourseOption[]
+  }
+}
+
+export interface TeacherAssetQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  type?: TeacherAssetType | 'all'
+}
+
+export interface TeacherAssetPayload {
+  type: TeacherAssetType
+  courseId: string
+  title: string
+  description: string
+  content: string
+  file?: File | null
+}
+
+export interface TeacherAssetUpdatePayload {
+  courseId: string
+  title: string
+  description: string
+  content: string
+}
+
+export async function getTeacherAssets(params: TeacherAssetQuery) {
+  const response = await http.get<ApiSuccess<TeacherAssetListData>>('/teacher/assets', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createTeacherAsset(payload: TeacherAssetPayload) {
+  const formData = new FormData()
+  formData.append('type', payload.type)
+  formData.append('courseId', payload.courseId)
+  formData.append('title', payload.title)
+  formData.append('description', payload.description)
+  formData.append('content', payload.content)
+  if (payload.file) {
+    formData.append('file', payload.file)
+  }
+
+  const response = await http.post<ApiSuccess<TeacherAssetItem>>('/teacher/assets', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data.data
+}
+
+export async function getTeacherAssetDetail(assetId: number) {
+  const response = await http.get<ApiSuccess<TeacherAssetItem>>(`/teacher/assets/${assetId}`)
+  return response.data.data
+}
+
+export async function updateTeacherAssetDetail(assetId: number, payload: TeacherAssetUpdatePayload) {
+  const response = await http.put<ApiSuccess<TeacherAssetItem>>(`/teacher/assets/${assetId}`, payload)
+  return response.data.data
+}
+
+export async function deleteTeacherAssetDetail(assetId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; type: TeacherAssetType; title: string }>>(`/teacher/assets/${assetId}`)
+  return response.data.data
+}
+
 export async function getTeacherProfile() {
   const response = await http.get<ApiSuccess<TeacherProfileResponse>>('/teacher/profile')
   return response.data.data
