@@ -66,6 +66,36 @@ const router = createRouter({
             component: () => import('@/views/admin/AdminHomePlaceholder.vue'),
             meta: { requiresAuth: true, role: 'admin' },
         },
+        {
+            path: '/admin/colleges',
+            name: 'admin-colleges',
+            component: () => import('@/views/admin/AdminCollegeManagePage.vue'),
+            meta: { requiresAuth: true, role: 'admin' },
+        },
+        {
+            path: '/admin/courses',
+            name: 'admin-courses',
+            component: () => import('@/views/admin/AdminCourseManagePage.vue'),
+            meta: { requiresAuth: true, role: 'admin' },
+        },
+        {
+            path: '/admin/materials',
+            name: 'admin-materials',
+            component: () => import('@/views/admin/AdminMaterialManagePage.vue'),
+            meta: { requiresAuth: true, role: 'admin' },
+        },
+        {
+            path: '/admin/videos',
+            name: 'admin-videos',
+            component: () => import('@/views/admin/AdminVideoManagePage.vue'),
+            meta: { requiresAuth: true, role: 'admin' },
+        },
+        {
+            path: '/admin/messages',
+            name: 'admin-messages',
+            component: () => import('@/views/admin/AdminMessageManagePage.vue'),
+            meta: { requiresAuth: true, role: 'admin' },
+        },
     ],
 });
 router.beforeEach((to) => {

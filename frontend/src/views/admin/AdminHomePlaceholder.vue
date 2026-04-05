@@ -8,10 +8,11 @@
 
       <nav class="admin-dashboard-nav">
         <button type="button" class="admin-dashboard-nav__item is-active">总览首页</button>
-        <button type="button" class="admin-dashboard-nav__item is-disabled">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item is-disabled">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item is-disabled">视频管理</button>
-        <button type="button" class="admin-dashboard-nav__item is-disabled">留言管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/videos')">视频管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
 
       <section class="admin-dashboard-reminder-card">

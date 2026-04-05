@@ -29,7 +29,7 @@ const primaryActionText = computed(() => {
     if (!authStore.isAuthenticated) {
         return '登录 / 注册';
     }
-    return authStore.role === 'admin' ? '进入管理端' : '进入教师中心';
+    return authStore.role === 'admin' ? '管理员中心' : '进入教师中心';
 });
 const visibleNotices = computed(() => {
     if (!home.notices.length) {
