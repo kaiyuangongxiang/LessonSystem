@@ -1,4 +1,4 @@
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import http from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
@@ -27,6 +27,9 @@ const home = reactive({
     },
 });
 const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE);
+const activeNoticeIndex = ref(0);
+const activeNotice = computed(() => visibleNotices.value[activeNoticeIndex.value] || visibleNotices.value[0]);
+let noticeRotationTimer;
 const primaryActionText = computed(() => {
     if (!authStore.isAuthenticated) {
         return '登录 / 注册';
@@ -46,6 +49,31 @@ const visibleNotices = computed(() => {
     }
     return home.notices;
 });
+function stopNoticeRotation() {
+    if (noticeRotationTimer !== undefined) {
+        window.clearInterval(noticeRotationTimer);
+        noticeRotationTimer = undefined;
+    }
+}
+function startNoticeRotation() {
+    stopNoticeRotation();
+    if (visibleNotices.value.length <= 1) {
+        return;
+    }
+    noticeRotationTimer = window.setInterval(() => {
+        activeNoticeIndex.value = (activeNoticeIndex.value + 1) % visibleNotices.value.length;
+    }, 4500);
+}
+function pauseNoticeRotation() {
+    stopNoticeRotation();
+}
+function resumeNoticeRotation() {
+    startNoticeRotation();
+}
+function setActiveNotice(index) {
+    activeNoticeIndex.value = index;
+    startNoticeRotation();
+}
 const visibleCourses = computed(() => {
     if (!home.courses.length) {
         return [
@@ -115,7 +143,7 @@ function goTeachingMessages() {
         return;
     }
     if (authStore.role === 'teacher') {
-        router.push('/teacher');
+        router.push('/teacher/messages');
         return;
     }
     router.push('/admin/messages');
@@ -150,6 +178,20 @@ async function loadHome() {
 onMounted(() => {
     loadHome();
 });
+onBeforeUnmount(() => {
+    stopNoticeRotation();
+});
+watch(visibleNotices, (list) => {
+    if (!list.length) {
+        activeNoticeIndex.value = 0;
+        stopNoticeRotation();
+        return;
+    }
+    if (activeNoticeIndex.value >= list.length) {
+        activeNoticeIndex.value = 0;
+    }
+    startNoticeRotation();
+}, { immediate: true });
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
@@ -293,19 +335,87 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "portal-section-head__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({
-    ...{ class: "portal-notice-list" },
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ onMouseenter: (__VLS_ctx.pauseNoticeRotation) },
+    ...{ onMouseleave: (__VLS_ctx.resumeNoticeRotation) },
+    ...{ class: "portal-notice-board" },
 });
-for (const [notice] of __VLS_getVForSourceType((__VLS_ctx.visibleNotices))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({
-        key: (notice.id),
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "portal-notice-board__window" },
+});
+const __VLS_0 = {}.Transition;
+/** @type {[typeof __VLS_components.Transition, typeof __VLS_components.Transition, ]} */ ;
+// @ts-ignore
+const __VLS_1 = __VLS_asFunctionalComponent(__VLS_0, new __VLS_0({
+    name: "portal-notice-slide",
+    mode: "out-in",
+}));
+const __VLS_2 = __VLS_1({
+    name: "portal-notice-slide",
+    mode: "out-in",
+}, ...__VLS_functionalComponentArgsRest(__VLS_1));
+__VLS_3.slots.default;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    key: (`${__VLS_ctx.activeNotice.id}-${__VLS_ctx.activeNoticeIndex}`),
+    ...{ class: "portal-notice-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "portal-notice-card__meta" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "portal-notice-card__date" },
+});
+(__VLS_ctx.activeNotice.publishDate);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "portal-notice-card__badge" },
+});
+(__VLS_ctx.visibleNotices.length > 1 ? `${__VLS_ctx.activeNoticeIndex + 1} / ${__VLS_ctx.visibleNotices.length}` : '当前公告');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.activeNotice.title);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+(__VLS_ctx.activeNotice.content);
+var __VLS_3;
+if (__VLS_ctx.visibleNotices.length > 1) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "portal-notice-board__dots" },
     });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-    (notice.title);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (notice.content);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (notice.publishDate);
+    for (const [notice, index] of __VLS_getVForSourceType((__VLS_ctx.visibleNotices))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.visibleNotices.length > 1))
+                        return;
+                    __VLS_ctx.setActiveNotice(index);
+                } },
+            key: (notice.id),
+            type: "button",
+            ...{ class: (['portal-notice-board__dot', { 'is-active': index === __VLS_ctx.activeNoticeIndex }]) },
+            'aria-label': (`切换到公告 ${index + 1}`),
+        });
+    }
+}
+if (__VLS_ctx.visibleNotices.length > 1) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({
+        ...{ class: "portal-notice-ticker" },
+    });
+    for (const [notice, index] of __VLS_getVForSourceType((__VLS_ctx.visibleNotices))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({
+            key: (`${notice.id}-ticker`),
+            ...{ class: ({ 'is-active': index === __VLS_ctx.activeNoticeIndex }) },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.visibleNotices.length > 1))
+                        return;
+                    __VLS_ctx.setActiveNotice(index);
+                } },
+            type: "button",
+            ...{ class: "portal-notice-ticker__item" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (notice.publishDate);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+        (notice.title);
+    }
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ref: "courseSectionRef",
@@ -447,7 +557,15 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-panel--notice']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-notice-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-board']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-board__window']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-card__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-card__date']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-card__badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-board__dots']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-ticker']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-notice-ticker__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-panel--courses']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
@@ -485,8 +603,13 @@ const __VLS_self = (await import('vue')).defineComponent({
             resourceSectionRef: resourceSectionRef,
             home: home,
             heroTitleText: heroTitleText,
+            activeNoticeIndex: activeNoticeIndex,
+            activeNotice: activeNotice,
             primaryActionText: primaryActionText,
             visibleNotices: visibleNotices,
+            pauseNoticeRotation: pauseNoticeRotation,
+            resumeNoticeRotation: resumeNoticeRotation,
+            setActiveNotice: setActiveNotice,
             visibleCourses: visibleCourses,
             visibleMaterials: visibleMaterials,
             visibleVideos: visibleVideos,

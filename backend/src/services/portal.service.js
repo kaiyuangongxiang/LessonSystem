@@ -17,8 +17,6 @@ const DEFAULT_PROFILE = {
   systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
 }
 
-let systemHeroTitleSchemaSupportPromise = null
-
 function badRequest(message) {
   const error = new Error(message)
   error.status = 400
@@ -77,22 +75,16 @@ function normalizeSort(value) {
 }
 
 async function getSystemHeroTitleSchemaSupport() {
-  if (!systemHeroTitleSchemaSupportPromise) {
-    systemHeroTitleSchemaSupportPromise = (async () => {
-      const [rows] = await pool.query(
-        `SELECT 1
-         FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME = 'system_profile'
-           AND COLUMN_NAME = 'hero_title'
-         LIMIT 1`,
-      )
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'system_profile'
+       AND COLUMN_NAME = 'hero_title'
+     LIMIT 1`,
+  )
 
-      return rows.length > 0
-    })()
-  }
-
-  return systemHeroTitleSchemaSupportPromise
+  return rows.length > 0
 }
 
 function buildCourseWhereClause({ keyword, collegeId }) {

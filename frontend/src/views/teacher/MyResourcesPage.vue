@@ -1,20 +1,20 @@
 <template>
-  <main class="my-resources-page">
-    <aside class="my-resources-sidebar">
+  <main class="teacher-dashboard-page">
+    <aside class="teacher-dashboard-sidebar">
       <div>
-        <div class="my-resources-sidebar__eyebrow">TEACHER WORKSPACE</div>
+        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER WORKSPACE</div>
         <h1>教师中心</h1>
       </div>
 
-      <nav class="my-resources-nav">
-        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
-        <button type="button" class="my-resources-nav__item is-active">我的资源</button>
-        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
+      <nav class="teacher-dashboard-nav">
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">工作台首页</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
+        <button type="button" class="teacher-dashboard-nav__item is-active">我的资源</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
     </aside>
 
-    <section class="my-resources-main">
+    <section class="teacher-dashboard-main my-resources-main">
       <header class="my-resources-head">
         <div>
           <div class="my-resources-head__eyebrow">MY RESOURCES</div>

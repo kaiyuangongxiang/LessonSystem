@@ -404,21 +404,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicEleme
     placeholder: "请输入首页展示的系统介绍内容",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-system-preview" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-system-preview__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.profileForm.systemName || '系统名称预览');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h4, __VLS_intrinsicElements.h4)({});
-(__VLS_ctx.profileForm.heroTitle || '首页主标题预览');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.profileForm.systemIntro || '系统介绍会展示在网站前台首页主视觉区域。');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "admin-course-editor__footer" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "admin-course-editor__actions" },
 });
@@ -652,8 +639,6 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-system-preview']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-system-preview__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;

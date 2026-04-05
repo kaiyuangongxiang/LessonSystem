@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  createMessage,
   createAdmin,
   createCollege,
   createCourse,
@@ -10,6 +11,7 @@ import {
   deleteCourse,
   deleteMaterial,
   deleteMessage,
+  deleteMessageReply,
   deleteNotice,
   deleteTeacherUser,
   deleteVideo,
@@ -64,8 +66,10 @@ router.delete('/materials/:materialId', deleteMaterial)
 router.get('/videos', getVideoList)
 router.delete('/videos/:videoId', deleteVideo)
 router.get('/messages', getMessageList)
+router.post('/messages', createMessage)
 router.get('/messages/:messageId', getMessageDetail)
 router.post('/messages/:messageId/replies', postMessageReply)
 router.delete('/messages/:messageId', deleteMessage)
+router.delete('/messages/:messageId/replies/:replyId', deleteMessageReply)
 
 export default router

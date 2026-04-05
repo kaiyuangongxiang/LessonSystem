@@ -73,13 +73,46 @@
           </div>
         </div>
 
-        <ul class="portal-notice-list">
-          <li v-for="notice in visibleNotices" :key="notice.id">
-            <strong>{{ notice.title }}</strong>
-            <p>{{ notice.content }}</p>
-            <span>{{ notice.publishDate }}</span>
-          </li>
-        </ul>
+        <div class="portal-notice-board" @mouseenter="pauseNoticeRotation" @mouseleave="resumeNoticeRotation">
+          <div class="portal-notice-board__window">
+            <Transition name="portal-notice-slide" mode="out-in">
+              <article :key="`${activeNotice.id}-${activeNoticeIndex}`" class="portal-notice-card">
+                <div class="portal-notice-card__meta">
+                  <span class="portal-notice-card__date">{{ activeNotice.publishDate }}</span>
+                  <span class="portal-notice-card__badge">
+                    {{ visibleNotices.length > 1 ? `${activeNoticeIndex + 1} / ${visibleNotices.length}` : '当前公告' }}
+                  </span>
+                </div>
+                <strong>{{ activeNotice.title }}</strong>
+                <p>{{ activeNotice.content }}</p>
+              </article>
+            </Transition>
+          </div>
+
+          <div v-if="visibleNotices.length > 1" class="portal-notice-board__dots">
+            <button
+              v-for="(notice, index) in visibleNotices"
+              :key="notice.id"
+              type="button"
+              :class="['portal-notice-board__dot', { 'is-active': index === activeNoticeIndex }]"
+              :aria-label="`切换到公告 ${index + 1}`"
+              @click="setActiveNotice(index)"
+            ></button>
+          </div>
+
+          <ul v-if="visibleNotices.length > 1" class="portal-notice-ticker">
+            <li
+              v-for="(notice, index) in visibleNotices"
+              :key="`${notice.id}-ticker`"
+              :class="{ 'is-active': index === activeNoticeIndex }"
+            >
+              <button type="button" class="portal-notice-ticker__item" @click="setActiveNotice(index)">
+                <span>{{ notice.publishDate }}</span>
+                <strong>{{ notice.title }}</strong>
+              </button>
+            </li>
+          </ul>
+        </div>
       </article>
 
       <article ref="courseSectionRef" class="portal-panel portal-panel--courses">
@@ -147,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '@/services/http'
 import { useAuthStore } from '@/stores/auth'
@@ -227,6 +260,9 @@ const home = reactive<HomeResponse>({
   },
 })
 const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE)
+const activeNoticeIndex = ref(0)
+const activeNotice = computed(() => visibleNotices.value[activeNoticeIndex.value] || visibleNotices.value[0])
+let noticeRotationTimer: number | undefined
 
 const primaryActionText = computed(() => {
   if (!authStore.isAuthenticated) {
@@ -250,6 +286,38 @@ const visibleNotices = computed(() => {
 
   return home.notices
 })
+
+function stopNoticeRotation() {
+  if (noticeRotationTimer !== undefined) {
+    window.clearInterval(noticeRotationTimer)
+    noticeRotationTimer = undefined
+  }
+}
+
+function startNoticeRotation() {
+  stopNoticeRotation()
+
+  if (visibleNotices.value.length <= 1) {
+    return
+  }
+
+  noticeRotationTimer = window.setInterval(() => {
+    activeNoticeIndex.value = (activeNoticeIndex.value + 1) % visibleNotices.value.length
+  }, 4500)
+}
+
+function pauseNoticeRotation() {
+  stopNoticeRotation()
+}
+
+function resumeNoticeRotation() {
+  startNoticeRotation()
+}
+
+function setActiveNotice(index: number) {
+  activeNoticeIndex.value = index
+  startNoticeRotation()
+}
 
 const visibleCourses = computed(() => {
   if (!home.courses.length) {
@@ -336,7 +404,7 @@ function goTeachingMessages() {
   }
 
   if (authStore.role === 'teacher') {
-    router.push('/teacher')
+    router.push('/teacher/messages')
     return
   }
 
@@ -376,4 +444,26 @@ async function loadHome() {
 onMounted(() => {
   loadHome()
 })
+
+onBeforeUnmount(() => {
+  stopNoticeRotation()
+})
+
+watch(
+  visibleNotices,
+  (list) => {
+    if (!list.length) {
+      activeNoticeIndex.value = 0
+      stopNoticeRotation()
+      return
+    }
+
+    if (activeNoticeIndex.value >= list.length) {
+      activeNoticeIndex.value = 0
+    }
+
+    startNoticeRotation()
+  },
+  { immediate: true },
+)
 </script>

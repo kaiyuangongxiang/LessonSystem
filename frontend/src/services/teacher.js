@@ -91,3 +91,29 @@ export async function uploadTeacherVideo(payload) {
     });
     return response.data.data;
 }
+export async function getTeacherMessageList(params) {
+    const response = await http.get('/teacher/messages', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createTeacherMessage(payload) {
+    const response = await http.post('/teacher/messages', payload);
+    return response.data.data;
+}
+export async function getTeacherMessageDetail(messageId) {
+    const response = await http.get(`/teacher/messages/${messageId}`);
+    return response.data.data;
+}
+export async function createTeacherMessageReply(messageId, payload) {
+    const response = await http.post(`/teacher/messages/${messageId}/replies`, payload);
+    return response.data.data;
+}
+export async function deleteTeacherMessage(messageId) {
+    const response = await http.delete(`/teacher/messages/${messageId}`);
+    return response.data.data;
+}
+export async function deleteTeacherMessageReply(messageId, replyId) {
+    const response = await http.delete(`/teacher/messages/${messageId}/replies/${replyId}`);
+    return response.data.data;
+}

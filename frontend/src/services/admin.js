@@ -125,11 +125,19 @@ export async function getAdminMessageDetail(messageId) {
     const response = await http.get(`/admin/messages/${messageId}`);
     return response.data.data;
 }
+export async function createAdminMessage(payload) {
+    const response = await http.post('/admin/messages', payload);
+    return response.data.data;
+}
 export async function createAdminMessageReply(messageId, payload) {
     const response = await http.post(`/admin/messages/${messageId}/replies`, payload);
     return response.data.data;
 }
 export async function deleteAdminMessage(messageId) {
     const response = await http.delete(`/admin/messages/${messageId}`);
+    return response.data.data;
+}
+export async function deleteAdminMessageReply(messageId, replyId) {
+    const response = await http.delete(`/admin/messages/${messageId}/replies/${replyId}`);
     return response.data.data;
 }

@@ -7,19 +7,11 @@
       </div>
 
       <nav class="teacher-dashboard-nav">
-        <button type="button" class="teacher-dashboard-nav__item is-active">工作台首页</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
+        <button type="button" class="teacher-dashboard-nav__item is-active">总览首页</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
-
-      <section class="teacher-dashboard-reminder-card">
-        <div class="teacher-dashboard-reminder-card__eyebrow">TODAY REMINDER</div>
-        <ul>
-          <li>{{ reminderTexts[0] }}</li>
-          <li>{{ reminderTexts[1] }}</li>
-        </ul>
-      </section>
     </aside>
 
     <section class="teacher-dashboard-main">
@@ -70,7 +62,7 @@
               </div>
             </article>
           </div>
-          <div v-else class="course-detail-empty">当前还没有上传资料或视频，后续可从这里统一查看最近内容。</div>
+          <div v-else class="course-detail-empty">当前还没有上传资料或视频，后续可以从这里统一查看最近内容。</div>
         </article>
 
         <article class="teacher-dashboard-panel teacher-dashboard-panel--actions">
@@ -123,6 +115,7 @@
           <div class="teacher-dashboard-weekly">
             <p>近 7 天新增资料 {{ dashboard?.weeklyActivity.materialCount ?? 0 }} 份。</p>
             <p>近 7 天新增视频 {{ dashboard?.weeklyActivity.videoCount ?? 0 }} 个。</p>
+            <p>近 7 天新增交流主题 {{ dashboard?.weeklyActivity.topicCount ?? 0 }} 条。</p>
             <div class="teacher-dashboard-status">教师工作台状态正常</div>
           </div>
         </article>
@@ -156,20 +149,9 @@ const metricCards = computed(() => {
 
   return [
     { label: '我的课程数', value: stats.courseCount, tip: '教师名下课程总览' },
-    { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资源数量' },
+    { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资料资源数量' },
     { label: '我的视频数', value: stats.videoCount, tip: '已上传视频资源数量' },
-  ]
-})
-
-const reminderTexts = computed(() => {
-  const stats = dashboard.value?.stats
-  if (!stats) {
-    return ['正在加载教师工作台数据', '稍后可查看最近上传与课程热度']
-  }
-
-  return [
-    stats.materialCount > 0 ? `当前共有 ${stats.materialCount} 份资料可继续维护。` : '当前还没有资料，后续可从资料上传入口补充。',
-    stats.videoCount > 0 ? `当前共有 ${stats.videoCount} 个视频资源。` : '当前还没有视频资源，后续可在资源上传页补充。',
+    { label: '交流主题数', value: stats.topicCount, tip: '参与中的教学交流主题数量' },
   ]
 })
 
@@ -185,6 +167,10 @@ const pendingText = computed(() => {
 
   if (!stats.materialCount && !stats.videoCount) {
     return '已有课程，但还没有上传资料或视频，可先从资源上传开始补充。'
+  }
+
+  if (!stats.topicCount) {
+    return '课程资源已经在持续补充，接下来可以进入教学交流区沉淀经验与问题。'
   }
 
   return '可以继续补充课程资料和视频资源，并同步维护个人资料信息。'

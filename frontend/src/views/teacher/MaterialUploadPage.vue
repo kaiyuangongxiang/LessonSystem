@@ -1,20 +1,20 @@
 <template>
-  <main class="material-upload-page">
-    <aside class="material-upload-sidebar">
+  <main class="teacher-dashboard-page">
+    <aside class="teacher-dashboard-sidebar">
       <div>
-        <div class="material-upload-sidebar__eyebrow">TEACHER WORKSPACE</div>
+        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER WORKSPACE</div>
         <h1>教师中心</h1>
       </div>
 
-      <nav class="material-upload-nav">
-        <button type="button" class="material-upload-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="material-upload-nav__item is-active">资源上传</button>
-        <button type="button" class="material-upload-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
-        <button type="button" class="material-upload-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
+      <nav class="teacher-dashboard-nav">
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">工作台首页</button>
+        <button type="button" class="teacher-dashboard-nav__item is-active">资源上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
     </aside>
 
-    <section class="material-upload-main">
+    <section class="teacher-dashboard-main material-upload-main">
       <header class="material-upload-head">
         <div>
           <div class="material-upload-head__eyebrow">RESOURCE UPLOAD</div>

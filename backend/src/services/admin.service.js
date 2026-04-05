@@ -5,8 +5,6 @@ import { logger } from '../utils/logger.js'
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
 let replySchemaSupportPromise = null
-let systemHeroTitleSchemaSupportPromise = null
-
 function badRequest(message) {
   const error = new Error(message)
   error.status = 400
@@ -637,22 +635,16 @@ async function getReplySchemaSupport() {
 }
 
 async function getSystemHeroTitleSchemaSupport() {
-  if (!systemHeroTitleSchemaSupportPromise) {
-    systemHeroTitleSchemaSupportPromise = (async () => {
-      const [rows] = await pool.query(
-        `SELECT 1
-         FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME = 'system_profile'
-           AND COLUMN_NAME = 'hero_title'
-         LIMIT 1`,
-      )
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'system_profile'
+       AND COLUMN_NAME = 'hero_title'
+     LIMIT 1`,
+  )
 
-      return rows.length > 0
-    })()
-  }
-
-  return systemHeroTitleSchemaSupportPromise
+  return rows.length > 0
 }
 
 async function getAdminProfile(adminId) {

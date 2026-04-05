@@ -1,20 +1,24 @@
 import {
   createTeacherMaterial,
-  createTeacherMessage,
-  createTeacherMessageReply,
   createTeacherResourceBundle,
   createTeacherVideo,
   deleteTeacherResource,
   getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherProfileDetail,
-  getTeacherMessageDetail,
-  getTeacherMessageList,
   getTeacherResourceDetail,
   getTeacherResourceList,
   updateTeacherProfileInfo,
   updateTeacherResource,
 } from '../services/teacher.service.js'
+import {
+  createDiscussionReply,
+  createDiscussionTopic,
+  deleteDiscussionReply,
+  deleteDiscussionTopic,
+  getDiscussionMessageDetail,
+  getDiscussionMessageList,
+} from '../services/discussion.service.js'
 
 export async function getDashboard(req, res, next) {
   try {
@@ -203,8 +207,9 @@ export async function removeResource(req, res, next) {
 }
 export async function getMessages(req, res, next) {
   try {
-    const result = await getTeacherMessageList({
-      teacherId: req.auth.userId,
+    const result = await getDiscussionMessageList({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
       query: req.query,
     })
 
@@ -220,8 +225,9 @@ export async function getMessages(req, res, next) {
 
 export async function postMessage(req, res, next) {
   try {
-    const result = await createTeacherMessage({
-      teacherId: req.auth.userId,
+    const result = await createDiscussionTopic({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
       payload: req.body,
     })
 
@@ -237,8 +243,9 @@ export async function postMessage(req, res, next) {
 
 export async function getMessageDetail(req, res, next) {
   try {
-    const result = await getTeacherMessageDetail({
-      teacherId: req.auth.userId,
+    const result = await getDiscussionMessageDetail({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
       messageId: req.params.messageId,
     })
 
@@ -254,8 +261,9 @@ export async function getMessageDetail(req, res, next) {
 
 export async function postMessageReply(req, res, next) {
   try {
-    const result = await createTeacherMessageReply({
-      teacherId: req.auth.userId,
+    const result = await createDiscussionReply({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
       messageId: req.params.messageId,
       payload: req.body,
     })
@@ -263,6 +271,43 @@ export async function postMessageReply(req, res, next) {
     res.status(201).json({
       code: 201,
       message: '发布回复成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteMessage(req, res, next) {
+  try {
+    const result = await deleteDiscussionTopic({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
+      messageId: req.params.messageId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除交流主题成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteMessageReply(req, res, next) {
+  try {
+    const result = await deleteDiscussionReply({
+      viewerRole: 'teacher',
+      viewerId: req.auth.userId,
+      messageId: req.params.messageId,
+      replyId: req.params.replyId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除回复成功',
       data: result,
     })
   } catch (error) {

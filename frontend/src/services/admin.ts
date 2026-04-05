@@ -326,12 +326,16 @@ export interface AdminMessageItem {
   id: number
   title: string
   summary: string
-  teacherName: string
+  authorName: string
+  authorRole: 'teacher' | 'admin'
+  teacherId: number | null
+  adminId: number | null
   publishDate: string
   lastReplyAt: string
   status: string
   statusLabel: string
   replyCount: number
+  canDelete: boolean
 }
 
 export interface AdminMessageListData {
@@ -348,7 +352,13 @@ export interface AdminMessageReplyItem {
   id: number
   content: string
   authorName: string
+  authorRole: 'teacher' | 'admin'
+  teacherId: number | null
+  adminId: number | null
   replyTime: string
+  parentReplyId: number | null
+  parentAuthorName: string
+  canDelete: boolean
 }
 
 export interface AdminMessageDetailData {
@@ -356,14 +366,19 @@ export interface AdminMessageDetailData {
     id: number
     title: string
     content: string
-    teacherId: number
-    teacherName: string
+    teacherId: number | null
+    adminId: number | null
+    authorName: string
+    authorRole: 'teacher' | 'admin'
     publishDate: string
     statusLabel: string
+    canDelete: boolean
   }
   replies: AdminMessageReplyItem[]
   capabilities: {
+    canCreateTopic: boolean
     canReply: boolean
+    canReplyToReply: boolean
   }
 }
 
@@ -371,6 +386,16 @@ export interface AdminMessageQuery {
   page?: number
   pageSize?: number
   keyword?: string
+}
+
+export interface AdminMessageTopicPayload {
+  title: string
+  content: string
+}
+
+export interface AdminMessageReplyPayload {
+  content: string
+  parentReplyId?: number | null
 }
 
 export interface AdminSystemProfile {
@@ -571,12 +596,22 @@ export async function getAdminMessageDetail(messageId: number) {
   return response.data.data
 }
 
-export async function createAdminMessageReply(messageId: number, payload: { content: string }) {
+export async function createAdminMessage(payload: AdminMessageTopicPayload) {
+  const response = await http.post<ApiSuccess<{ id: number; title: string }>>('/admin/messages', payload)
+  return response.data.data
+}
+
+export async function createAdminMessageReply(messageId: number, payload: AdminMessageReplyPayload) {
   const response = await http.post<ApiSuccess<{ id: number }>>(`/admin/messages/${messageId}/replies`, payload)
   return response.data.data
 }
 
 export async function deleteAdminMessage(messageId: number) {
   const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/admin/messages/${messageId}`)
+  return response.data.data
+}
+
+export async function deleteAdminMessageReply(messageId: number, replyId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number }>>(`/admin/messages/${messageId}/replies/${replyId}`)
   return response.data.data
 }

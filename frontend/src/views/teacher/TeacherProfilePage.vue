@@ -1,28 +1,20 @@
 <template>
-  <main class="teacher-profile-page">
-    <aside class="teacher-profile-sidebar">
+  <main class="teacher-dashboard-page">
+    <aside class="teacher-dashboard-sidebar">
       <div>
-        <div class="teacher-profile-sidebar__eyebrow">TEACHER WORKSPACE</div>
+        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER WORKSPACE</div>
         <h1>教师中心</h1>
       </div>
 
-      <nav class="teacher-profile-nav">
-        <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
-        <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
-        <button type="button" class="teacher-profile-nav__item is-active">个人资料</button>
+      <nav class="teacher-dashboard-nav">
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">工作台首页</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
+        <button type="button" class="teacher-dashboard-nav__item is-active">个人资料</button>
       </nav>
-
-      <section class="teacher-profile-side-card">
-        <div class="teacher-profile-side-card__eyebrow">PROFILE GUIDE</div>
-        <ul>
-          <li>用户名、教师姓名、性别和所属学院为基础信息。</li>
-          <li>邮箱与个人简介支持选填，方便后续展示和联系。</li>
-        </ul>
-      </section>
     </aside>
 
-    <section class="teacher-profile-main">
+    <section class="teacher-dashboard-main teacher-profile-main">
       <header class="teacher-profile-head">
         <div>
           <div class="teacher-profile-head__eyebrow">PROFILE SETTINGS</div>

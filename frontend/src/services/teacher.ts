@@ -304,3 +304,111 @@ export async function uploadTeacherVideo(payload: TeacherVideoUploadPayload) {
 
   return response.data.data
 }
+
+export interface TeacherMessageItem {
+  id: number
+  title: string
+  summary: string
+  authorName: string
+  authorRole: 'teacher' | 'admin'
+  teacherId: number | null
+  adminId: number | null
+  publishDate: string
+  lastReplyAt: string
+  status: string
+  statusLabel: string
+  replyCount: number
+  canDelete: boolean
+}
+
+export interface TeacherMessageReplyItem {
+  id: number
+  content: string
+  authorName: string
+  authorRole: 'teacher' | 'admin'
+  teacherId: number | null
+  adminId: number | null
+  replyTime: string
+  parentReplyId: number | null
+  parentAuthorName: string
+  canDelete: boolean
+}
+
+export interface TeacherMessageDetailData {
+  topic: {
+    id: number
+    title: string
+    content: string
+    teacherId: number | null
+    adminId: number | null
+    authorName: string
+    authorRole: 'teacher' | 'admin'
+    publishDate: string
+    statusLabel: string
+    canDelete: boolean
+  }
+  replies: TeacherMessageReplyItem[]
+  capabilities: {
+    canCreateTopic: boolean
+    canReply: boolean
+    canReplyToReply: boolean
+  }
+}
+
+export interface TeacherMessageListData {
+  list: TeacherMessageItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
+export interface TeacherMessageQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+}
+
+export interface TeacherMessageTopicPayload {
+  title: string
+  content: string
+}
+
+export interface TeacherMessageReplyPayload {
+  content: string
+  parentReplyId?: number | null
+}
+
+export async function getTeacherMessageList(params: TeacherMessageQuery) {
+  const response = await http.get<ApiSuccess<TeacherMessageListData>>('/teacher/messages', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createTeacherMessage(payload: TeacherMessageTopicPayload) {
+  const response = await http.post<ApiSuccess<{ id: number; title: string }>>('/teacher/messages', payload)
+  return response.data.data
+}
+
+export async function getTeacherMessageDetail(messageId: number) {
+  const response = await http.get<ApiSuccess<TeacherMessageDetailData>>(`/teacher/messages/${messageId}`)
+  return response.data.data
+}
+
+export async function createTeacherMessageReply(messageId: number, payload: TeacherMessageReplyPayload) {
+  const response = await http.post<ApiSuccess<{ id: number }>>(`/teacher/messages/${messageId}/replies`, payload)
+  return response.data.data
+}
+
+export async function deleteTeacherMessage(messageId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/teacher/messages/${messageId}`)
+  return response.data.data
+}
+
+export async function deleteTeacherMessageReply(messageId: number, replyId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number }>>(`/teacher/messages/${messageId}/replies/${replyId}`)
+  return response.data.data
+}

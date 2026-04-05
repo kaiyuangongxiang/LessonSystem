@@ -96,15 +96,7 @@
               ></textarea>
             </label>
 
-            <div class="admin-system-preview">
-              <div class="admin-system-preview__eyebrow">HOME PREVIEW</div>
-              <strong>{{ profileForm.systemName || '系统名称预览' }}</strong>
-              <h4>{{ profileForm.heroTitle || '首页主标题预览' }}</h4>
-              <p>{{ profileForm.systemIntro || '系统介绍会展示在网站前台首页主视觉区域。' }}</p>
-            </div>
-
             <div class="admin-course-editor__footer">
-              <p>保存后，网站前台首页的系统名称、主标题和介绍会立即使用最新配置。</p>
               <div class="admin-course-editor__actions">
                 <button type="submit" class="auth-btn" :disabled="savingProfile">{{ savingProfile ? '保存中...' : '保存系统介绍' }}</button>
               </div>

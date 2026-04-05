@@ -17,18 +17,9 @@ const metricCards = computed(() => {
     };
     return [
         { label: '我的课程数', value: stats.courseCount, tip: '教师名下课程总览' },
-        { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资源数量' },
+        { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资料资源数量' },
         { label: '我的视频数', value: stats.videoCount, tip: '已上传视频资源数量' },
-    ];
-});
-const reminderTexts = computed(() => {
-    const stats = dashboard.value?.stats;
-    if (!stats) {
-        return ['正在加载教师工作台数据', '稍后可查看最近上传与课程热度'];
-    }
-    return [
-        stats.materialCount > 0 ? `当前共有 ${stats.materialCount} 份资料可继续维护。` : '当前还没有资料，后续可从资料上传入口补充。',
-        stats.videoCount > 0 ? `当前共有 ${stats.videoCount} 个视频资源。` : '当前还没有视频资源，后续可在资源上传页补充。',
+        { label: '交流主题数', value: stats.topicCount, tip: '参与中的教学交流主题数量' },
     ];
 });
 const pendingText = computed(() => {
@@ -41,6 +32,9 @@ const pendingText = computed(() => {
     }
     if (!stats.materialCount && !stats.videoCount) {
         return '已有课程，但还没有上传资料或视频，可先从资源上传开始补充。';
+    }
+    if (!stats.topicCount) {
+        return '课程资源已经在持续补充，接下来可以进入教学交流区沉淀经验与问题。';
     }
     return '可以继续补充课程资料和视频资源，并同步维护个人资料信息。';
 });
@@ -99,22 +93,18 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/messages');
+        } },
+    type: "button",
+    ...{ class: "teacher-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/profile');
         } },
     type: "button",
     ...{ class: "teacher-dashboard-nav__item" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "teacher-dashboard-reminder-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-dashboard-reminder-card__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-(__VLS_ctx.reminderTexts[0]);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-(__VLS_ctx.reminderTexts[1]);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-main" },
 });
@@ -250,6 +240,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/messages');
+        } },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/profile');
         } },
     type: "button",
@@ -314,6 +311,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 (__VLS_ctx.dashboard?.weeklyActivity.materialCount ?? 0);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 (__VLS_ctx.dashboard?.weeklyActivity.videoCount ?? 0);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+(__VLS_ctx.dashboard?.weeklyActivity.topicCount ?? 0);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-dashboard-status" },
 });
@@ -326,8 +325,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-reminder-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-reminder-card__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head__eyebrow']} */ ;
@@ -363,6 +361,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-note']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid--bottom']} */ ;
@@ -387,7 +387,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             errorMessage: errorMessage,
             welcomeText: welcomeText,
             metricCards: metricCards,
-            reminderTexts: reminderTexts,
             pendingText: pendingText,
             handleLogout: handleLogout,
         };

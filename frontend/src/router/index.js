@@ -62,7 +62,8 @@ const router = createRouter({
         {
             path: '/teacher/messages',
             name: 'teacher-messages',
-            redirect: { name: 'teacher-home' },
+            component: () => import('@/views/teacher/TeacherMessagePage.vue'),
+            meta: { requiresAuth: true, role: 'teacher' },
         },
         {
             path: '/admin',
@@ -137,6 +138,8 @@ router.afterEach((to) => {
         return;
     }
     const isAdminPage = typeof to.path === 'string' && to.path.startsWith('/admin');
+    const isTeacherPage = typeof to.path === 'string' && to.path.startsWith('/teacher');
     document.body.classList.toggle('body-admin-locked', isAdminPage);
+    document.body.classList.toggle('body-teacher-locked', isTeacherPage);
 });
 export default router;
