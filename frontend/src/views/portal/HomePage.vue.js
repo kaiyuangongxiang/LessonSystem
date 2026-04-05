@@ -2,6 +2,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import http from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
+const DEFAULT_HERO_TITLE = '让课程、资料与视频在一个入口里协同';
 const router = useRouter();
 const authStore = useAuthStore();
 const searchKeyword = ref('');
@@ -11,6 +12,7 @@ const courseSectionRef = ref(null);
 const resourceSectionRef = ref(null);
 const home = reactive({
     profile: {
+        heroTitle: '让课程、资料与视频在一个入口里协同',
         systemName: '在线教师备课系统',
         systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
     },
@@ -24,7 +26,7 @@ const home = reactive({
         videoCount: 0,
     },
 });
-const heroTitle = computed(() => '让课程、资料与视频在一个入口里协同');
+const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE);
 const primaryActionText = computed(() => {
     if (!authStore.isAuthenticated) {
         return '登录 / 注册';
@@ -130,7 +132,11 @@ async function loadHome() {
     try {
         const response = await http.get('/portal/home');
         const data = response.data.data;
-        home.profile = data.profile;
+        home.profile = {
+            ...home.profile,
+            ...data.profile,
+            heroTitle: data?.profile?.heroTitle || DEFAULT_HERO_TITLE,
+        };
         home.notices = data.notices;
         home.courses = data.courses;
         home.materials = data.materials;
@@ -225,11 +231,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElemen
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "portal-hero__content" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "portal-hero__eyebrow" },
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
-(__VLS_ctx.heroTitle);
+(__VLS_ctx.heroTitleText);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 (__VLS_ctx.home.profile.systemIntro);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -430,7 +433,6 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-login-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__content']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-hero__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__btn']} */ ;
@@ -482,7 +484,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             courseSectionRef: courseSectionRef,
             resourceSectionRef: resourceSectionRef,
             home: home,
-            heroTitle: heroTitle,
+            heroTitleText: heroTitleText,
             primaryActionText: primaryActionText,
             visibleNotices: visibleNotices,
             visibleCourses: visibleCourses,

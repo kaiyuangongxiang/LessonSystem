@@ -72,6 +72,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'admin' },
     },
     {
+      path: '/admin/teachers',
+      name: 'admin-teachers',
+      component: () => import('@/views/admin/AdminTeacherManagePage.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
       path: '/admin/accounts',
       name: 'admin-accounts',
       component: () => import('@/views/admin/AdminAccountManagePage.vue'),
@@ -96,10 +102,15 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'admin' },
     },
     {
+      path: '/admin/system',
+      name: 'admin-system',
+      component: () => import('@/views/admin/AdminSystemManagePage.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
       path: '/admin/videos',
       name: 'admin-videos',
-      component: () => import('@/views/admin/AdminVideoManagePage.vue'),
-      meta: { requiresAuth: true, role: 'admin' },
+      redirect: { name: 'admin-materials' },
     },
     {
       path: '/admin/messages',
@@ -126,6 +137,15 @@ router.beforeEach((to) => {
   }
 
   return true
+})
+
+router.afterEach((to) => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const isAdminPage = typeof to.path === 'string' && to.path.startsWith('/admin')
+  document.body.classList.toggle('body-admin-locked', isAdminPage)
 })
 
 export default router

@@ -359,7 +359,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/system');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/teachers');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -385,13 +399,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin/materials');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/videos');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -607,8 +614,6 @@ else if (__VLS_ctx.courseList.length) {
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.name);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.updateDate);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
         (item.summary || '暂无课程简介，建议先补充课程定位和教学范围。');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -650,6 +655,8 @@ else if (__VLS_ctx.courseList.length) {
         (item.teachingContent ? '已写教学内容' : '缺教学内容');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         (item.teachingIdea ? '已写教学思路' : '缺教学思路');
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (item.updateDate);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "admin-course-crud-item__actions" },
         });
@@ -872,11 +879,13 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item--system']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card']} */ ;

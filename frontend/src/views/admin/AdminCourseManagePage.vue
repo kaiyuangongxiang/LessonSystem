@@ -7,12 +7,13 @@
       </div>
 
       <nav class="admin-dashboard-nav">
+        <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item is-active">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/videos')">视频管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
 
@@ -130,7 +131,6 @@
             <div class="admin-course-crud-item__main">
               <div class="admin-course-crud-item__head">
                 <strong>{{ item.name }}</strong>
-                <span>最近更新 {{ item.updateDate }}</span>
               </div>
 
               <p>{{ item.summary || '暂无课程简介，建议先补充课程定位和教学范围。' }}</p>
@@ -163,6 +163,7 @@
                 <span>{{ item.teachingGoal ? '已写教学目标' : '缺教学目标' }}</span>
                 <span>{{ item.teachingContent ? '已写教学内容' : '缺教学内容' }}</span>
                 <span>{{ item.teachingIdea ? '已写教学思路' : '缺教学思路' }}</span>
+                <span>最近更新 {{ item.updateDate }}</span>
               </div>
             </div>
 

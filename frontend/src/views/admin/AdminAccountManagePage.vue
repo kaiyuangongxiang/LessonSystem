@@ -7,12 +7,13 @@
       </div>
 
       <nav class="admin-dashboard-nav">
+        <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
         <button type="button" class="admin-dashboard-nav__item is-active">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/videos')">视频管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
 
@@ -80,7 +81,6 @@
             <div class="admin-course-crud-item__main">
               <div class="admin-course-crud-item__head">
                 <strong>{{ item.name }}</strong>
-                <span>最近更新 {{ item.updateTime }}</span>
               </div>
 
               <p>{{ item.realName ? `真实姓名：${item.realName}` : '当前尚未设置真实姓名，建议补齐以便后台协作识别。' }}</p>
@@ -98,7 +98,7 @@
               <div class="admin-course-crud-item__meta">
                 <span>ID {{ item.id }}</span>
                 <span>创建于 {{ item.createTime }}</span>
-                <span>更新于 {{ item.updateTime }}</span>
+                <span>最近更新 {{ item.updateTime }}</span>
               </div>
             </div>
 

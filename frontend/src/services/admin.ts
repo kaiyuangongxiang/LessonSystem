@@ -91,6 +91,65 @@ export interface AdminAccountPayload {
 
 export type AdminAccountMutationData = AdminAccountItem
 
+export interface AdminTeacherStats {
+  total: number
+  collegeAssignedCount: number
+  emailBoundCount: number
+  profileCompletedCount: number
+}
+
+export interface AdminTeacherItem {
+  id: number
+  username: string
+  teacherName: string
+  name: string
+  gender: string
+  email: string
+  collegeId: number | null
+  collegeName: string
+  profile: string
+  registerTime: string
+  updateTime: string
+  courseCount: number
+  resourceCount: number
+}
+
+export interface AdminTeacherFormOptions {
+  colleges: AdminCollegeOption[]
+  genders: string[]
+}
+
+export interface AdminTeacherListData {
+  stats: AdminTeacherStats
+  list: AdminTeacherItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  formOptions: AdminTeacherFormOptions
+}
+
+export interface AdminTeacherQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  collegeId?: string
+}
+
+export interface AdminTeacherPayload {
+  username: string
+  teacherName: string
+  gender: string
+  collegeId: string | number
+  email: string
+  profile: string
+  password?: string
+}
+
+export type AdminTeacherMutationData = AdminTeacherItem
+
 export interface AdminCollegeOption {
   id: number
   name: string
@@ -314,8 +373,77 @@ export interface AdminMessageQuery {
   keyword?: string
 }
 
+export interface AdminSystemProfile {
+  id: number | null
+  systemName: string
+  heroTitle: string
+  systemIntro: string
+  updateTime: string
+  updateAdminName: string
+}
+
+export interface AdminSystemNoticeItem {
+  id: number
+  title: string
+  content: string
+  status: number
+  statusLabel: string
+  publishTime: string
+  updateTime: string
+  publisherName: string
+}
+
+export interface AdminSystemStats {
+  noticeCount: number
+  publishedNoticeCount: number
+  disabledNoticeCount: number
+}
+
+export interface AdminSystemManageData {
+  profile: AdminSystemProfile
+  notices: AdminSystemNoticeItem[]
+  stats: AdminSystemStats
+}
+
+export interface AdminSystemProfilePayload {
+  systemName: string
+  heroTitle: string
+  systemIntro: string
+}
+
+export interface AdminNoticePayload {
+  title: string
+  content: string
+  status: number
+}
+
 export async function getAdminDashboard() {
   const response = await http.get<ApiSuccess<AdminDashboardData>>('/admin/dashboard')
+  return response.data.data
+}
+
+export async function getAdminSystemManage() {
+  const response = await http.get<ApiSuccess<AdminSystemManageData>>('/admin/system')
+  return response.data.data
+}
+
+export async function updateAdminSystemProfile(payload: AdminSystemProfilePayload) {
+  const response = await http.put<ApiSuccess<AdminSystemProfile>>('/admin/system/profile', payload)
+  return response.data.data
+}
+
+export async function createAdminNotice(payload: AdminNoticePayload) {
+  const response = await http.post<ApiSuccess<AdminSystemNoticeItem>>('/admin/system/notices', payload)
+  return response.data.data
+}
+
+export async function updateAdminNotice(noticeId: number, payload: AdminNoticePayload) {
+  const response = await http.put<ApiSuccess<AdminSystemNoticeItem>>(`/admin/system/notices/${noticeId}`, payload)
+  return response.data.data
+}
+
+export async function deleteAdminNotice(noticeId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/admin/system/notices/${noticeId}`)
   return response.data.data
 }
 
@@ -338,6 +466,28 @@ export async function updateAdminAccount(adminId: number, payload: AdminAccountP
 
 export async function deleteAdminAccount(adminId: number) {
   const response = await http.delete<ApiSuccess<{ id: number; username: string; name: string }>>(`/admin/admins/${adminId}`)
+  return response.data.data
+}
+
+export async function getAdminTeacherUserList(params: AdminTeacherQuery) {
+  const response = await http.get<ApiSuccess<AdminTeacherListData>>('/admin/teachers', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createAdminTeacherUser(payload: AdminTeacherPayload) {
+  const response = await http.post<ApiSuccess<AdminTeacherMutationData>>('/admin/teachers', payload)
+  return response.data.data
+}
+
+export async function updateAdminTeacherUser(teacherId: number, payload: AdminTeacherPayload) {
+  const response = await http.put<ApiSuccess<AdminTeacherMutationData>>(`/admin/teachers/${teacherId}`, payload)
+  return response.data.data
+}
+
+export async function deleteAdminTeacherUser(teacherId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; username: string; name: string }>>(`/admin/teachers/${teacherId}`)
   return response.data.data
 }
 

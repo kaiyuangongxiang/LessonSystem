@@ -3,11 +3,15 @@ import {
   createAdminCollege,
   createAdminCourse,
   createAdminMessageReply,
+  createAdminNotice,
+  createAdminTeacherUser,
   deleteAdminAccount,
   deleteAdminCollege,
   deleteAdminCourse,
   deleteAdminMessage,
+  deleteAdminNotice,
   deleteAdminResource,
+  deleteAdminTeacherUser,
   getAdminAccountList,
   getAdminCollegeList,
   getAdminCourseList,
@@ -15,9 +19,14 @@ import {
   getAdminMessageDetail,
   getAdminMessageList,
   getAdminResourceList,
+  getAdminSystemManageData,
+  getAdminTeacherUserList,
+  updateAdminNotice,
   updateAdminAccount,
   updateAdminCollege,
   updateAdminCourse,
+  updateAdminSystemProfile,
+  updateAdminTeacherUser,
 } from '../services/admin.service.js'
 
 export async function getDashboard(req, res, next) {
@@ -27,6 +36,91 @@ export async function getDashboard(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取管理员工作台成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getSystemManage(req, res, next) {
+  try {
+    const result = await getAdminSystemManageData({
+      adminId: req.auth.userId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取系统管理数据成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateSystemProfile(req, res, next) {
+  try {
+    const result = await updateAdminSystemProfile({
+      adminId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新系统介绍成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function createNotice(req, res, next) {
+  try {
+    const result = await createAdminNotice({
+      adminId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建公告成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateNotice(req, res, next) {
+  try {
+    const result = await updateAdminNotice({
+      adminId: req.auth.userId,
+      noticeId: req.params.noticeId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新公告成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteNotice(req, res, next) {
+  try {
+    const result = await deleteAdminNotice({
+      adminId: req.auth.userId,
+      noticeId: req.params.noticeId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除公告成功',
       data: result,
     })
   } catch (error) {
@@ -96,6 +190,75 @@ export async function deleteAdmin(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '删除管理员账号成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getTeacherUserList(req, res, next) {
+  try {
+    const result = await getAdminTeacherUserList({
+      adminId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师用户列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function createTeacherUser(req, res, next) {
+  try {
+    const result = await createAdminTeacherUser({
+      adminId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建教师用户成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateTeacherUser(req, res, next) {
+  try {
+    const result = await updateAdminTeacherUser({
+      adminId: req.auth.userId,
+      teacherId: req.params.teacherId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新教师用户成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteTeacherUser(req, res, next) {
+  try {
+    const result = await deleteAdminTeacherUser({
+      adminId: req.auth.userId,
+      teacherId: req.params.teacherId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除教师用户成功',
       data: result,
     })
   } catch (error) {
@@ -245,7 +408,7 @@ export async function getMaterialList(req, res, next) {
   try {
     const result = await getAdminResourceList({
       adminId: req.auth.userId,
-      type: 'material',
+      type: 'all',
       query: req.query,
     })
 

@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js'
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
 let replySchemaSupportPromise = null
+let systemHeroTitleSchemaSupportPromise = null
 
 function badRequest(message) {
   const error = new Error(message)
@@ -121,6 +122,109 @@ function normalizeCollegeIntro(value) {
   return intro
 }
 
+function normalizeSystemName(value) {
+  const name = typeof value === 'string' ? value.trim() : ''
+
+  if (!name) {
+    throw badRequest('系统名称不能为空')
+  }
+
+  if (name.length > 100) {
+    throw badRequest('系统名称不能超过100个字')
+  }
+
+  return name
+}
+
+function normalizeSystemIntro(value) {
+  const intro = typeof value === 'string' ? value.trim() : ''
+
+  if (!intro) {
+    throw badRequest('系统介绍不能为空')
+  }
+
+  if (intro.length > 5000) {
+    throw badRequest('系统介绍不能超过5000个字')
+  }
+
+  return intro
+}
+
+function normalizeSystemHeroTitle(value) {
+  const title = typeof value === 'string' ? value.trim() : ''
+
+  if (!title) {
+    throw badRequest('首页主标题不能为空')
+  }
+
+  if (title.length > 120) {
+    throw badRequest('首页主标题不能超过120个字')
+  }
+
+  return title
+}
+
+function normalizeSystemProfilePayload(payload) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    systemName: normalizeSystemName(body.systemName),
+    heroTitle: normalizeSystemHeroTitle(body.heroTitle),
+    systemIntro: normalizeSystemIntro(body.systemIntro),
+  }
+}
+
+function normalizeNoticeId(value) {
+  const noticeId = Number(value)
+  if (!Number.isInteger(noticeId) || noticeId <= 0) {
+    throw badRequest('公告ID不合法')
+  }
+
+  return noticeId
+}
+
+function normalizeNoticeTitle(value) {
+  const title = typeof value === 'string' ? value.trim() : ''
+
+  if (!title) {
+    throw badRequest('公告标题不能为空')
+  }
+
+  if (title.length > 200) {
+    throw badRequest('公告标题不能超过200个字')
+  }
+
+  return title
+}
+
+function normalizeNoticeContent(value) {
+  const content = typeof value === 'string' ? value.trim() : ''
+
+  if (!content) {
+    throw badRequest('公告内容不能为空')
+  }
+
+  if (content.length > 5000) {
+    throw badRequest('公告内容不能超过5000个字')
+  }
+
+  return content
+}
+
+function normalizeNoticeStatus(value) {
+  return value === 0 || value === '0' || value === false ? 0 : 1
+}
+
+function normalizeNoticePayload(payload) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    title: normalizeNoticeTitle(body.title),
+    content: normalizeNoticeContent(body.content),
+    status: normalizeNoticeStatus(body.status),
+  }
+}
+
 function normalizeCollegePayload(payload) {
   const body = payload && typeof payload === 'object' ? payload : {}
 
@@ -192,6 +296,120 @@ function normalizeAdminPayload(payload, { requirePassword = true } = {}) {
     username: normalizeAdminUsername(body.username),
     realName: normalizeAdminRealName(body.realName),
     password: normalizeAdminPassword(body.password, { required: requirePassword }),
+  }
+}
+
+function normalizeManagedTeacherId(value, label = '教师用户') {
+  const teacherId = Number(value)
+  if (!Number.isInteger(teacherId) || teacherId <= 0) {
+    throw badRequest(`${label}ID不合法`)
+  }
+
+  return teacherId
+}
+
+function normalizeManagedTeacherUsername(value) {
+  const username = typeof value === 'string' ? value.trim() : ''
+
+  if (!username) {
+    throw badRequest('教师用户名不能为空')
+  }
+
+  if (username.length > 50) {
+    throw badRequest('教师用户名不能超过50个字符')
+  }
+
+  return username
+}
+
+function normalizeManagedTeacherName(value) {
+  const teacherName = typeof value === 'string' ? value.trim() : ''
+
+  if (!teacherName) {
+    throw badRequest('教师姓名不能为空')
+  }
+
+  if (teacherName.length > 50) {
+    throw badRequest('教师姓名不能超过50个字')
+  }
+
+  return teacherName
+}
+
+function normalizeManagedTeacherGender(value) {
+  if (value === '男' || value === '女' || value === '未知') {
+    return value
+  }
+
+  throw badRequest('性别参数不合法')
+}
+
+function normalizeManagedTeacherPassword(value, { required = true } = {}) {
+  const password = typeof value === 'string' ? value.trim() : ''
+
+  if (!password) {
+    if (required) {
+      throw badRequest('教师账号密码不能为空')
+    }
+
+    return ''
+  }
+
+  if (password.length < 6) {
+    throw badRequest('教师账号密码不能少于6位')
+  }
+
+  if (password.length > 50) {
+    throw badRequest('教师账号密码不能超过50位')
+  }
+
+  return password
+}
+
+function normalizeManagedTeacherEmail(value) {
+  const email = typeof value === 'string' ? value.trim() : ''
+
+  if (!email) {
+    return null
+  }
+
+  if (email.length > 100) {
+    throw badRequest('邮箱不能超过100个字符')
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(email)) {
+    throw badRequest('邮箱格式不正确')
+  }
+
+  return email
+}
+
+function normalizeManagedTeacherProfile(value) {
+  const profile = typeof value === 'string' ? value.trim() : ''
+
+  if (!profile) {
+    return null
+  }
+
+  if (profile.length > 2000) {
+    throw badRequest('个人简介不能超过2000个字')
+  }
+
+  return profile
+}
+
+function normalizeManagedTeacherPayload(payload, { requirePassword = true } = {}) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    username: normalizeManagedTeacherUsername(body.username),
+    teacherName: normalizeManagedTeacherName(body.teacherName),
+    gender: normalizeManagedTeacherGender(body.gender),
+    collegeId: normalizeRequiredCollegeId(body.collegeId),
+    email: normalizeManagedTeacherEmail(body.email),
+    profile: normalizeManagedTeacherProfile(body.profile),
+    password: normalizeManagedTeacherPassword(body.password, { required: requirePassword }),
   }
 }
 
@@ -267,7 +485,7 @@ function normalizeContent(value, label = '内容') {
 }
 
 function normalizeResourceType(value) {
-  if (value === 'material' || value === 'video') {
+  if (value === 'material' || value === 'video' || value === 'all') {
     return value
   }
 
@@ -368,6 +586,33 @@ function buildAdminWhereClause({ keyword }) {
   }
 }
 
+function buildTeacherAccountWhereClause({ keyword, collegeId }) {
+  const conditions = ['t.status = 1']
+  const params = []
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    conditions.push(`(
+      t.username LIKE ?
+      OR COALESCE(t.teacher_name, '') LIKE ?
+      OR COALESCE(t.email, '') LIKE ?
+      OR COALESCE(t.profile, '') LIKE ?
+      OR COALESCE(c.college_name, '') LIKE ?
+    )`)
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+  }
+
+  if (collegeId) {
+    conditions.push('t.college_id = ?')
+    params.push(collegeId)
+  }
+
+  return {
+    whereSql: conditions.join(' AND '),
+    params,
+  }
+}
+
 async function getReplySchemaSupport() {
   if (!replySchemaSupportPromise) {
     replySchemaSupportPromise = (async () => {
@@ -389,6 +634,25 @@ async function getReplySchemaSupport() {
   }
 
   return replySchemaSupportPromise
+}
+
+async function getSystemHeroTitleSchemaSupport() {
+  if (!systemHeroTitleSchemaSupportPromise) {
+    systemHeroTitleSchemaSupportPromise = (async () => {
+      const [rows] = await pool.query(
+        `SELECT 1
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'system_profile'
+           AND COLUMN_NAME = 'hero_title'
+         LIMIT 1`,
+      )
+
+      return rows.length > 0
+    })()
+  }
+
+  return systemHeroTitleSchemaSupportPromise
 }
 
 async function getAdminProfile(adminId) {
@@ -430,6 +694,137 @@ async function getManagedAdminRow(adminId) {
   return rows[0]
 }
 
+async function getManagedTeacherAccountRow(teacherId) {
+  const [rows] = await pool.query(
+    `SELECT t.teacher_id AS id,
+            t.username AS username,
+            COALESCE(t.teacher_name, '') AS teacherName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS name,
+            COALESCE(NULLIF(t.gender, ''), '未知') AS gender,
+            COALESCE(t.email, '') AS email,
+            t.college_id AS collegeId,
+            COALESCE(c.college_name, '未关联学院') AS collegeName,
+            COALESCE(t.profile, '') AS profile,
+            DATE_FORMAT(t.register_time, '%Y-%m-%d %H:%i') AS registerTime,
+            DATE_FORMAT(t.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            COALESCE(courseStats.courseCount, 0) AS courseCount,
+            COALESCE(resourceStats.resourceCount, 0) AS resourceCount
+     FROM teacher_user t
+     LEFT JOIN college c ON c.college_id = t.college_id
+     LEFT JOIN (
+       SELECT teacher_id, COUNT(*) AS courseCount
+       FROM course_intro
+       WHERE status = 1
+       GROUP BY teacher_id
+     ) courseStats ON courseStats.teacher_id = t.teacher_id
+     LEFT JOIN (
+       SELECT teacher_id, COUNT(*) AS resourceCount
+       FROM (
+         SELECT teacher_id
+         FROM material
+         WHERE status = 1
+         UNION ALL
+         SELECT teacher_id
+         FROM course_video
+         WHERE status = 1
+       ) resourceUnion
+       GROUP BY teacher_id
+     ) resourceStats ON resourceStats.teacher_id = t.teacher_id
+     WHERE t.teacher_id = ? AND t.status = 1
+     LIMIT 1`,
+    [teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('教师用户不存在或已禁用')
+  }
+
+  const item = rows[0]
+  return {
+    id: Number(item.id),
+    username: item.username,
+    teacherName: item.teacherName,
+    name: item.name,
+    gender: item.gender,
+    email: item.email || '',
+    collegeId: item.collegeId === null ? null : Number(item.collegeId),
+    collegeName: item.collegeName,
+    profile: item.profile || '',
+    registerTime: item.registerTime,
+    updateTime: item.updateTime,
+    courseCount: Number(item.courseCount || 0),
+    resourceCount: Number(item.resourceCount || 0),
+  }
+}
+
+async function getAdminSystemProfileDetail() {
+  const heroTitleSupported = await getSystemHeroTitleSchemaSupport()
+  const [rows] = await pool.query(
+    `SELECT sp.profile_id AS id,
+            sp.system_name AS systemName,
+            ${heroTitleSupported ? `COALESCE(sp.hero_title, '') AS heroTitle,` : ''}
+            COALESCE(sp.system_intro, '') AS systemIntro,
+            DATE_FORMAT(sp.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            COALESCE(NULLIF(a.real_name, ''), a.admin_name, 'System Admin') AS updateAdminName
+     FROM system_profile sp
+     LEFT JOIN admin a ON a.admin_id = sp.update_admin_id
+     ORDER BY sp.update_time DESC, sp.profile_id DESC
+     LIMIT 1`,
+  )
+
+if (!rows.length) {
+  return {
+    heroTitle: '让课程、资料与视频在一个入口里协同',
+      id: null,
+      systemName: '在线教师备课系统',
+      systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
+      updateTime: '',
+      updateAdminName: '',
+    }
+  }
+
+  return {
+    id: Number(rows[0].id),
+    systemName: rows[0].systemName,
+    heroTitle: rows[0].heroTitle || '让课程、资料与视频在一个入口里协同',
+    systemIntro: rows[0].systemIntro,
+    updateTime: rows[0].updateTime,
+    updateAdminName: rows[0].updateAdminName,
+  }
+}
+
+async function getAdminNoticeRow(noticeId) {
+  const [rows] = await pool.query(
+    `SELECT n.notice_id AS id,
+            n.notice_title AS title,
+            n.notice_content AS content,
+            n.status AS status,
+            DATE_FORMAT(n.publish_time, '%Y-%m-%d %H:%i') AS publishTime,
+            DATE_FORMAT(n.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            COALESCE(NULLIF(a.real_name, ''), a.admin_name, 'System Admin') AS publisherName
+     FROM notice n
+     LEFT JOIN admin a ON a.admin_id = n.publisher_admin_id
+     WHERE n.notice_id = ?
+     LIMIT 1`,
+    [noticeId],
+  )
+
+  if (!rows.length) {
+    throw notFound('公告不存在')
+  }
+
+  return {
+    id: Number(rows[0].id),
+    title: rows[0].title,
+    content: rows[0].content,
+    status: Number(rows[0].status || 0),
+    statusLabel: Number(rows[0].status || 0) === 1 ? '已发布' : '已停用',
+    publishTime: rows[0].publishTime,
+    updateTime: rows[0].updateTime,
+    publisherName: rows[0].publisherName,
+  }
+}
+
 async function ensureAdminUsernameAvailable(username, excludeAdminId = null) {
   const params = [username]
   let sql = `SELECT admin_id AS id
@@ -447,6 +842,26 @@ async function ensureAdminUsernameAvailable(username, excludeAdminId = null) {
 
   if (rows.length) {
     throw badRequest('管理员账号已存在，请使用其他账号')
+  }
+}
+
+async function ensureTeacherUsernameAvailable(username, excludeTeacherId = null) {
+  const params = [username]
+  let sql = `SELECT teacher_id AS id
+             FROM teacher_user
+             WHERE username = ?`
+
+  if (excludeTeacherId !== null) {
+    sql += ' AND teacher_id <> ?'
+    params.push(excludeTeacherId)
+  }
+
+  sql += ' LIMIT 1'
+
+  const [rows] = await pool.query(sql, params)
+
+  if (rows.length) {
+    throw badRequest('教师用户名已存在，请使用其他用户名')
   }
 }
 
@@ -582,6 +997,22 @@ async function getAdminTeacherRow(teacherId) {
   }
 
   return rows[0]
+}
+
+async function getAdminTeacherManageFormOptions() {
+  const [collegeRows] = await pool.query(
+    `SELECT college_id AS id, college_name AS name
+     FROM college
+     ORDER BY college_name ASC`,
+  )
+
+  return {
+    colleges: collegeRows.map((item) => ({
+      id: Number(item.id),
+      name: item.name,
+    })),
+    genders: ['男', '女', '未知'],
+  }
 }
 
 async function getAdminCourseFormOptions() {
@@ -911,6 +1342,166 @@ export async function getAdminDashboardData(adminId) {
   }
 }
 
+export async function getAdminSystemManageData({ adminId }) {
+  await getAdminProfile(adminId)
+
+  const profile = await getAdminSystemProfileDetail()
+  const [noticeRows] = await pool.query(
+    `SELECT n.notice_id AS id,
+            n.notice_title AS title,
+            n.notice_content AS content,
+            n.status AS status,
+            DATE_FORMAT(n.publish_time, '%Y-%m-%d %H:%i') AS publishTime,
+            DATE_FORMAT(n.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            COALESCE(NULLIF(a.real_name, ''), a.admin_name, 'System Admin') AS publisherName
+     FROM notice n
+     LEFT JOIN admin a ON a.admin_id = n.publisher_admin_id
+     ORDER BY n.publish_time DESC, n.notice_id DESC`,
+  )
+  const [statsRows] = await pool.query(
+    `SELECT
+        COUNT(*) AS noticeCount,
+        COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS publishedNoticeCount,
+        COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS disabledNoticeCount
+     FROM notice`,
+  )
+
+  const statsRow = statsRows[0] || {
+    noticeCount: 0,
+    publishedNoticeCount: 0,
+    disabledNoticeCount: 0,
+  }
+
+  logger.info('admin_system_manage_loaded', {
+    adminId,
+    noticeCount: Number(statsRow.noticeCount || 0),
+  })
+
+  return {
+    profile,
+    notices: noticeRows.map((item) => ({
+      id: Number(item.id),
+      title: item.title,
+      content: item.content,
+      status: Number(item.status || 0),
+      statusLabel: Number(item.status || 0) === 1 ? '已发布' : '已停用',
+      publishTime: item.publishTime,
+      updateTime: item.updateTime,
+      publisherName: item.publisherName,
+    })),
+    stats: {
+      noticeCount: Number(statsRow.noticeCount || 0),
+      publishedNoticeCount: Number(statsRow.publishedNoticeCount || 0),
+      disabledNoticeCount: Number(statsRow.disabledNoticeCount || 0),
+    },
+  }
+}
+
+export async function updateAdminSystemProfile({ adminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const profile = normalizeSystemProfilePayload(payload)
+  const currentProfile = await getAdminSystemProfileDetail()
+  const heroTitleSupported = await getSystemHeroTitleSchemaSupport()
+
+  if (currentProfile.id) {
+    await pool.query(
+      `UPDATE system_profile
+       SET system_name = ?,
+           ${heroTitleSupported ? 'hero_title = ?,' : ''}
+           system_intro = ?,
+           update_admin_id = ?,
+           update_time = CURRENT_TIMESTAMP
+       WHERE profile_id = ?`,
+      heroTitleSupported
+        ? [profile.systemName, profile.heroTitle, profile.systemIntro, adminId, currentProfile.id]
+        : [profile.systemName, profile.systemIntro, adminId, currentProfile.id],
+    )
+  } else {
+    await pool.query(
+      `INSERT INTO system_profile (system_name, ${heroTitleSupported ? 'hero_title, ' : ''}system_intro, update_admin_id)
+       VALUES (?, ${heroTitleSupported ? '?, ' : ''}?, ?)`,
+      heroTitleSupported
+        ? [profile.systemName, profile.heroTitle, profile.systemIntro, adminId]
+        : [profile.systemName, profile.systemIntro, adminId],
+    )
+  }
+
+  logger.info('admin_system_profile_updated', {
+    adminId,
+    systemName: profile.systemName,
+    heroTitle: profile.heroTitle,
+  })
+
+  return getAdminSystemProfileDetail()
+}
+
+export async function createAdminNotice({ adminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const notice = normalizeNoticePayload(payload)
+  const [result] = await pool.query(
+    `INSERT INTO notice (notice_title, notice_content, publisher_admin_id, status)
+     VALUES (?, ?, ?, ?)`,
+    [notice.title, notice.content, adminId, notice.status],
+  )
+
+  logger.info('admin_notice_created', {
+    adminId,
+    noticeId: Number(result.insertId || 0),
+    status: notice.status,
+  })
+
+  return getAdminNoticeRow(Number(result.insertId || 0))
+}
+
+export async function updateAdminNotice({ adminId, noticeId, payload }) {
+  await getAdminProfile(adminId)
+
+  const normalizedNoticeId = normalizeNoticeId(noticeId)
+  await getAdminNoticeRow(normalizedNoticeId)
+
+  const notice = normalizeNoticePayload(payload)
+
+  await pool.query(
+    `UPDATE notice
+     SET notice_title = ?,
+         notice_content = ?,
+         publisher_admin_id = ?,
+         status = ?,
+         update_time = CURRENT_TIMESTAMP
+     WHERE notice_id = ?`,
+    [notice.title, notice.content, adminId, notice.status, normalizedNoticeId],
+  )
+
+  logger.info('admin_notice_updated', {
+    adminId,
+    noticeId: normalizedNoticeId,
+    status: notice.status,
+  })
+
+  return getAdminNoticeRow(normalizedNoticeId)
+}
+
+export async function deleteAdminNotice({ adminId, noticeId }) {
+  await getAdminProfile(adminId)
+
+  const normalizedNoticeId = normalizeNoticeId(noticeId)
+  const notice = await getAdminNoticeRow(normalizedNoticeId)
+
+  await pool.query('DELETE FROM notice WHERE notice_id = ?', [normalizedNoticeId])
+
+  logger.info('admin_notice_deleted', {
+    adminId,
+    noticeId: normalizedNoticeId,
+  })
+
+  return {
+    id: normalizedNoticeId,
+    title: notice.title,
+  }
+}
+
 export async function getAdminAccountList({ adminId, query }) {
   await getAdminProfile(adminId)
 
@@ -1076,6 +1667,223 @@ export async function deleteAdminAccount({ adminId, targetAdminId }) {
     id: Number(target.id),
     username: target.username,
     name: target.name,
+  }
+}
+
+export async function getAdminTeacherUserList({ adminId, query }) {
+  await getAdminProfile(adminId)
+
+  const keyword = normalizeKeyword(query.keyword)
+  const collegeId = normalizeCollegeId(query.collegeId)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const { whereSql, params } = buildTeacherAccountWhereClause({ keyword, collegeId })
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM teacher_user t
+     LEFT JOIN college c ON c.college_id = t.college_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [rows] = await pool.query(
+    `SELECT t.teacher_id AS id,
+            t.username AS username,
+            COALESCE(t.teacher_name, '') AS teacherName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS name,
+            COALESCE(NULLIF(t.gender, ''), '未知') AS gender,
+            COALESCE(t.email, '') AS email,
+            t.college_id AS collegeId,
+            COALESCE(c.college_name, '未关联学院') AS collegeName,
+            COALESCE(t.profile, '') AS profile,
+            DATE_FORMAT(t.register_time, '%Y-%m-%d %H:%i') AS registerTime,
+            DATE_FORMAT(t.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            COALESCE(courseStats.courseCount, 0) AS courseCount,
+            COALESCE(resourceStats.resourceCount, 0) AS resourceCount
+     FROM teacher_user t
+     LEFT JOIN college c ON c.college_id = t.college_id
+     LEFT JOIN (
+       SELECT teacher_id, COUNT(*) AS courseCount
+       FROM course_intro
+       WHERE status = 1
+       GROUP BY teacher_id
+     ) courseStats ON courseStats.teacher_id = t.teacher_id
+     LEFT JOIN (
+       SELECT teacher_id, COUNT(*) AS resourceCount
+       FROM (
+         SELECT teacher_id
+         FROM material
+         WHERE status = 1
+         UNION ALL
+         SELECT teacher_id
+         FROM course_video
+         WHERE status = 1
+       ) resourceUnion
+       GROUP BY teacher_id
+     ) resourceStats ON resourceStats.teacher_id = t.teacher_id
+     WHERE ${whereSql}
+     ORDER BY t.update_time DESC, t.teacher_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        (SELECT COUNT(*) FROM teacher_user WHERE status = 1) AS total,
+        (SELECT COUNT(*) FROM teacher_user WHERE status = 1 AND college_id IS NOT NULL) AS collegeAssignedCount,
+        (SELECT COUNT(*) FROM teacher_user WHERE status = 1 AND email IS NOT NULL AND TRIM(email) <> '') AS emailBoundCount,
+        (SELECT COUNT(*) FROM teacher_user WHERE status = 1 AND profile IS NOT NULL AND TRIM(profile) <> '') AS profileCompletedCount`,
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    collegeAssignedCount: 0,
+    emailBoundCount: 0,
+    profileCompletedCount: 0,
+  }
+
+  logger.info('admin_teacher_user_list_loaded', {
+    adminId,
+    keyword,
+    collegeId,
+    page,
+    pageSize,
+    total,
+    resultCount: rows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      collegeAssignedCount: Number(statsRow.collegeAssignedCount || 0),
+      emailBoundCount: Number(statsRow.emailBoundCount || 0),
+      profileCompletedCount: Number(statsRow.profileCompletedCount || 0),
+    },
+    list: rows.map((item) => ({
+      id: Number(item.id),
+      username: item.username,
+      teacherName: item.teacherName,
+      name: item.name,
+      gender: item.gender,
+      email: item.email || '',
+      collegeId: item.collegeId === null ? null : Number(item.collegeId),
+      collegeName: item.collegeName,
+      profile: item.profile || '',
+      registerTime: item.registerTime,
+      updateTime: item.updateTime,
+      courseCount: Number(item.courseCount || 0),
+      resourceCount: Number(item.resourceCount || 0),
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    formOptions: await getAdminTeacherManageFormOptions(),
+  }
+}
+
+export async function createAdminTeacherUser({ adminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const teacher = normalizeManagedTeacherPayload(payload, { requirePassword: true })
+  await getAdminCollegeRow(teacher.collegeId)
+  await ensureTeacherUsernameAvailable(teacher.username)
+
+  const hashedPassword = await bcrypt.hash(teacher.password, 10)
+  const [result] = await pool.query(
+    `INSERT INTO teacher_user (username, password, teacher_name, gender, college_id, email, profile, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+    [teacher.username, hashedPassword, teacher.teacherName, teacher.gender, teacher.collegeId, teacher.email, teacher.profile],
+  )
+
+  logger.info('admin_teacher_user_created', {
+    adminId,
+    teacherId: Number(result.insertId || 0),
+    username: teacher.username,
+    collegeId: teacher.collegeId,
+  })
+
+  return getManagedTeacherAccountRow(Number(result.insertId || 0))
+}
+
+export async function updateAdminTeacherUser({ adminId, teacherId, payload }) {
+  await getAdminProfile(adminId)
+
+  const normalizedTeacherId = normalizeManagedTeacherId(teacherId)
+  await getManagedTeacherAccountRow(normalizedTeacherId)
+
+  const teacher = normalizeManagedTeacherPayload(payload, { requirePassword: false })
+  await getAdminCollegeRow(teacher.collegeId)
+  await ensureTeacherUsernameAvailable(teacher.username, normalizedTeacherId)
+
+  const params = [teacher.username, teacher.teacherName, teacher.gender, teacher.collegeId, teacher.email, teacher.profile]
+  let passwordSql = ''
+
+  if (teacher.password) {
+    const hashedPassword = await bcrypt.hash(teacher.password, 10)
+    passwordSql = ', password = ?'
+    params.push(hashedPassword)
+  }
+
+  params.push(normalizedTeacherId)
+
+  await pool.query(
+    `UPDATE teacher_user
+     SET username = ?,
+         teacher_name = ?,
+         gender = ?,
+         college_id = ?,
+         email = ?,
+         profile = ?${passwordSql},
+         update_time = CURRENT_TIMESTAMP
+     WHERE teacher_id = ? AND status = 1`,
+    params,
+  )
+
+  logger.info('admin_teacher_user_updated', {
+    adminId,
+    teacherId: normalizedTeacherId,
+    username: teacher.username,
+    collegeId: teacher.collegeId,
+    passwordChanged: Boolean(teacher.password),
+  })
+
+  return getManagedTeacherAccountRow(normalizedTeacherId)
+}
+
+export async function deleteAdminTeacherUser({ adminId, teacherId }) {
+  await getAdminProfile(adminId)
+
+  const normalizedTeacherId = normalizeManagedTeacherId(teacherId)
+  const teacher = await getManagedTeacherAccountRow(normalizedTeacherId)
+
+  await pool.query(
+    `UPDATE teacher_user
+     SET status = 0, update_time = CURRENT_TIMESTAMP
+     WHERE teacher_id = ? AND status = 1`,
+    [normalizedTeacherId],
+  )
+
+  logger.info('admin_teacher_user_deleted', {
+    adminId,
+    teacherId: normalizedTeacherId,
+    username: teacher.username,
+    courseCount: teacher.courseCount,
+    resourceCount: teacher.resourceCount,
+  })
+
+  return {
+    id: normalizedTeacherId,
+    username: teacher.username,
+    name: teacher.name,
   }
 }
 
@@ -1529,6 +2337,163 @@ export async function getAdminResourceList({ adminId, type, query }) {
   const pageSize = normalizePageSize(query.pageSize)
   const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
   const keywordPattern = keyword ? `%${keyword}%` : ''
+
+  if (normalizedType === 'all') {
+    const params = []
+    let materialWhereSql = 'm.status = 1'
+    let videoWhereSql = 'v.status = 1'
+
+    if (courseId) {
+      materialWhereSql += ' AND m.course_id = ?'
+      videoWhereSql += ' AND v.course_id = ?'
+      params.push(courseId)
+    }
+
+    if (keyword) {
+      materialWhereSql += ` AND (m.material_name LIKE ? OR COALESCE(m.description, '') LIKE ? OR COALESCE(m.file_name, '') LIKE ?)`
+      videoWhereSql += ` AND (v.video_title LIKE ? OR COALESCE(v.description, '') LIKE ?)`
+    }
+
+    const materialParams = keyword ? [...params, keywordPattern, keywordPattern, keywordPattern] : [...params]
+    const videoParams = keyword ? [...params, keywordPattern, keywordPattern] : [...params]
+
+    const [materialRows] = await pool.query(
+      `SELECT m.material_id AS id,
+              'material' AS type,
+              m.course_id AS courseId,
+              m.teacher_id AS teacherId,
+              m.material_name AS title,
+              COALESCE(ci.course_name, '未关联课程') AS courseName,
+              COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
+              COALESCE(m.description, '') AS description,
+              COALESCE(NULLIF(m.file_name, ''), m.material_name) AS fileName,
+              m.file_size AS fileSize,
+              m.material_type AS formatSource,
+              NULL AS duration,
+              m.download_count AS interactionCount,
+              DATE_FORMAT(m.upload_time, '%Y-%m-%d') AS uploadTime,
+              m.upload_time AS sortTime
+       FROM material m
+       LEFT JOIN course_intro ci ON ci.course_id = m.course_id
+       LEFT JOIN teacher_user t ON t.teacher_id = m.teacher_id
+       WHERE ${materialWhereSql}`,
+      materialParams,
+    )
+
+    const [videoRows] = await pool.query(
+      `SELECT v.video_id AS id,
+              'video' AS type,
+              v.course_id AS courseId,
+              v.teacher_id AS teacherId,
+              v.video_title AS title,
+              COALESCE(ci.course_name, '未关联课程') AS courseName,
+              COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
+              COALESCE(v.description, '') AS description,
+              COALESCE(NULLIF(v.video_title, ''), v.video_title) AS fileName,
+              v.file_size AS fileSize,
+              v.video_path AS formatSource,
+              v.duration AS duration,
+              v.play_count AS interactionCount,
+              DATE_FORMAT(v.upload_time, '%Y-%m-%d') AS uploadTime,
+              v.upload_time AS sortTime
+       FROM course_video v
+       LEFT JOIN course_intro ci ON ci.course_id = v.course_id
+       LEFT JOIN teacher_user t ON t.teacher_id = v.teacher_id
+       WHERE ${videoWhereSql}`,
+      videoParams,
+    )
+
+    const mergedList = [...materialRows, ...videoRows]
+      .map((item) => ({
+        id: Number(item.id),
+        type: item.type,
+        courseId: Number(item.courseId || 0),
+        teacherId: Number(item.teacherId || 0),
+        title: item.title,
+        courseName: item.courseName,
+        teacherName: item.teacherName,
+        description: item.description || '',
+        fileName: item.fileName || item.title,
+        fileSize: Number(item.fileSize || 0),
+        format: String(item.formatSource || item.type).toUpperCase().split('.').pop(),
+        duration: item.duration === null || item.duration === undefined ? null : Number(item.duration),
+        interactionCount: Number(item.interactionCount || 0),
+        uploadTime: item.uploadTime,
+        previewUrl: buildResourcePreviewUrl(item.type, Number(item.id)),
+        sortTime: item.sortTime,
+      }))
+      .sort((left, right) => new Date(right.sortTime).getTime() - new Date(left.sortTime).getTime())
+
+    const total = mergedList.length
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+    const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+    const offset = (page - 1) * pageSize
+    const list = mergedList.slice(offset, offset + pageSize).map(({ sortTime, ...item }) => item)
+
+    const [statsRows] = await pool.query(
+      `SELECT
+          (SELECT COUNT(*) FROM material WHERE status = 1) + (SELECT COUNT(*) FROM course_video WHERE status = 1) AS total,
+          COUNT(DISTINCT resource.courseId) AS courseCount,
+          COUNT(DISTINCT resource.teacherId) AS teacherCount,
+          COALESCE(SUM(resource.interactionCount), 0) AS interactionCount
+       FROM (
+         SELECT course_id AS courseId, teacher_id AS teacherId, download_count AS interactionCount
+         FROM material
+         WHERE status = 1
+         UNION ALL
+         SELECT course_id AS courseId, teacher_id AS teacherId, play_count AS interactionCount
+         FROM course_video
+         WHERE status = 1
+       ) resource`,
+    )
+
+    const [courseRows] = await pool.query(
+      `SELECT course_id AS id, course_name AS name
+       FROM course_intro
+       WHERE status = 1
+       ORDER BY update_time DESC, course_id DESC`,
+    )
+
+    const statsRow = statsRows[0] || {
+      total: 0,
+      courseCount: 0,
+      teacherCount: 0,
+      interactionCount: 0,
+    }
+
+    logger.info('admin_resource_list_loaded', {
+      adminId,
+      keyword,
+      courseId,
+      page,
+      pageSize,
+      total,
+      resultCount: list.length,
+    })
+
+    return {
+      stats: {
+        total: Number(statsRow.total || 0),
+        courseCount: Number(statsRow.courseCount || 0),
+        teacherCount: Number(statsRow.teacherCount || 0),
+        interactionCount: Number(statsRow.interactionCount || 0),
+      },
+      list,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+      },
+      filters: {
+        courses: courseRows.map((item) => ({
+          id: Number(item.id),
+          name: item.name,
+        })),
+      },
+    }
+  }
+
   const params = []
 
   const alias = normalizedType === 'material' ? 'm' : 'v'

@@ -3,6 +3,26 @@ export async function getAdminDashboard() {
     const response = await http.get('/admin/dashboard');
     return response.data.data;
 }
+export async function getAdminSystemManage() {
+    const response = await http.get('/admin/system');
+    return response.data.data;
+}
+export async function updateAdminSystemProfile(payload) {
+    const response = await http.put('/admin/system/profile', payload);
+    return response.data.data;
+}
+export async function createAdminNotice(payload) {
+    const response = await http.post('/admin/system/notices', payload);
+    return response.data.data;
+}
+export async function updateAdminNotice(noticeId, payload) {
+    const response = await http.put(`/admin/system/notices/${noticeId}`, payload);
+    return response.data.data;
+}
+export async function deleteAdminNotice(noticeId) {
+    const response = await http.delete(`/admin/system/notices/${noticeId}`);
+    return response.data.data;
+}
 export async function getAdminAccountList(params) {
     const response = await http.get('/admin/admins', {
         params,
@@ -19,6 +39,24 @@ export async function updateAdminAccount(adminId, payload) {
 }
 export async function deleteAdminAccount(adminId) {
     const response = await http.delete(`/admin/admins/${adminId}`);
+    return response.data.data;
+}
+export async function getAdminTeacherUserList(params) {
+    const response = await http.get('/admin/teachers', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createAdminTeacherUser(payload) {
+    const response = await http.post('/admin/teachers', payload);
+    return response.data.data;
+}
+export async function updateAdminTeacherUser(teacherId, payload) {
+    const response = await http.put(`/admin/teachers/${teacherId}`, payload);
+    return response.data.data;
+}
+export async function deleteAdminTeacherUser(teacherId) {
+    const response = await http.delete(`/admin/teachers/${teacherId}`);
     return response.data.data;
 }
 export async function getAdminCollegeList(params) {

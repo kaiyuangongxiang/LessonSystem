@@ -35,8 +35,7 @@
 
     <section class="portal-hero">
       <div class="portal-hero__content">
-        <div class="portal-hero__eyebrow">统一备课入口</div>
-        <h1>{{ heroTitle }}</h1>
+        <h1>{{ heroTitleText }}</h1>
         <p>{{ home.profile.systemIntro }}</p>
 
         <div class="portal-hero__actions">
@@ -187,6 +186,7 @@ interface VideoItem {
 interface HomeResponse {
   profile: {
     systemName: string
+    heroTitle: string
     systemIntro: string
   }
   notices: NoticeItem[]
@@ -200,6 +200,8 @@ interface HomeResponse {
   }
 }
 
+const DEFAULT_HERO_TITLE = '让课程、资料与视频在一个入口里协同'
+
 const router = useRouter()
 const authStore = useAuthStore()
 const searchKeyword = ref('')
@@ -210,6 +212,7 @@ const resourceSectionRef = ref<HTMLElement | null>(null)
 
 const home = reactive<HomeResponse>({
   profile: {
+    heroTitle: '让课程、资料与视频在一个入口里协同',
     systemName: '在线教师备课系统',
     systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
   },
@@ -223,8 +226,7 @@ const home = reactive<HomeResponse>({
     videoCount: 0,
   },
 })
-
-const heroTitle = computed(() => '让课程、资料与视频在一个入口里协同')
+const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE)
 
 const primaryActionText = computed(() => {
   if (!authStore.isAuthenticated) {
@@ -356,7 +358,11 @@ async function loadHome() {
     const response = await http.get('/portal/home')
     const data = response.data.data as HomeResponse
 
-    home.profile = data.profile
+    home.profile = {
+      ...home.profile,
+      ...data.profile,
+      heroTitle: data?.profile?.heroTitle || DEFAULT_HERO_TITLE,
+    }
     home.notices = data.notices
     home.courses = data.courses
     home.materials = data.materials

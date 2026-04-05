@@ -12,9 +12,12 @@ const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
 
 const DEFAULT_PROFILE = {
+  heroTitle: '让课程、资料与视频在一个入口里协同',
   systemName: '在线教师备课系统',
   systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
 }
+
+let systemHeroTitleSchemaSupportPromise = null
 
 function badRequest(message) {
   const error = new Error(message)
@@ -73,6 +76,25 @@ function normalizeSort(value) {
   return value === 'video-rich' ? 'video-rich' : 'latest'
 }
 
+async function getSystemHeroTitleSchemaSupport() {
+  if (!systemHeroTitleSchemaSupportPromise) {
+    systemHeroTitleSchemaSupportPromise = (async () => {
+      const [rows] = await pool.query(
+        `SELECT 1
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'system_profile'
+           AND COLUMN_NAME = 'hero_title'
+         LIMIT 1`,
+      )
+
+      return rows.length > 0
+    })()
+  }
+
+  return systemHeroTitleSchemaSupportPromise
+}
+
 function buildCourseWhereClause({ keyword, collegeId }) {
   const conditions = ['c.status = 1']
   const params = []
@@ -125,8 +147,11 @@ function resolveStoredFilePath(storedPath) {
 }
 
 export async function getPortalHomeData() {
+  const heroTitleSupported = await getSystemHeroTitleSchemaSupport()
   const [profiles] = await pool.query(
-    `SELECT system_name, system_intro
+    `SELECT system_name,
+            ${heroTitleSupported ? `COALESCE(hero_title, '') AS hero_title,` : ''}
+            system_intro
      FROM system_profile
      ORDER BY update_time DESC
      LIMIT 1`,
@@ -203,6 +228,7 @@ export async function getPortalHomeData() {
   return {
     profile: {
       systemName: profileRow?.system_name || DEFAULT_PROFILE.systemName,
+      heroTitle: profileRow?.hero_title || DEFAULT_PROFILE.heroTitle,
       systemIntro: profileRow?.system_intro || DEFAULT_PROFILE.systemIntro,
     },
     notices,
@@ -314,7 +340,7 @@ export async function getPortalCourseDetailData(courseIdValue) {
             COALESCE(c.course_summary, '暂无课程简介') AS summary,
             COALESCE(c.teaching_goal, '暂无教学目标') AS teachingGoal,
             COALESCE(c.teaching_content, '暂无教学内容') AS teachingContent,
-            COALESCE(c.teaching_idea, '暂无教学思想') AS teachingIdea,
+            COALESCE(c.teaching_idea, '暂无教学思路') AS teachingIdea,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
             COALESCE(t.teacher_name, t.username, '未署名教师') AS teacherName,
             DATE_FORMAT(c.update_time, '%Y-%m-%d') AS updateDate

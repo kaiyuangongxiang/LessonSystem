@@ -7,12 +7,13 @@
       </div>
 
       <nav class="admin-dashboard-nav">
+        <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item is-active">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/videos')">视频管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
 
@@ -94,12 +95,12 @@
             <div class="admin-course-crud-item__main">
               <div class="admin-course-crud-item__head">
                 <strong>{{ item.name }}</strong>
-                <span>最近更新 {{ item.updateDate }}</span>
               </div>
               <p>{{ item.intro || '暂无学院简介' }}</p>
               <div class="admin-course-crud-item__meta">
                 <span>教师 {{ item.teacherCount }}</span>
                 <span>课程 {{ item.courseCount }}</span>
+                <span>最近更新 {{ item.updateDate }}</span>
               </div>
             </div>
 

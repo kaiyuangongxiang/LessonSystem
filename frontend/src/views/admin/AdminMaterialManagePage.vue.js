@@ -1,12 +1,12 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { deleteAdminMaterial, getAdminMaterialList, } from '@/services/admin';
+import { deleteAdminMaterial, deleteAdminVideo, getAdminMaterialList, } from '@/services/admin';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const loading = ref(false);
-const deletingId = ref(null);
+const deletingKey = ref('');
 const errorMessage = ref('');
 const successMessage = ref('');
 const courseOptions = ref([]);
@@ -29,14 +29,12 @@ const pagination = reactive({
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '管理员';
-    return `${name}，这里统一管理教师上传的资料资源，并快速处理失效文档。`;
+    return `${name}，这里统一管理教师上传的资料与视频资源。`;
 });
-const reminderTexts = computed(() => {
-    return [
-        stats.total > 0 ? `当前共有 ${stats.total} 份资料处于有效状态。` : '当前还没有可管理的资料资源。',
-        stats.interactionCount > 0 ? `累计资料下载次数为 ${stats.interactionCount} 次。` : '当前资料尚未产生下载记录。',
-    ];
-});
+const reminderTexts = computed(() => [
+    stats.total > 0 ? `当前共有 ${stats.total} 条资源处于有效状态。` : '当前还没有可管理的资源。',
+    stats.interactionCount > 0 ? `累计下载和播放次数为 ${stats.interactionCount} 次。` : '当前资源尚未产生互动记录。',
+]);
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
     return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
@@ -53,6 +51,21 @@ function formatFileSize(size) {
         return `${(size / 1024 / 1024).toFixed(2)} MB`;
     }
     return `${(size / 1024).toFixed(2)} KB`;
+}
+function formatDuration(duration) {
+    if (!duration || duration <= 0) {
+        return '未标注';
+    }
+    const totalSeconds = Math.floor(duration);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes} 分 ${String(seconds).padStart(2, '0')} 秒`;
+}
+function resourceTypeLabel(type) {
+    return type === 'material' ? '资料' : '视频';
+}
+function resourceMetaText(item) {
+    return item.format;
 }
 function clearMessages() {
     errorMessage.value = '';
@@ -84,32 +97,40 @@ function resetFilters() {
 function changePage(page) {
     updateRoute(page);
 }
-function viewResource(path) {
+function openResource(path) {
     if (!path) {
         return;
     }
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
     window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
 }
+function handlePrimaryAction(item) {
+    openResource(item.previewUrl);
+}
 async function removeResource(item) {
     clearMessages();
-    if (!window.confirm(`确认删除资料《${item.title}》吗？`)) {
+    if (!window.confirm(`确认删除${resourceTypeLabel(item.type)}《${item.title}》吗？`)) {
         return;
     }
-    deletingId.value = item.id;
+    deletingKey.value = `${item.type}-${item.id}`;
     try {
-        await deleteAdminMaterial(item.id);
-        successMessage.value = `资料《${item.title}》已删除。`;
-        await loadMaterials();
+        if (item.type === 'material') {
+            await deleteAdminMaterial(item.id);
+        }
+        else {
+            await deleteAdminVideo(item.id);
+        }
+        successMessage.value = `${resourceTypeLabel(item.type)}《${item.title}》已删除。`;
+        await loadResources();
     }
     catch (error) {
-        errorMessage.value = error?.response?.data?.message || '资料删除失败';
+        errorMessage.value = error?.response?.data?.message || `${resourceTypeLabel(item.type)}删除失败`;
     }
     finally {
-        deletingId.value = null;
+        deletingKey.value = '';
     }
 }
-async function loadMaterials() {
+async function loadResources() {
     loading.value = true;
     clearMessages();
     syncFormWithRoute();
@@ -142,14 +163,14 @@ async function loadMaterials() {
         pagination.pageSize = 6;
         pagination.total = 0;
         pagination.totalPages = 0;
-        errorMessage.value = error?.response?.data?.message || '资料管理列表加载失败';
+        errorMessage.value = error?.response?.data?.message || '资源管理列表加载失败';
     }
     finally {
         loading.value = false;
     }
 }
 watch(() => route.fullPath, () => {
-    loadMaterials();
+    loadResources();
 }, { immediate: true });
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
@@ -171,7 +192,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/system');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/teachers');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -200,13 +235,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "admin-dashboard-nav__item is-active" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/videos');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
@@ -291,7 +319,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     value: (__VLS_ctx.form.keyword),
     type: "text",
     maxlength: "200",
-    placeholder: "搜索资料标题、描述或文件名",
+    placeholder: "搜索资源标题、描述或文件名",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "admin-manage-field" },
@@ -324,7 +352,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn" },
     disabled: (__VLS_ctx.loading),
 });
-(__VLS_ctx.loading ? '加载中...' : '搜索资料');
+(__VLS_ctx.loading ? '加载中...' : '搜索资源');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-stats" },
 });
@@ -386,7 +414,7 @@ if (__VLS_ctx.resourceList.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
     for (const [item] of __VLS_getVForSourceType((__VLS_ctx.resourceList))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-            key: (item.id),
+            key: (`${item.type}-${item.id}`),
             ...{ class: "admin-manage-row admin-manage-row--resource" },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -395,26 +423,55 @@ if (__VLS_ctx.resourceList.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.title);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (item.description || `${item.fileName} · ${__VLS_ctx.formatFileSize(item.fileSize)}`);
+        (item.description || `${__VLS_ctx.resourceTypeLabel(item.type)} · ${item.fileName}`);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell" },
+            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__label" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__value" },
         });
         (item.courseName);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell" },
+            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__label" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__value" },
         });
         (item.teacherName);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell" },
+            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
         });
-        (item.format);
-        (__VLS_ctx.formatFileSize(item.fileSize));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__label" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__value" },
+        });
+        (__VLS_ctx.resourceMetaText(item));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell" },
+            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__label" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__value" },
         });
         (item.uploadTime);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "admin-manage-row__cell" },
+            ...{ class: "admin-manage-row__cell admin-manage-row__meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__label" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "admin-manage-row__value" },
         });
         (item.interactionCount);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -424,11 +481,12 @@ if (__VLS_ctx.resourceList.length) {
             ...{ onClick: (...[$event]) => {
                     if (!(__VLS_ctx.resourceList.length))
                         return;
-                    __VLS_ctx.viewResource(item.previewUrl);
+                    __VLS_ctx.handlePrimaryAction(item);
                 } },
             type: "button",
             ...{ class: "course-chip course-chip--soft" },
         });
+        (item.type === 'material' ? '下载' : '查看');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
             ...{ onClick: (...[$event]) => {
                     if (!(__VLS_ctx.resourceList.length))
@@ -437,9 +495,9 @@ if (__VLS_ctx.resourceList.length) {
                 } },
             type: "button",
             ...{ class: "course-chip admin-manage-delete-btn" },
-            disabled: (__VLS_ctx.deletingId === item.id),
+            disabled: (__VLS_ctx.deletingKey === `${item.type}-${item.id}`),
         });
-        (__VLS_ctx.deletingId === item.id ? '删除中...' : '删除');
+        (__VLS_ctx.deletingKey === `${item.type}-${item.id}` ? '删除中...' : '删除');
     }
 }
 else if (!__VLS_ctx.loading) {
@@ -484,12 +542,14 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item--system']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card--manage']} */ ;
@@ -535,10 +595,25 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-row--resource']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__title']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__cell']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__label']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-row__value']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-row__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
@@ -555,7 +630,7 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             router: router,
             loading: loading,
-            deletingId: deletingId,
+            deletingKey: deletingKey,
             errorMessage: errorMessage,
             successMessage: successMessage,
             courseOptions: courseOptions,
@@ -566,11 +641,12 @@ const __VLS_self = (await import('vue')).defineComponent({
             headerText: headerText,
             reminderTexts: reminderTexts,
             pageNumbers: pageNumbers,
-            formatFileSize: formatFileSize,
+            resourceTypeLabel: resourceTypeLabel,
+            resourceMetaText: resourceMetaText,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,
-            viewResource: viewResource,
+            handlePrimaryAction: handlePrimaryAction,
             removeResource: removeResource,
         };
     },

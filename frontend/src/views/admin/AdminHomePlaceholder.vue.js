@@ -77,8 +77,22 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
     ...{ class: "admin-dashboard-nav" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/system');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "admin-dashboard-nav__item is-active" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/teachers');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
@@ -104,13 +118,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin/materials');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/videos');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -327,6 +334,8 @@ else {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item--system']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;

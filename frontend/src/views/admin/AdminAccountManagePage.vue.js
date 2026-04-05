@@ -214,7 +214,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/system');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/teachers');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -240,13 +254,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/admin/materials');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/videos');
         } },
     type: "button",
     ...{ class: "admin-dashboard-nav__item" },
@@ -379,8 +386,6 @@ else if (__VLS_ctx.accountList.length) {
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.name);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.updateTime);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
         (item.realName ? `真实姓名：${item.realName}` : '当前尚未设置真实姓名，建议补齐以便后台协作识别。');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -575,9 +580,11 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item--system']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
