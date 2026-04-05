@@ -263,6 +263,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "button",
     ...{ class: "my-resources-nav__item is-active" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/profile');
+        } },
+    type: "button",
+    ...{ class: "my-resources-nav__item" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "my-resources-main" },
 });
@@ -622,6 +629,7 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head__eyebrow']} */ ;

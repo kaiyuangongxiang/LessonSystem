@@ -12,6 +12,7 @@
         <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
         <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="my-resources-nav__item is-active">我的资源</button>
+        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
     </aside>
 

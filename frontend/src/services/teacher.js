@@ -7,6 +7,14 @@ export async function getTeacherCourseOptions() {
     const response = await http.get('/teacher/courses/options');
     return response.data.data;
 }
+export async function getTeacherProfile() {
+    const response = await http.get('/teacher/profile');
+    return response.data.data;
+}
+export async function updateTeacherProfile(payload) {
+    const response = await http.put('/teacher/profile', payload);
+    return response.data.data;
+}
 export async function uploadTeacherMaterial(payload) {
     const formData = new FormData();
     formData.append('courseId', payload.courseId);

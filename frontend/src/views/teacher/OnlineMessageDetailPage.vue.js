@@ -76,6 +76,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/teacher/profile');
+        } },
+    type: "button",
+    ...{ class: "course-chip" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/messages');
         } },
     type: "button",
@@ -196,6 +203,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['online-message-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['online-message-nav__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['online-message-nav__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;

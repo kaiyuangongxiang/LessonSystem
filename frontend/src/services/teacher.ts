@@ -43,6 +43,36 @@ export interface TeacherCourseOption {
   name: string
 }
 
+export interface TeacherProfileFormData {
+  id: number
+  username: string
+  teacherName: string
+  gender: string
+  email: string
+  collegeId: number | null
+  collegeName: string
+  profile: string
+}
+
+export interface TeacherProfileOptions {
+  genders: string[]
+  colleges: TeacherCourseOption[]
+}
+
+export interface TeacherProfileResponse {
+  profile: TeacherProfileFormData
+  options: TeacherProfileOptions
+}
+
+export interface TeacherProfileUpdatePayload {
+  username: string
+  teacherName: string
+  gender: string
+  email: string
+  collegeId: string
+  profile: string
+}
+
 export interface TeacherMaterialUploadPayload {
   courseId: string
   materialName: string
@@ -68,6 +98,16 @@ export async function getTeacherDashboard() {
 
 export async function getTeacherCourseOptions() {
   const response = await http.get<ApiSuccess<TeacherCourseOption[]>>('/teacher/courses/options')
+  return response.data.data
+}
+
+export async function getTeacherProfile() {
+  const response = await http.get<ApiSuccess<TeacherProfileResponse>>('/teacher/profile')
+  return response.data.data
+}
+
+export async function updateTeacherProfile(payload: TeacherProfileUpdatePayload) {
+  const response = await http.put<ApiSuccess<TeacherProfileFormData>>('/teacher/profile', payload)
   return response.data.data
 }
 

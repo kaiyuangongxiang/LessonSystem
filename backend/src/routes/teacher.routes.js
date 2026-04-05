@@ -4,6 +4,7 @@ import {
   getDashboard,
   getMessageDetail,
   getMessages,
+  getProfile,
   getResourceDetail,
   getResources,
   postMaterial,
@@ -11,6 +12,7 @@ import {
   postMessageReply,
   postVideo,
   removeResource,
+  updateProfile,
   updateResource,
 } from '../controllers/teacher.controller.js'
 import { authenticate, requireRole } from '../middleware/auth.js'
@@ -21,6 +23,8 @@ const router = Router()
 router.use(authenticate, requireRole('teacher'))
 router.get('/dashboard', getDashboard)
 router.get('/courses/options', getCourseOptions)
+router.get('/profile', getProfile)
+router.put('/profile', updateProfile)
 router.post('/materials', uploadMaterialFile.single('file'), postMaterial)
 router.post(
   '/videos',

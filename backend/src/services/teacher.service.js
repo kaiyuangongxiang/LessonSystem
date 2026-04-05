@@ -272,6 +272,218 @@ async function getTeacherProfile(teacherId) {
   return rows[0]
 }
 
+function normalizeTeacherUsername(value) {
+  const username = typeof value === 'string' ? value.trim() : ''
+
+  if (!username) {
+    throw badRequest('用户名不能为空')
+  }
+
+  if (username.length > 50) {
+    throw badRequest('用户名不能超过50个字符')
+  }
+
+  return username
+}
+
+function normalizeTeacherName(value) {
+  const teacherName = typeof value === 'string' ? value.trim() : ''
+
+  if (!teacherName) {
+    throw badRequest('教师姓名不能为空')
+  }
+
+  if (teacherName.length > 50) {
+    throw badRequest('教师姓名不能超过50个字符')
+  }
+
+  return teacherName
+}
+
+function normalizeTeacherGender(value) {
+  if (value === '男' || value === '女' || value === '未知') {
+    return value
+  }
+
+  throw badRequest('性别参数不合法')
+}
+
+function normalizeTeacherCollegeId(value) {
+  const collegeId = Number(value)
+
+  if (!Number.isInteger(collegeId) || collegeId <= 0) {
+    throw badRequest('所属学院不合法')
+  }
+
+  return collegeId
+}
+
+function normalizeTeacherOptionalEmail(value) {
+  const email = typeof value === 'string' ? value.trim() : ''
+
+  if (!email) {
+    return null
+  }
+
+  if (email.length > 100) {
+    throw badRequest('邮箱不能超过100个字符')
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(email)) {
+    throw badRequest('邮箱格式不正确')
+  }
+
+  return email
+}
+
+function normalizeTeacherOptionalProfile(value) {
+  const profile = typeof value === 'string' ? value.trim() : ''
+
+  if (!profile) {
+    return null
+  }
+
+  if (profile.length > 2000) {
+    throw badRequest('个人简介不能超过2000个字符')
+  }
+
+  return profile
+}
+
+async function ensureTeacherCollegeExists(collegeId) {
+  const [rows] = await pool.query(
+    `SELECT college_id AS id, college_name AS name
+     FROM college
+     WHERE college_id = ?
+     LIMIT 1`,
+    [collegeId],
+  )
+
+  if (!rows.length) {
+    throw badRequest('所选学院不存在')
+  }
+
+  return rows[0]
+}
+
+async function getTeacherCollegeOptions() {
+  const [rows] = await pool.query(
+    `SELECT college_id AS id, college_name AS name
+     FROM college
+     ORDER BY college_name ASC`,
+  )
+
+  return rows.map((item) => ({
+    id: Number(item.id),
+    name: item.name,
+  }))
+}
+
+export async function getTeacherProfileDetail(teacherId) {
+  const [rows] = await pool.query(
+    `SELECT t.teacher_id AS id,
+            t.username AS username,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
+            COALESCE(NULLIF(t.gender, ''), '未知') AS gender,
+            COALESCE(t.email, '') AS email,
+            t.college_id AS collegeId,
+            COALESCE(c.college_name, '') AS collegeName,
+            COALESCE(t.profile, '') AS profile
+     FROM teacher_user t
+     LEFT JOIN college c ON c.college_id = t.college_id
+     WHERE t.teacher_id = ? AND t.status = 1
+     LIMIT 1`,
+    [teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('教师账号不存在或不可用')
+  }
+
+  const profile = rows[0]
+  const colleges = await getTeacherCollegeOptions()
+
+  logger.info('teacher_profile_detail_loaded', {
+    teacherId,
+    collegeId: profile.collegeId ? Number(profile.collegeId) : null,
+  })
+
+  return {
+    profile: {
+      id: Number(profile.id),
+      username: profile.username,
+      teacherName: profile.teacherName,
+      gender: profile.gender,
+      email: profile.email || '',
+      collegeId: profile.collegeId ? Number(profile.collegeId) : null,
+      collegeName: profile.collegeName || '',
+      profile: profile.profile || '',
+    },
+    options: {
+      genders: ['男', '女', '未知'],
+      colleges,
+    },
+  }
+}
+
+export async function updateTeacherProfileInfo({ teacherId, payload }) {
+  await getTeacherProfile(teacherId)
+
+  const username = normalizeTeacherUsername(payload.username)
+  const teacherName = normalizeTeacherName(payload.teacherName)
+  const gender = normalizeTeacherGender(payload.gender)
+  const collegeId = normalizeTeacherCollegeId(payload.collegeId)
+  const email = normalizeTeacherOptionalEmail(payload.email)
+  const profile = normalizeTeacherOptionalProfile(payload.profile)
+
+  await ensureTeacherCollegeExists(collegeId)
+
+  const [existingRows] = await pool.query(
+    `SELECT teacher_id AS id
+     FROM teacher_user
+     WHERE username = ? AND teacher_id <> ?
+     LIMIT 1`,
+    [username, teacherId],
+  )
+
+  if (existingRows.length) {
+    throw badRequest('用户名已存在')
+  }
+
+  await pool.query(
+    `UPDATE teacher_user
+     SET username = ?,
+         teacher_name = ?,
+         gender = ?,
+         email = ?,
+         college_id = ?,
+         profile = ?,
+         update_time = CURRENT_TIMESTAMP
+     WHERE teacher_id = ? AND status = 1`,
+    [username, teacherName, gender, email, collegeId, profile, teacherId],
+  )
+
+  const college = await ensureTeacherCollegeExists(collegeId)
+
+  logger.info('teacher_profile_updated', {
+    teacherId,
+    username,
+    collegeId,
+  })
+
+  return {
+    id: Number(teacherId),
+    username,
+    teacherName,
+    gender,
+    email: email || '',
+    collegeId,
+    collegeName: college.name,
+    profile: profile || '',
+  }
+}
+
 async function getOwnedCourseRow(courseId, teacherId) {
   const [rows] = await pool.query(
     `SELECT course_id AS id, course_name AS name

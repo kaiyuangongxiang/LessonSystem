@@ -12,6 +12,7 @@
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
 
       <section class="teacher-dashboard-reminder-card">
@@ -86,6 +87,7 @@
             <button type="button" class="auth-btn" @click="router.push('/teacher/messages')">查看教学交流</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/materials')">上传课程资料</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/videos')">上传课程视频</button>
+            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/profile')">维护个人资料</button>
           </div>
 
           <div class="teacher-dashboard-note">

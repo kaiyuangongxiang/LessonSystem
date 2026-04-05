@@ -32,6 +32,10 @@ export const useAuthStore = defineStore('auth', {
             this.profile = payload.profile;
             this.persist();
         },
+        updateProfile(profile) {
+            this.profile = profile;
+            this.persist();
+        },
         logout() {
             this.token = '';
             this.role = '';

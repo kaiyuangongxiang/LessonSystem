@@ -8,6 +8,7 @@
       </div>
 
       <div class="online-message-nav__actions">
+        <button type="button" class="course-chip" @click="router.push('/teacher/profile')">个人资料</button>
         <button type="button" class="course-chip" @click="router.push('/teacher/messages')">返回交流列表</button>
         <button type="button" class="course-chip course-chip--soft" @click="router.push('/')">返回首页</button>
       </div>

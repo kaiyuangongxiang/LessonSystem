@@ -6,10 +6,12 @@ import {
   deleteTeacherResource,
   getTeacherCourseOptions,
   getTeacherDashboardData,
+  getTeacherProfileDetail,
   getTeacherMessageDetail,
   getTeacherMessageList,
   getTeacherResourceDetail,
   getTeacherResourceList,
+  updateTeacherProfileInfo,
   updateTeacherResource,
 } from '../services/teacher.service.js'
 
@@ -34,6 +36,37 @@ export async function getCourseOptions(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取教师课程选项成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getProfile(req, res, next) {
+  try {
+    const result = await getTeacherProfileDetail(req.auth.userId)
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师资料成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateProfile(req, res, next) {
+  try {
+    const result = await updateTeacherProfileInfo({
+      teacherId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新教师资料成功',
       data: result,
     })
   } catch (error) {
