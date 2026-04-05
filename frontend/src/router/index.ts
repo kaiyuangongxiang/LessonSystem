@@ -46,8 +46,7 @@ const router = createRouter({
     {
       path: '/teacher/videos',
       name: 'teacher-video-upload',
-      component: () => import('@/views/teacher/VideoUploadPage.vue'),
-      meta: { requiresAuth: true, role: 'teacher' },
+      redirect: { name: 'teacher-material-upload' },
     },
     {
       path: '/teacher/resources',
@@ -64,8 +63,7 @@ const router = createRouter({
     {
       path: '/teacher/messages',
       name: 'teacher-messages',
-      component: () => import('@/views/teacher/OnlineMessagePage.vue'),
-      meta: { requiresAuth: true, role: 'teacher' },
+      redirect: { name: 'teacher-home' },
     },
     {
       path: '/admin',

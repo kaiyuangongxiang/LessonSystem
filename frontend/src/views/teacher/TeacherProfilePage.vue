@@ -8,9 +8,7 @@
 
       <nav class="teacher-profile-nav">
         <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
-        <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="teacher-profile-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-profile-nav__item is-active">个人资料</button>
       </nav>

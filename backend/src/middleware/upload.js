@@ -73,6 +73,17 @@ const videoStorage = createStorage({
   fallbackBaseName: 'video',
 })
 
+const resourceStorage = createStorage({
+  destinationRoot(file) {
+    if (file.fieldname === 'material') {
+      return materialUploadRoot
+    }
+
+    return file.fieldname === 'cover' ? videoCoverUploadRoot : videoUploadRoot
+  },
+  fallbackBaseName: 'resource',
+})
+
 function materialFileFilter(req, file, callback) {
   const extension = path.extname(file.originalname || '').toLowerCase()
   const mimeType = String(file.mimetype || '').toLowerCase()
@@ -134,6 +145,31 @@ export const uploadVideoFiles = multer({
   fileFilter: videoFileFilter,
   limits: {
     files: 2,
+    fileSize: 500 * 1024 * 1024,
+  },
+})
+
+function resourceFileFilter(req, file, callback) {
+  if (file.fieldname === 'material') {
+    materialFileFilter(req, file, callback)
+    return
+  }
+
+  if (file.fieldname === 'video' || file.fieldname === 'cover') {
+    videoFileFilter(req, file, callback)
+    return
+  }
+
+  const error = new Error('不支持的上传字段')
+  error.status = 400
+  callback(error)
+}
+
+export const uploadResourceFiles = multer({
+  storage: resourceStorage,
+  fileFilter: resourceFileFilter,
+  limits: {
+    files: 3,
     fileSize: 500 * 1024 * 1024,
   },
 })

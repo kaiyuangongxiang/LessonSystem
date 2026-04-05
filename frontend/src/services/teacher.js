@@ -15,6 +15,31 @@ export async function updateTeacherProfile(payload) {
     const response = await http.put('/teacher/profile', payload);
     return response.data.data;
 }
+export async function uploadTeacherResourceBundle(payload) {
+    const formData = new FormData();
+    formData.append('courseId', payload.courseId);
+    formData.append('title', payload.title);
+    formData.append('description', payload.description);
+    if (payload.material) {
+        formData.append('material', payload.material);
+    }
+    if (payload.video) {
+        formData.append('video', payload.video);
+    }
+    if (payload.cover) {
+        formData.append('cover', payload.cover);
+    }
+    if (payload.duration !== undefined && payload.duration !== null) {
+        formData.append('duration', String(payload.duration));
+    }
+    const response = await http.post('/teacher/resources/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30 * 60 * 1000,
+    });
+    return response.data.data;
+}
 export async function uploadTeacherMaterial(payload) {
     const formData = new FormData();
     formData.append('courseId', payload.courseId);

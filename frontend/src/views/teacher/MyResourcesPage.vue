@@ -8,9 +8,7 @@
 
       <nav class="my-resources-nav">
         <button type="button" class="my-resources-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/messages')">教学交流</button>
         <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
-        <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/videos')">视频上传</button>
         <button type="button" class="my-resources-nav__item is-active">我的资源</button>
         <button type="button" class="my-resources-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
       </nav>
@@ -25,8 +23,7 @@
         </div>
 
         <div class="my-resources-head__actions">
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/materials')">新增资料</button>
-          <button type="button" class="auth-btn" @click="router.push('/teacher/videos')">新增视频</button>
+          <button type="button" class="auth-btn" @click="router.push('/teacher/materials')">上传资源</button>
         </div>
       </header>
 

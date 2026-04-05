@@ -7,7 +7,7 @@ const authStore = useAuthStore();
 const dashboard = ref(null);
 const errorMessage = ref('');
 const teacherName = computed(() => dashboard.value?.profile.name || authStore.profile?.name || authStore.profile?.username || '教师用户');
-const welcomeText = computed(() => `${teacherName.value}，这里用于查看课程、资料、视频与教学交流的个人概览。`);
+const welcomeText = computed(() => `${teacherName.value}，这里用于查看课程与资源上传情况，并管理个人教学资料。`);
 const metricCards = computed(() => {
     const stats = dashboard.value?.stats || {
         courseCount: 0,
@@ -19,7 +19,6 @@ const metricCards = computed(() => {
         { label: '我的课程数', value: stats.courseCount, tip: '教师名下课程总览' },
         { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资源数量' },
         { label: '我的视频数', value: stats.videoCount, tip: '已上传视频资源数量' },
-        { label: '我的交流主题数', value: stats.topicCount, tip: '教学交流主题累计数量' },
     ];
 });
 const reminderTexts = computed(() => {
@@ -29,7 +28,7 @@ const reminderTexts = computed(() => {
     }
     return [
         stats.materialCount > 0 ? `当前共有 ${stats.materialCount} 份资料可继续维护。` : '当前还没有资料，后续可从资料上传入口补充。',
-        stats.videoCount > 0 ? `当前共有 ${stats.videoCount} 个视频资源。` : '当前还没有视频资源，后续可从视频上传入口补充。',
+        stats.videoCount > 0 ? `当前共有 ${stats.videoCount} 个视频资源。` : '当前还没有视频资源，后续可在资源上传页补充。',
     ];
 });
 const pendingText = computed(() => {
@@ -41,9 +40,9 @@ const pendingText = computed(() => {
         return '当前还没有课程数据，后续可在课程与资源模块中继续完善。';
     }
     if (!stats.materialCount && !stats.videoCount) {
-        return '已有课程，但还没有上传资料或视频，可先从资料上传开始补充。';
+        return '已有课程，但还没有上传资料或视频，可先从资源上传开始补充。';
     }
-    return '可先进入教学交流查看讨论，再逐步补充资料与视频资源。';
+    return '可以继续补充课程资料和视频资源，并同步维护个人资料信息。';
 });
 function handleLogout() {
     authStore.logout();
@@ -86,21 +85,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
         } },
     type: "button",
     ...{ class: "teacher-dashboard-nav__item" },
@@ -251,21 +236,14 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
+            __VLS_ctx.router.push('/teacher/materials');
         } },
     type: "button",
     ...{ class: "auth-btn" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
+            __VLS_ctx.router.push('/teacher/resources');
         } },
     type: "button",
     ...{ class: "auth-btn auth-btn--secondary" },
@@ -336,8 +314,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 (__VLS_ctx.dashboard?.weeklyActivity.materialCount ?? 0);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 (__VLS_ctx.dashboard?.weeklyActivity.videoCount ?? 0);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.dashboard?.weeklyActivity.topicCount ?? 0);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-dashboard-status" },
 });
@@ -347,8 +323,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
@@ -385,8 +359,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-action-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;

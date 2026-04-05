@@ -109,14 +109,14 @@ function goPrimaryAction() {
 }
 function goTeachingMessages() {
     if (!authStore.isAuthenticated) {
-        router.push('/login');
+        router.push({ path: '/login', query: { role: 'teacher' } });
         return;
     }
     if (authStore.role === 'teacher') {
-        router.push('/teacher/messages');
+        router.push('/teacher');
         return;
     }
-    router.push('/admin');
+    router.push('/admin/messages');
 }
 function formatDuration(duration) {
     if (!duration) {

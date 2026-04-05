@@ -2,6 +2,7 @@ import {
   createTeacherMaterial,
   createTeacherMessage,
   createTeacherMessageReply,
+  createTeacherResourceBundle,
   createTeacherVideo,
   deleteTeacherResource,
   getTeacherCourseOptions,
@@ -85,6 +86,24 @@ export async function postMaterial(req, res, next) {
     res.status(201).json({
       code: 201,
       message: '上传资料成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postResourceBundle(req, res, next) {
+  try {
+    const result = await createTeacherResourceBundle({
+      teacherId: req.auth.userId,
+      payload: req.body,
+      files: req.files,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '上传课程资源成功',
       data: result,
     })
   } catch (error) {

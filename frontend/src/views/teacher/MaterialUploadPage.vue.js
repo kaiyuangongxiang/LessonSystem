@@ -1,71 +1,173 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { getTeacherCourseOptions, uploadTeacherMaterial } from '@/services/teacher';
+import { getTeacherCourseOptions, uploadTeacherResourceBundle } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const authStore = useAuthStore();
 const courseOptions = ref([]);
-const selectedFile = ref(null);
-const fileInputRef = ref(null);
+const materialFileInputRef = ref(null);
+const videoInputRef = ref(null);
+const coverInputRef = ref(null);
+const selectedMaterialFile = ref(null);
+const selectedVideo = ref(null);
+const selectedCover = ref(null);
+const videoDuration = ref(null);
 const loading = ref(false);
 const submitting = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const form = reactive({
     courseId: '',
-    materialName: '',
+    title: '',
     description: '',
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '教师用户';
-    return `${name}，在这里上传讲义、课件和实验指导等文档资料。`;
+    return `${name}，在这里统一上传课程资料和视频资源。`;
 });
+const videoDurationText = computed(() => formatDuration(videoDuration.value));
 function formatFileSize(size) {
+    if (size >= 1024 * 1024 * 1024) {
+        return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    }
     if (size >= 1024 * 1024) {
         return `${(size / 1024 / 1024).toFixed(2)} MB`;
     }
     return `${(size / 1024).toFixed(2)} KB`;
 }
+function formatDuration(duration) {
+    if (!duration) {
+        return '';
+    }
+    const totalSeconds = Math.round(duration);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes} 分 ${seconds.toString().padStart(2, '0')} 秒`;
+}
 function clearMessages() {
     errorMessage.value = '';
     successMessage.value = '';
 }
-function chooseFile() {
-    fileInputRef.value?.click();
+function chooseMaterialFile() {
+    materialFileInputRef.value?.click();
+}
+function chooseVideoFile() {
+    videoInputRef.value?.click();
+}
+function chooseCoverFile() {
+    coverInputRef.value?.click();
 }
 function resetForm() {
     form.courseId = '';
-    form.materialName = '';
+    form.title = '';
     form.description = '';
-    selectedFile.value = null;
+    selectedMaterialFile.value = null;
+    selectedVideo.value = null;
+    selectedCover.value = null;
+    videoDuration.value = null;
     clearMessages();
-    if (fileInputRef.value) {
-        fileInputRef.value.value = '';
+    if (materialFileInputRef.value) {
+        materialFileInputRef.value.value = '';
+    }
+    if (videoInputRef.value) {
+        videoInputRef.value.value = '';
+    }
+    if (coverInputRef.value) {
+        coverInputRef.value.value = '';
     }
 }
-function handleFileChange(event) {
+function handleMaterialFileChange(event) {
     clearMessages();
     const input = event.target;
     const file = input.files?.[0] || null;
     if (!file) {
-        selectedFile.value = null;
+        selectedMaterialFile.value = null;
         return;
     }
     const extension = file.name.split('.').pop()?.toLowerCase() || '';
     const allowedExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
     if (!allowedExtensions.includes(extension)) {
         input.value = '';
-        selectedFile.value = null;
+        selectedMaterialFile.value = null;
         errorMessage.value = '仅支持 PDF、DOC、DOCX、PPT、PPTX 格式资料';
         return;
     }
     if (file.size > 100 * 1024 * 1024) {
         input.value = '';
-        selectedFile.value = null;
+        selectedMaterialFile.value = null;
         errorMessage.value = '资料文件大小不能超过 100MB';
         return;
     }
-    selectedFile.value = file;
+    selectedMaterialFile.value = file;
+}
+function readVideoDuration(file) {
+    return new Promise((resolve) => {
+        const objectUrl = URL.createObjectURL(file);
+        const media = document.createElement('video');
+        media.preload = 'metadata';
+        media.onloadedmetadata = () => {
+            const duration = Number.isFinite(media.duration) ? media.duration : null;
+            URL.revokeObjectURL(objectUrl);
+            resolve(duration);
+        };
+        media.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(null);
+        };
+        media.src = objectUrl;
+    });
+}
+async function handleVideoChange(event) {
+    clearMessages();
+    const input = event.target;
+    const file = input.files?.[0] || null;
+    if (!file) {
+        selectedVideo.value = null;
+        videoDuration.value = null;
+        return;
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['mp4', 'mov'];
+    if (!allowedExtensions.includes(extension)) {
+        input.value = '';
+        selectedVideo.value = null;
+        videoDuration.value = null;
+        errorMessage.value = '仅支持 MP4、MOV 格式视频';
+        return;
+    }
+    if (file.size > 500 * 1024 * 1024) {
+        input.value = '';
+        selectedVideo.value = null;
+        videoDuration.value = null;
+        errorMessage.value = '视频文件大小不能超过 500MB';
+        return;
+    }
+    selectedVideo.value = file;
+    videoDuration.value = await readVideoDuration(file);
+}
+function handleCoverChange(event) {
+    clearMessages();
+    const input = event.target;
+    const file = input.files?.[0] || null;
+    if (!file) {
+        selectedCover.value = null;
+        return;
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!allowedExtensions.includes(extension)) {
+        input.value = '';
+        selectedCover.value = null;
+        errorMessage.value = '封面仅支持 JPG、JPEG、PNG、WEBP 格式图片';
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        input.value = '';
+        selectedCover.value = null;
+        errorMessage.value = '封面图片大小不能超过 10MB';
+        return;
+    }
+    selectedCover.value = file;
 }
 async function loadCourseOptions() {
     loading.value = true;
@@ -81,33 +183,41 @@ async function loadCourseOptions() {
         loading.value = false;
     }
 }
-async function submitMaterial() {
+async function submitResources() {
     clearMessages();
     if (!form.courseId) {
         errorMessage.value = '请选择所属课程';
         return;
     }
-    if (!form.materialName) {
-        errorMessage.value = '请输入资料名称';
+    if (!form.title) {
+        errorMessage.value = '请输入资源名称';
         return;
     }
-    if (!selectedFile.value) {
-        errorMessage.value = '请先选择资料文件';
+    if (!selectedMaterialFile.value && !selectedVideo.value) {
+        errorMessage.value = '资料文件和视频文件至少上传一种';
+        return;
+    }
+    if (selectedCover.value && !selectedVideo.value) {
+        errorMessage.value = '上传视频封面前请先选择视频文件';
         return;
     }
     submitting.value = true;
     try {
-        const result = await uploadTeacherMaterial({
+        const result = await uploadTeacherResourceBundle({
             courseId: form.courseId,
-            materialName: form.materialName,
+            title: form.title,
             description: form.description,
-            file: selectedFile.value,
+            material: selectedMaterialFile.value,
+            video: selectedVideo.value,
+            cover: selectedCover.value,
+            duration: videoDuration.value,
         });
+        const createdTypes = result.created.map((item) => (item.type === 'video' ? '视频' : '资料')).join('、');
         resetForm();
-        successMessage.value = `资料《${result.materialName}》上传成功，已归档到《${result.courseName}》。`;
+        successMessage.value = `资源上传成功，已归档到《${result.courseName}》，本次上传包含：${createdTypes}。`;
     }
     catch (error) {
-        errorMessage.value = error?.response?.data?.message || '资料上传失败';
+        errorMessage.value = error?.response?.data?.message || '资源上传失败';
     }
     finally {
         submitting.value = false;
@@ -142,22 +252,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "material-upload-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
-        } },
-    type: "button",
-    ...{ class: "material-upload-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "material-upload-nav__item is-active" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
-        } },
-    type: "button",
-    ...{ class: "material-upload-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
@@ -218,7 +314,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-    ...{ onSubmit: (__VLS_ctx.submitMaterial) },
+    ...{ onSubmit: (__VLS_ctx.submitResources) },
     ...{ class: "material-upload-form" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -229,10 +325,10 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    value: (__VLS_ctx.form.materialName),
+    value: (__VLS_ctx.form.title),
     type: "text",
     maxlength: "200",
-    placeholder: "请输入资料名称，如《数据库实验指导书》",
+    placeholder: "请输入资源名称，资料和视频会共用该标题",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "material-upload-field" },
@@ -259,22 +355,22 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicEleme
     value: (__VLS_ctx.form.description),
     maxlength: "2000",
     rows: "4",
-    placeholder: "填写资料用途、适用章节或更新说明",
+    placeholder: "填写资源用途、适用章节或更新说明",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "material-upload-field material-upload-field--file" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    ...{ onChange: (__VLS_ctx.handleFileChange) },
-    ref: "fileInputRef",
+    ...{ onChange: (__VLS_ctx.handleMaterialFileChange) },
+    ref: "materialFileInputRef",
     ...{ class: "material-upload-file-input" },
     type: "file",
     accept: ".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",
 });
-/** @type {typeof __VLS_ctx.fileInputRef} */ ;
+/** @type {typeof __VLS_ctx.materialFileInputRef} */ ;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ onClick: (__VLS_ctx.chooseFile) },
+    ...{ onClick: (__VLS_ctx.chooseMaterialFile) },
     ...{ class: "material-upload-dropzone" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -309,9 +405,9 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.selectedFile ? __VLS_ctx.selectedFile.name : '选择本地资料文件');
+(__VLS_ctx.selectedMaterialFile ? __VLS_ctx.selectedMaterialFile.name : '选择本地资料文件');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.selectedFile ? `文件大小 ${__VLS_ctx.formatFileSize(__VLS_ctx.selectedFile.size)}` : '支持 PDF、DOC、DOCX、PPT、PPTX，单文件不超过 100MB');
+(__VLS_ctx.selectedMaterialFile ? `文件大小 ${__VLS_ctx.formatFileSize(__VLS_ctx.selectedMaterialFile.size)}` : '支持 PDF、DOC、DOCX、PPT、PPTX，单文件不超过 100MB');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "material-upload-dropzone__actions" },
 });
@@ -319,10 +415,143 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "button",
     ...{ class: "material-upload-file-button" },
 });
-(__VLS_ctx.selectedFile ? '重新选择' : '点击选择');
-if (__VLS_ctx.selectedFile) {
+(__VLS_ctx.selectedMaterialFile ? '重新选择' : '点击选择');
+if (__VLS_ctx.selectedMaterialFile) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
         ...{ class: "material-upload-file-tag" },
+    });
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "video-upload-field video-upload-field--file" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    ...{ onChange: (__VLS_ctx.handleVideoChange) },
+    ref: "videoInputRef",
+    ...{ class: "video-upload-file-input" },
+    type: "file",
+    accept: ".mp4,.mov,video/mp4,video/quicktime",
+});
+/** @type {typeof __VLS_ctx.videoInputRef} */ ;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ onClick: (__VLS_ctx.chooseVideoFile) },
+    ...{ class: "video-upload-dropzone video-upload-dropzone--primary" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__main" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__icon" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.svg, __VLS_intrinsicElements.svg)({
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+    d: "M12 16V7",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+    'stroke-linecap': "round",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+    d: "M8.5 10.5 12 7l3.5 3.5",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+    'stroke-linecap': "round",
+    'stroke-linejoin': "round",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+    d: "M6 17.5h12",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+    'stroke-linecap': "round",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.selectedVideo ? __VLS_ctx.selectedVideo.name : '选择视频文件');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+(__VLS_ctx.selectedVideo
+    ? `文件大小 ${__VLS_ctx.formatFileSize(__VLS_ctx.selectedVideo.size)}${__VLS_ctx.videoDurationText ? `，时长 ${__VLS_ctx.videoDurationText}` : ''}`
+    : '支持 MP4、MOV，单文件不超过 500MB');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "video-upload-file-button" },
+});
+(__VLS_ctx.selectedVideo ? '重新选择' : '点击选择');
+if (__VLS_ctx.selectedVideo) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "video-upload-file-tag" },
+    });
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "video-upload-field video-upload-field--file" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    ...{ onChange: (__VLS_ctx.handleCoverChange) },
+    ref: "coverInputRef",
+    ...{ class: "video-upload-file-input" },
+    type: "file",
+    accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp",
+});
+/** @type {typeof __VLS_ctx.coverInputRef} */ ;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ onClick: (__VLS_ctx.chooseCoverFile) },
+    ...{ class: "video-upload-dropzone video-upload-dropzone--cover" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__main" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__icon video-upload-dropzone__icon--cover" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.svg, __VLS_intrinsicElements.svg)({
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.rect)({
+    x: "4.5",
+    y: "6",
+    width: "15",
+    height: "12",
+    rx: "2.5",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+    d: "m8 14 2.5-2.5L13 14l2-2 3 3",
+    stroke: "currentColor",
+    'stroke-width': "1.8",
+    'stroke-linecap': "round",
+    'stroke-linejoin': "round",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.circle)({
+    cx: "9",
+    cy: "10",
+    r: "1.2",
+    fill: "currentColor",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.selectedCover ? __VLS_ctx.selectedCover.name : '选择封面图片');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+(__VLS_ctx.selectedCover ? `文件大小 ${__VLS_ctx.formatFileSize(__VLS_ctx.selectedCover.size)}` : '封面可选，支持 JPG、PNG、WEBP');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "video-upload-dropzone__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "video-upload-file-button video-upload-file-button--soft" },
+});
+(__VLS_ctx.selectedCover ? '重新选择' : '上传封面');
+if (__VLS_ctx.selectedCover) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "video-upload-file-tag video-upload-file-tag--cover" },
     });
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -346,9 +575,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['material-upload-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-main']} */ ;
@@ -378,6 +605,29 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['material-upload-dropzone__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-file-button']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-file-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-field--file']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-input']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone--primary']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__main']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__icon']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-field--file']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-input']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone--cover']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__main']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__icon']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__icon--cover']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-dropzone__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-button']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-button--soft']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['video-upload-file-tag--cover']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
@@ -388,19 +638,28 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             router: router,
             courseOptions: courseOptions,
-            selectedFile: selectedFile,
-            fileInputRef: fileInputRef,
+            materialFileInputRef: materialFileInputRef,
+            videoInputRef: videoInputRef,
+            coverInputRef: coverInputRef,
+            selectedMaterialFile: selectedMaterialFile,
+            selectedVideo: selectedVideo,
+            selectedCover: selectedCover,
             loading: loading,
             submitting: submitting,
             errorMessage: errorMessage,
             successMessage: successMessage,
             form: form,
             headerText: headerText,
+            videoDurationText: videoDurationText,
             formatFileSize: formatFileSize,
-            chooseFile: chooseFile,
+            chooseMaterialFile: chooseMaterialFile,
+            chooseVideoFile: chooseVideoFile,
+            chooseCoverFile: chooseCoverFile,
             resetForm: resetForm,
-            handleFileChange: handleFileChange,
-            submitMaterial: submitMaterial,
+            handleMaterialFileChange: handleMaterialFileChange,
+            handleVideoChange: handleVideoChange,
+            handleCoverChange: handleCoverChange,
+            submitResources: submitResources,
         };
     },
 });

@@ -240,21 +240,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
-        } },
-    type: "button",
-    ...{ class: "my-resources-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "my-resources-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
         } },
     type: "button",
     ...{ class: "my-resources-nav__item" },
@@ -289,13 +275,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
         } },
     type: "button",
     ...{ class: "auth-btn" },
@@ -626,16 +605,12 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;

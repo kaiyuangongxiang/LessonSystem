@@ -126,21 +126,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/messages');
-        } },
-    type: "button",
-    ...{ class: "teacher-profile-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "teacher-profile-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/videos');
         } },
     type: "button",
     ...{ class: "teacher-profile-nav__item" },
@@ -357,8 +343,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 /** @type {__VLS_StyleScopedClasses['teacher-profile-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;

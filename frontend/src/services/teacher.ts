@@ -80,6 +80,34 @@ export interface TeacherMaterialUploadPayload {
   file: File
 }
 
+export interface TeacherResourceBundleUploadPayload {
+  courseId: string
+  title: string
+  description: string
+  material?: File | null
+  video?: File | null
+  cover?: File | null
+  duration?: number | null
+}
+
+export interface TeacherResourceBundleUploadResultItem {
+  id: number
+  type: 'material' | 'video'
+  title: string
+  fileName: string
+  fileSize: number
+  duration?: number | null
+  coverFileName?: string
+}
+
+export interface TeacherResourceBundleUploadResult {
+  title: string
+  courseId: number
+  courseName: string
+  created: TeacherResourceBundleUploadResultItem[]
+  uploadTime: string
+}
+
 export interface TeacherMaterialUploadResult {
   id: number
   materialName: string
@@ -108,6 +136,34 @@ export async function getTeacherProfile() {
 
 export async function updateTeacherProfile(payload: TeacherProfileUpdatePayload) {
   const response = await http.put<ApiSuccess<TeacherProfileFormData>>('/teacher/profile', payload)
+  return response.data.data
+}
+
+export async function uploadTeacherResourceBundle(payload: TeacherResourceBundleUploadPayload) {
+  const formData = new FormData()
+  formData.append('courseId', payload.courseId)
+  formData.append('title', payload.title)
+  formData.append('description', payload.description)
+  if (payload.material) {
+    formData.append('material', payload.material)
+  }
+  if (payload.video) {
+    formData.append('video', payload.video)
+  }
+  if (payload.cover) {
+    formData.append('cover', payload.cover)
+  }
+  if (payload.duration !== undefined && payload.duration !== null) {
+    formData.append('duration', String(payload.duration))
+  }
+
+  const response = await http.post<ApiSuccess<TeacherResourceBundleUploadResult>>('/teacher/resources/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 30 * 60 * 1000,
+  })
+
   return response.data.data
 }
 

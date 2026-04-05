@@ -120,6 +120,19 @@ function normalizeContent(value, label = '内容') {
   return content
 }
 
+function normalizeDuration(value) {
+  if (value === undefined || value === null || value === '') {
+    return null
+  }
+
+  const duration = Number(value)
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw badRequest('视频时长不合法')
+  }
+
+  return Math.round(duration)
+}
+
 function normalizeResourceId(value) {
   const resourceId = Number(value)
   if (!Number.isInteger(resourceId) || resourceId <= 0) {
@@ -662,6 +675,148 @@ export async function getTeacherCourseOptions(teacherId) {
   })
 
   return rows
+}
+
+export async function createTeacherResourceBundle({ teacherId, payload, files }) {
+  await getTeacherProfile(teacherId)
+
+  const materialFile = getUploadFile(files, 'material')
+  const videoFile = getUploadFile(files, 'video')
+  const coverFile = getUploadFile(files, 'cover')
+  let connection = null
+  let courseId = null
+
+  try {
+    if (!materialFile && !videoFile) {
+      throw badRequest('资料文件和视频文件至少上传一种')
+    }
+
+    if (coverFile && !videoFile) {
+      throw badRequest('上传视频封面前请先选择视频文件')
+    }
+
+    if (materialFile && Number(materialFile.size || 0) > 100 * 1024 * 1024) {
+      throw badRequest('资料文件大小不能超过 100MB')
+    }
+
+    if (coverFile && Number(coverFile.size || 0) > 10 * 1024 * 1024) {
+      throw badRequest('封面图片大小不能超过 10MB')
+    }
+
+    courseId = normalizeCourseId(payload.courseId)
+    const title = normalizeMaterialName(payload.title || payload.resourceTitle || payload.materialName || payload.videoTitle)
+    const description = normalizeDescription(payload.description, '资源说明')
+    const duration = videoFile ? normalizeDuration(payload.duration) : null
+    const course = await getOwnedCourseRow(courseId, teacherId)
+
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+
+    const created = []
+
+    if (materialFile) {
+      const storedMaterialPath = buildStoredFilePath(materialFile.path)
+      const materialType = path.extname(materialFile.originalname || '').replace('.', '').toLowerCase() || 'document'
+      const [materialResult] = await connection.query(
+        `INSERT INTO material (
+          material_name,
+          material_type,
+          teacher_id,
+          course_id,
+          file_path,
+          file_name,
+          file_size,
+          description,
+          download_count,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+        [title, materialType, teacherId, courseId, storedMaterialPath, materialFile.originalname, Number(materialFile.size || 0), description || null],
+      )
+
+      created.push({
+        id: materialResult.insertId,
+        type: 'material',
+        title,
+        fileName: materialFile.originalname,
+        fileSize: Number(materialFile.size || 0),
+      })
+    }
+
+    if (videoFile) {
+      const storedVideoPath = buildStoredFilePath(videoFile.path)
+      const storedCoverPath = coverFile ? buildStoredFilePath(coverFile.path) : null
+      const [videoResult] = await connection.query(
+        `INSERT INTO course_video (
+          video_title,
+          course_id,
+          teacher_id,
+          video_path,
+          cover_path,
+          duration,
+          file_size,
+          description,
+          play_count,
+          download_count,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1)`,
+        [title, courseId, teacherId, storedVideoPath, storedCoverPath, duration, Number(videoFile.size || 0), description || null],
+      )
+
+      created.push({
+        id: videoResult.insertId,
+        type: 'video',
+        title,
+        fileName: videoFile.originalname,
+        fileSize: Number(videoFile.size || 0),
+        duration,
+        coverFileName: coverFile?.originalname || '',
+      })
+    }
+
+    await connection.commit()
+
+    logger.info('teacher_resource_bundle_created', {
+      teacherId,
+      courseId,
+      createdTypes: created.map((item) => item.type),
+      hasMaterial: Boolean(materialFile),
+      hasVideo: Boolean(videoFile),
+      hasCover: Boolean(coverFile),
+    })
+
+    return {
+      title,
+      courseId,
+      courseName: course.name,
+      created,
+      uploadTime: new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+        .format(new Date())
+        .replace(/\//g, '-'),
+    }
+  } catch (error) {
+    if (connection) {
+      await connection.rollback()
+    }
+
+    await cleanupUploadedFiles([materialFile?.path, videoFile?.path, coverFile?.path])
+
+    logger.error('teacher_resource_bundle_create_failed', {
+      teacherId,
+      courseId,
+      hasMaterial: Boolean(materialFile),
+      hasVideo: Boolean(videoFile),
+      hasCover: Boolean(coverFile),
+      error: error.message,
+    })
+
+    throw error
+  } finally {
+    connection?.release()
+  }
 }
 
 export async function createTeacherMaterial({ teacherId, payload, file }) {
