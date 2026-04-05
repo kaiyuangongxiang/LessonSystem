@@ -1,6 +1,38 @@
 *
-!/.gitignore
 !/backend/
 !/backend/**
 !/frontend/
 !/frontend/**
+
+# .gitignore
+/.gitignore
+
+# dependencies
+backend/node_modules/
+frontend/node_modules/
+
+# build output
+backend/dist/
+frontend/dist/
+backend/coverage/
+frontend/coverage/
+backend/*.tsbuildinfo
+frontend/*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# runtime files
+backend/*.log
+frontend/*.log
+backend/*.out.log
+frontend/*.out.log
+backend/*.err.log
+frontend/*.err.log
+
+# env files
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
