@@ -4,7 +4,7 @@ import { logger } from '../utils/logger.js'
 
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
-const ASSET_FILE_TYPES = new Set(['image', 'audio'])
+const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
 let replySchemaSupportPromise = null
@@ -2859,7 +2859,7 @@ export async function getAdminAssetList({ adminId, query }) {
         COUNT(*) AS total,
         COUNT(DISTINCT course_id) AS courseCount,
         COUNT(DISTINCT teacher_id) AS teacherCount,
-        SUM(CASE WHEN asset_type IN ('image', 'audio') THEN 1 ELSE 0 END) AS fileCount
+        SUM(CASE WHEN asset_type IN ('image', 'audio', 'video') THEN 1 ELSE 0 END) AS fileCount
      FROM asset_library
      WHERE status = 1`,
   )

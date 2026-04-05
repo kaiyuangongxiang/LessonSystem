@@ -329,7 +329,7 @@ export interface AdminCourseMutationData extends AdminCourseItem {
   formOptions: AdminCourseFormOptions
 }
 
-export type AdminAssetType = 'image' | 'audio' | 'text' | 'question' | 'template'
+export type AdminAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
 
 export interface AdminAssetStats {
   total: number

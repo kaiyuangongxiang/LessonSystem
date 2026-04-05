@@ -31,13 +31,14 @@ const pagination = reactive({
 const assetTypeOptions = [
     { value: 'image', label: '图片素材' },
     { value: 'audio', label: '音频素材' },
+    { value: 'video', label: '视频素材' },
     { value: 'text', label: '文本片段' },
     { value: 'question', label: '题目卡片' },
     { value: 'template', label: '页面模板' },
 ];
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '系统管理员';
-    return `${name}，这里统一查看教师上传的图片、音频和文本类教学素材。`;
+    return `${name}，这里统一查看教师上传的图片、音频、视频和文本类教学素材。`;
 });
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
@@ -423,7 +424,7 @@ if (__VLS_ctx.assetList.length) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
                 ...{ class: "asset-manage-item__meta" },
             });
-            (item.fileName || '无文件名');
+            (item.fileName || '未记录文件名');
             if (item.fileSize) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
                 (__VLS_ctx.formatFileSize(item.fileSize));

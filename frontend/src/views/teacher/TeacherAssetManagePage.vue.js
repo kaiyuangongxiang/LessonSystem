@@ -12,6 +12,7 @@ const editingId = ref(null);
 const errorMessage = ref('');
 const successMessage = ref('');
 const selectedFile = ref(null);
+const fileInputRef = ref(null);
 const fileInputKey = ref(0);
 const courseOptions = ref([]);
 const assetList = ref([]);
@@ -19,6 +20,7 @@ const stats = reactive({
     total: 0,
     imageCount: 0,
     audioCount: 0,
+    videoCount: 0,
     contentCount: 0,
 });
 const filters = reactive({
@@ -42,22 +44,60 @@ const pagination = reactive({
 const assetTypeOptions = [
     { value: 'image', label: '图片素材' },
     { value: 'audio', label: '音频素材' },
+    { value: 'video', label: '视频素材' },
     { value: 'text', label: '文本片段' },
     { value: 'question', label: '题目卡片' },
     { value: 'template', label: '页面模板' },
 ];
 const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type));
-const fileAccept = computed(() => (editorForm.type === 'audio' ? '.mp3,.wav,.ogg,.m4a' : '.jpg,.jpeg,.png,.webp,.gif'));
+const fileAccept = computed(() => {
+    if (editorForm.type === 'audio') {
+        return '.mp3,.wav,.ogg,.m4a';
+    }
+    if (editorForm.type === 'video') {
+        return '.mp4,.mov';
+    }
+    return '.jpg,.jpeg,.png,.webp,.gif';
+});
+const uploadLabel = computed(() => {
+    if (editorForm.type === 'audio') {
+        return '上传音频';
+    }
+    if (editorForm.type === 'video') {
+        return '上传视频';
+    }
+    return '上传图片';
+});
+const uploadTip = computed(() => {
+    if (editorForm.type === 'audio') {
+        return '支持 MP3、WAV、OGG、M4A 格式，单文件不超过 500MB。';
+    }
+    if (editorForm.type === 'video') {
+        return '支持 MP4、MOV 格式，单文件不超过 500MB。';
+    }
+    return '支持 JPG、JPEG、PNG、WEBP、GIF 格式，单文件不超过 500MB。';
+});
+const fileNameText = computed(() => {
+    if (selectedFile.value) {
+        return selectedFile.value.name;
+    }
+    if (editingId.value) {
+        return '编辑状态下保留原文件';
+    }
+    return '未选择任何文件';
+});
 const contentPlaceholder = computed(() => {
-    if (editorForm.type === 'question')
+    if (editorForm.type === 'question') {
         return '请输入题干、选项、答案要点或讲解内容';
-    if (editorForm.type === 'template')
+    }
+    if (editorForm.type === 'template') {
         return '请输入页面模板结构、布局说明或使用建议';
+    }
     return '请输入可直接复用的文本片段内容';
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '教师用户';
-    return `${name}，这里统一管理图片、音频和文本类教学素材，可按课程沉淀后续课件内容。`;
+    return `${name}，这里统一管理图片、音频、视频和文本类教学素材，方便后续课程资源与课件复用。`;
 });
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
@@ -79,6 +119,11 @@ function formatFileSize(size) {
 }
 function assetTypeLabel(type) {
     return assetTypeOptions.find((item) => item.value === type)?.label || type;
+}
+function openFilePicker() {
+    if (!editingId.value) {
+        fileInputRef.value?.click();
+    }
 }
 function resetEditor() {
     editingId.value = null;
@@ -229,6 +274,7 @@ async function loadAssets() {
         stats.total = data.stats.total;
         stats.imageCount = data.stats.imageCount;
         stats.audioCount = data.stats.audioCount;
+        stats.videoCount = data.stats.videoCount;
         stats.contentCount = data.stats.contentCount;
         pagination.page = data.pagination.page;
         pagination.pageSize = data.pagination.pageSize;
@@ -241,6 +287,7 @@ async function loadAssets() {
         stats.total = 0;
         stats.imageCount = 0;
         stats.audioCount = 0;
+        stats.videoCount = 0;
         stats.contentCount = 0;
         pagination.page = 1;
         pagination.pageSize = 6;
@@ -352,7 +399,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElemen
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.audioCount);
+(__VLS_ctx.stats.audioCount + __VLS_ctx.stats.videoCount);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ...{ class: "my-resources-stat-card is-highlight" },
@@ -453,17 +500,35 @@ else {
         ...{ class: "my-resources-field asset-manage-form__full" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (__VLS_ctx.editorForm.type === 'audio' ? '上传音频' : '上传图片');
+    (__VLS_ctx.uploadLabel);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "asset-upload-picker" },
+        ...{ class: ({ 'is-disabled': Boolean(__VLS_ctx.editingId) }) },
+    });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
         ...{ onChange: (__VLS_ctx.handleFileChange) },
+        ref: "fileInputRef",
         key: (__VLS_ctx.fileInputKey),
+        ...{ class: "asset-upload-picker__input" },
         type: "file",
         accept: (__VLS_ctx.fileAccept),
+        disabled: (Boolean(__VLS_ctx.editingId)),
     });
+    /** @type {typeof __VLS_ctx.fileInputRef} */ ;
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (__VLS_ctx.openFilePicker) },
+        type: "button",
+        ...{ class: "asset-upload-picker__button" },
+        disabled: (Boolean(__VLS_ctx.editingId)),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "asset-upload-picker__name" },
+    });
+    (__VLS_ctx.fileNameText);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.small, __VLS_intrinsicElements.small)({
         ...{ class: "asset-manage-field-tip" },
     });
-    (__VLS_ctx.selectedFile ? `已选择：${__VLS_ctx.selectedFile.name}` : __VLS_ctx.editingId ? '编辑时暂不支持更换文件，可保留原文件。' : '请选择要上传的素材文件。');
+    (__VLS_ctx.editingId ? '编辑素材时暂不支持替换文件，可保留原文件继续修改标题和说明。' : __VLS_ctx.uploadTip);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "my-resources-filter-actions" },
@@ -613,7 +678,7 @@ if (__VLS_ctx.assetList.length) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
                 ...{ class: "asset-manage-item__meta" },
             });
-            (item.fileName || '无文件名');
+            (item.fileName || '未记录文件名');
             if (item.fileSize) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
                 (__VLS_ctx.formatFileSize(item.fileSize));
@@ -735,6 +800,10 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['asset-manage-form__full']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-form__full']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-upload-picker']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-upload-picker__input']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-upload-picker__button']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-upload-picker__name']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-field-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
@@ -788,7 +857,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             editingId: editingId,
             errorMessage: errorMessage,
             successMessage: successMessage,
-            selectedFile: selectedFile,
+            fileInputRef: fileInputRef,
             fileInputKey: fileInputKey,
             courseOptions: courseOptions,
             assetList: assetList,
@@ -799,11 +868,15 @@ const __VLS_self = (await import('vue')).defineComponent({
             assetTypeOptions: assetTypeOptions,
             isContentType: isContentType,
             fileAccept: fileAccept,
+            uploadLabel: uploadLabel,
+            uploadTip: uploadTip,
+            fileNameText: fileNameText,
             contentPlaceholder: contentPlaceholder,
             headerText: headerText,
             pageNumbers: pageNumbers,
             formatFileSize: formatFileSize,
             assetTypeLabel: assetTypeLabel,
+            openFilePicker: openFilePicker,
             resetEditor: resetEditor,
             applySearch: applySearch,
             resetFilters: resetFilters,

@@ -35,7 +35,7 @@
         <article class="admin-manage-stat-card">
           <span>素材总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前平台全部素材</em>
+          <em>平台当前全部素材</em>
         </article>
         <article class="admin-manage-stat-card">
           <span>关联课程</span>
@@ -45,12 +45,12 @@
         <article class="admin-manage-stat-card">
           <span>上传教师</span>
           <strong>{{ stats.teacherCount }}</strong>
-          <em>已参与素材沉淀的教师</em>
+          <em>已参与素材沉淀的教师数量</em>
         </article>
         <article class="admin-manage-stat-card is-highlight">
-          <span>文件型素材</span>
+          <span>多媒体素材</span>
           <strong>{{ stats.fileCount }}</strong>
-          <em>图片与音频类素材数量</em>
+          <em>图片、音频与视频类素材数量</em>
         </article>
       </section>
 
@@ -102,7 +102,7 @@
             <div class="admin-manage-panel__eyebrow">ASSET LIST</div>
             <h3>素材列表</h3>
           </div>
-          <div class="admin-manage-panel__meta">管理员可查看文件类素材并删除不合规内容</div>
+          <div class="admin-manage-panel__meta">支持预览文件类素材，并删除不合规内容</div>
         </div>
 
         <div v-if="assetList.length" class="asset-manage-list">
@@ -119,7 +119,8 @@
             <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
             <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
             <p v-else class="asset-manage-item__meta">
-              {{ item.fileName || '无文件名' }}<span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
+              {{ item.fileName || '未记录文件名' }}
+              <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
             </p>
 
             <div class="asset-manage-item__actions">
@@ -168,17 +169,20 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const courseOptions = ref<AdminCourseOption[]>([])
 const assetList = ref<AdminAssetItem[]>([])
+
 const stats = reactive<AdminAssetStats>({
   total: 0,
   courseCount: 0,
   teacherCount: 0,
   fileCount: 0,
 })
+
 const filters = reactive({
   keyword: '',
   courseId: '',
   type: 'all' as AdminAssetType | 'all',
 })
+
 const pagination = reactive({
   page: 1,
   pageSize: 6,
@@ -189,6 +193,7 @@ const pagination = reactive({
 const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
   { value: 'image', label: '图片素材' },
   { value: 'audio', label: '音频素材' },
+  { value: 'video', label: '视频素材' },
   { value: 'text', label: '文本片段' },
   { value: 'question', label: '题目卡片' },
   { value: 'template', label: '页面模板' },
@@ -196,7 +201,7 @@ const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
 
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '系统管理员'
-  return `${name}，这里统一查看教师上传的图片、音频和文本类教学素材。`
+  return `${name}，这里统一查看教师上传的图片、音频、视频和文本类教学素材。`
 })
 
 const pageNumbers = computed(() => {

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS asset_library (
   asset_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '素材ID',
-  asset_type VARCHAR(20) NOT NULL COMMENT '素材类型:image/audio/text/question/template',
+  asset_type VARCHAR(20) NOT NULL COMMENT '素材类型:image/audio/video/text/question/template',
   teacher_id BIGINT NOT NULL COMMENT '上传教师ID',
   course_id BIGINT NOT NULL COMMENT '所属课程ID',
   asset_title VARCHAR(200) NOT NULL COMMENT '素材标题',

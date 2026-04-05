@@ -9,7 +9,7 @@ const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
 const MAX_DESCRIPTION_LENGTH = 2000
-const ASSET_FILE_TYPES = new Set(['image', 'audio'])
+const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
 
@@ -850,6 +850,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
         COUNT(*) AS total,
         SUM(CASE WHEN asset_type = 'image' THEN 1 ELSE 0 END) AS imageCount,
         SUM(CASE WHEN asset_type = 'audio' THEN 1 ELSE 0 END) AS audioCount,
+        SUM(CASE WHEN asset_type = 'video' THEN 1 ELSE 0 END) AS videoCount,
         SUM(CASE WHEN asset_type IN ('text', 'question', 'template') THEN 1 ELSE 0 END) AS contentCount
      FROM asset_library
      WHERE teacher_id = ? AND status = 1`,
@@ -861,6 +862,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
     total: 0,
     imageCount: 0,
     audioCount: 0,
+    videoCount: 0,
     contentCount: 0,
   }
 
@@ -880,6 +882,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
       total: Number(statsRow.total || 0),
       imageCount: Number(statsRow.imageCount || 0),
       audioCount: Number(statsRow.audioCount || 0),
+      videoCount: Number(statsRow.videoCount || 0),
       contentCount: Number(statsRow.contentCount || 0),
     },
     list: listRows.map((item) => ({
@@ -920,7 +923,15 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
     const course = await getOwnedCourseRow(courseId, teacherId)
 
     if (ASSET_FILE_TYPES.has(type) && !file) {
-      throw badRequest(type === 'image' ? '图片素材必须上传文件' : '音频素材必须上传文件')
+      if (type === 'image') {
+        throw badRequest('图片素材必须上传文件')
+      }
+
+      if (type === 'video') {
+        throw badRequest('视频素材必须上传文件')
+      }
+
+      throw badRequest('音频素材必须上传文件')
     }
 
     if (ASSET_CONTENT_TYPES.has(type) && file) {

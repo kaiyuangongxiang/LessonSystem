@@ -10,6 +10,7 @@ const videoUploadRoot = path.resolve(projectRoot, 'uploads', 'videos')
 const videoCoverUploadRoot = path.resolve(projectRoot, 'uploads', 'video-covers')
 const assetImageUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'images')
 const assetAudioUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'audios')
+const assetVideoUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'videos')
 
 const materialExtensions = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx'])
 const materialMimeTypes = new Set([
@@ -61,7 +62,7 @@ function createStorage({ destinationRoot, fallbackBaseName }) {
   return multer.diskStorage({
     destination(req, file, callback) {
       try {
-        const uploadRoot = typeof destinationRoot === 'function' ? destinationRoot(file) : destinationRoot
+        const uploadRoot = typeof destinationRoot === 'function' ? destinationRoot(req, file) : destinationRoot
         ensureUploadDir(uploadRoot)
         callback(null, uploadRoot)
       } catch (error) {
@@ -82,14 +83,14 @@ const materialStorage = createStorage({
 })
 
 const videoStorage = createStorage({
-  destinationRoot(file) {
+  destinationRoot(req, file) {
     return file.fieldname === 'cover' ? videoCoverUploadRoot : videoUploadRoot
   },
   fallbackBaseName: 'video',
 })
 
 const resourceStorage = createStorage({
-  destinationRoot(file) {
+  destinationRoot(req, file) {
     if (file.fieldname === 'material') {
       return materialUploadRoot
     }
@@ -102,7 +103,13 @@ const resourceStorage = createStorage({
 const assetStorage = createStorage({
   destinationRoot(req) {
     const assetType = String(req.body?.type || '').trim().toLowerCase()
-    return assetType === 'audio' ? assetAudioUploadRoot : assetImageUploadRoot
+    if (assetType === 'audio') {
+      return assetAudioUploadRoot
+    }
+    if (assetType === 'video') {
+      return assetVideoUploadRoot
+    }
+    return assetImageUploadRoot
   },
   fallbackBaseName: 'asset',
 })
@@ -208,6 +215,18 @@ function assetFileFilter(req, file, callback) {
     return
   }
 
+  if (assetType === 'video') {
+    if (!videoExtensions.has(extension) || !videoMimeTypes.has(mimeType)) {
+      const error = new Error('视频素材仅支持 MP4、MOV 格式')
+      error.status = 400
+      callback(error)
+      return
+    }
+
+    callback(null, true)
+    return
+  }
+
   const error = new Error('当前素材类型不支持文件上传')
   error.status = 400
   callback(error)
@@ -243,6 +262,6 @@ export const uploadAssetFile = multer({
   fileFilter: assetFileFilter,
   limits: {
     files: 1,
-    fileSize: 100 * 1024 * 1024,
+    fileSize: 500 * 1024 * 1024,
   },
 })

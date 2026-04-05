@@ -129,7 +129,7 @@ export async function getTeacherCourseOptions() {
   return response.data.data
 }
 
-export type TeacherAssetType = 'image' | 'audio' | 'text' | 'question' | 'template'
+export type TeacherAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
 
 export interface TeacherAssetItem {
   id: number
@@ -149,6 +149,7 @@ export interface TeacherAssetStats {
   total: number
   imageCount: number
   audioCount: number
+  videoCount: number
   contentCount: number
 }
 

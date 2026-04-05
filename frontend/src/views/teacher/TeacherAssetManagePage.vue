@@ -31,17 +31,17 @@
         <article class="my-resources-stat-card">
           <span>素材总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前可维护的全部素材</em>
+          <em>当前可管理的全部素材</em>
         </article>
         <article class="my-resources-stat-card">
           <span>图片素材</span>
           <strong>{{ stats.imageCount }}</strong>
-          <em>封面、插图、课堂图片</em>
+          <em>插图、封面与课堂配图</em>
         </article>
         <article class="my-resources-stat-card">
-          <span>音频素材</span>
-          <strong>{{ stats.audioCount }}</strong>
-          <em>讲解音频与配套音频</em>
+          <span>音视频素材</span>
+          <strong>{{ stats.audioCount + stats.videoCount }}</strong>
+          <em>音频讲解、演示视频与课堂视频</em>
         </article>
         <article class="my-resources-stat-card is-highlight">
           <span>文本类素材</span>
@@ -100,10 +100,24 @@
           </label>
 
           <label v-else class="my-resources-field asset-manage-form__full">
-            <span>{{ editorForm.type === 'audio' ? '上传音频' : '上传图片' }}</span>
-            <input :key="fileInputKey" type="file" :accept="fileAccept" @change="handleFileChange" />
+            <span>{{ uploadLabel }}</span>
+            <div class="asset-upload-picker" :class="{ 'is-disabled': Boolean(editingId) }">
+              <input
+                ref="fileInputRef"
+                :key="fileInputKey"
+                class="asset-upload-picker__input"
+                type="file"
+                :accept="fileAccept"
+                :disabled="Boolean(editingId)"
+                @change="handleFileChange"
+              />
+              <button type="button" class="asset-upload-picker__button" :disabled="Boolean(editingId)" @click="openFilePicker">
+                选择文件
+              </button>
+              <span class="asset-upload-picker__name">{{ fileNameText }}</span>
+            </div>
             <small class="asset-manage-field-tip">
-              {{ selectedFile ? `已选择：${selectedFile.name}` : editingId ? '编辑时暂不支持更换文件，可保留原文件。' : '请选择要上传的素材文件。' }}
+              {{ editingId ? '编辑素材时暂不支持替换文件，可保留原文件继续修改标题和说明。' : uploadTip }}
             </small>
           </label>
 
@@ -164,7 +178,7 @@
             <div class="my-resources-panel__eyebrow">ASSET LIST</div>
             <h3>素材列表</h3>
           </div>
-          <div class="my-resources-panel__meta">支持编辑、预览和删除</div>
+          <div class="my-resources-panel__meta">支持预览、编辑和删除</div>
         </div>
 
         <div v-if="assetList.length" class="asset-manage-list">
@@ -181,7 +195,8 @@
             <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
             <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
             <p v-else class="asset-manage-item__meta">
-              {{ item.fileName || '无文件名' }}<span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
+              {{ item.fileName || '未记录文件名' }}
+              <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
             </p>
 
             <div class="asset-manage-item__actions">
@@ -193,7 +208,7 @@
             </div>
           </article>
         </div>
-        <div v-else-if="!loading" class="course-detail-empty">当前还没有素材记录，可先创建一条素材。</div>
+        <div v-else-if="!loading" class="course-detail-empty">当前还没有素材记录，可以先新增一条素材。</div>
 
         <section class="course-pagination my-resources-pagination">
           <div class="course-pagination__desc">共 {{ pagination.total }} 条素材记录 · 当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
@@ -242,20 +257,25 @@ const editingId = ref<number | null>(null)
 const errorMessage = ref('')
 const successMessage = ref('')
 const selectedFile = ref<File | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const fileInputKey = ref(0)
 const courseOptions = ref<TeacherCourseOption[]>([])
 const assetList = ref<TeacherAssetItem[]>([])
+
 const stats = reactive<TeacherAssetStats>({
   total: 0,
   imageCount: 0,
   audioCount: 0,
+  videoCount: 0,
   contentCount: 0,
 })
+
 const filters = reactive({
   keyword: '',
   courseId: '',
   type: 'all' as TeacherAssetType | 'all',
 })
+
 const editorForm = reactive({
   type: 'image' as TeacherAssetType,
   courseId: '',
@@ -263,6 +283,7 @@ const editorForm = reactive({
   description: '',
   content: '',
 })
+
 const pagination = reactive({
   page: 1,
   pageSize: 6,
@@ -273,22 +294,79 @@ const pagination = reactive({
 const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
   { value: 'image', label: '图片素材' },
   { value: 'audio', label: '音频素材' },
+  { value: 'video', label: '视频素材' },
   { value: 'text', label: '文本片段' },
   { value: 'question', label: '题目卡片' },
   { value: 'template', label: '页面模板' },
 ]
 
 const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type))
-const fileAccept = computed(() => (editorForm.type === 'audio' ? '.mp3,.wav,.ogg,.m4a' : '.jpg,.jpeg,.png,.webp,.gif'))
+
+const fileAccept = computed(() => {
+  if (editorForm.type === 'audio') {
+    return '.mp3,.wav,.ogg,.m4a'
+  }
+
+  if (editorForm.type === 'video') {
+    return '.mp4,.mov'
+  }
+
+  return '.jpg,.jpeg,.png,.webp,.gif'
+})
+
+const uploadLabel = computed(() => {
+  if (editorForm.type === 'audio') {
+    return '上传音频'
+  }
+
+  if (editorForm.type === 'video') {
+    return '上传视频'
+  }
+
+  return '上传图片'
+})
+
+const uploadTip = computed(() => {
+  if (editorForm.type === 'audio') {
+    return '支持 MP3、WAV、OGG、M4A 格式，单文件不超过 500MB。'
+  }
+
+  if (editorForm.type === 'video') {
+    return '支持 MP4、MOV 格式，单文件不超过 500MB。'
+  }
+
+  return '支持 JPG、JPEG、PNG、WEBP、GIF 格式，单文件不超过 500MB。'
+})
+
+const fileNameText = computed(() => {
+  if (selectedFile.value) {
+    return selectedFile.value.name
+  }
+
+  if (editingId.value) {
+    return '编辑状态下保留原文件'
+  }
+
+  return '未选择任何文件'
+})
+
 const contentPlaceholder = computed(() => {
-  if (editorForm.type === 'question') return '请输入题干、选项、答案要点或讲解内容'
-  if (editorForm.type === 'template') return '请输入页面模板结构、布局说明或使用建议'
+  if (editorForm.type === 'question') {
+    return '请输入题干、选项、答案要点或讲解内容'
+  }
+
+  if (editorForm.type === 'template') {
+    return '请输入页面模板结构、布局说明或使用建议'
+  }
+
   return '请输入可直接复用的文本片段内容'
 })
+
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '教师用户'
-  return `${name}，这里统一管理图片、音频和文本类教学素材，可按课程沉淀后续课件内容。`
+  return `${name}，这里统一管理图片、音频、视频和文本类教学素材，方便后续课程资源与课件复用。`
 })
+
 const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
   return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
@@ -314,6 +392,12 @@ function formatFileSize(size: number) {
 
 function assetTypeLabel(type: TeacherAssetType) {
   return assetTypeOptions.find((item) => item.value === type)?.label || type
+}
+
+function openFilePicker() {
+  if (!editingId.value) {
+    fileInputRef.value?.click()
+  }
 }
 
 function resetEditor() {
@@ -478,6 +562,7 @@ async function loadAssets() {
     stats.total = data.stats.total
     stats.imageCount = data.stats.imageCount
     stats.audioCount = data.stats.audioCount
+    stats.videoCount = data.stats.videoCount
     stats.contentCount = data.stats.contentCount
     pagination.page = data.pagination.page
     pagination.pageSize = data.pagination.pageSize
@@ -489,6 +574,7 @@ async function loadAssets() {
     stats.total = 0
     stats.imageCount = 0
     stats.audioCount = 0
+    stats.videoCount = 0
     stats.contentCount = 0
     pagination.page = 1
     pagination.pageSize = 6
