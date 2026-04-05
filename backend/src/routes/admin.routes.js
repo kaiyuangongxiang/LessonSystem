@@ -1,12 +1,15 @@
 import { Router } from 'express'
 import {
+  createAdmin,
   createCollege,
   createCourse,
+  deleteAdmin,
   deleteCollege,
   deleteCourse,
   deleteMaterial,
   deleteMessage,
   deleteVideo,
+  getAdminList,
   getCollegeList,
   getCourseList,
   getDashboard,
@@ -15,6 +18,7 @@ import {
   getMessageList,
   getVideoList,
   postMessageReply,
+  updateAdmin,
   updateCollege,
   updateCourse,
 } from '../controllers/admin.controller.js'
@@ -24,6 +28,10 @@ const router = Router()
 
 router.use(authenticate, requireRole('admin'))
 router.get('/dashboard', getDashboard)
+router.get('/admins', getAdminList)
+router.post('/admins', createAdmin)
+router.put('/admins/:adminId', updateAdmin)
+router.delete('/admins/:adminId', deleteAdmin)
 
 router.get('/colleges', getCollegeList)
 router.post('/colleges', createCollege)

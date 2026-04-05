@@ -41,8 +41,9 @@ const reminderTexts = computed(() => {
         stats.topicCount > 0 ? `当前共有 ${stats.topicCount} 条交流主题可继续跟进。` : '当前还没有交流主题，后续可关注教师讨论情况。',
     ];
 });
-function handleNoticeClick() {
-    window.alert('公告管理将在后续后台模块中接入。');
+async function handleLogout() {
+    authStore.logout();
+    await router.push('/login');
 }
 async function loadDashboard() {
     errorMessage.value = '';
@@ -78,6 +79,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "admin-dashboard-nav__item is-active" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/admin/accounts');
+        } },
+    type: "button",
+    ...{ class: "admin-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
@@ -141,9 +149,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "admin-dashboard-head__actions" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-    ...{ class: "course-chip course-chip--soft" },
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/');
@@ -152,7 +157,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn auth-btn--secondary" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.handleNoticeClick) },
+    ...{ onClick: (__VLS_ctx.handleLogout) },
     type: "button",
     ...{ class: "auth-btn" },
 });
@@ -329,14 +334,13 @@ else {
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-reminder-card__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-head__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-head__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
@@ -385,7 +389,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             welcomeText: welcomeText,
             metricCards: metricCards,
             reminderTexts: reminderTexts,
-            handleNoticeClick: handleNoticeClick,
+            handleLogout: handleLogout,
         };
     },
 });

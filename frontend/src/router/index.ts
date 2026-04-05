@@ -68,6 +68,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'admin' },
     },
     {
+      path: '/admin/accounts',
+      name: 'admin-accounts',
+      component: () => import('@/views/admin/AdminAccountManagePage.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
       path: '/admin/colleges',
       name: 'admin-colleges',
       component: () => import('@/views/admin/AdminCollegeManagePage.vue'),

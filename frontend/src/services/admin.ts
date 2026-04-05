@@ -51,6 +51,46 @@ export interface AdminDashboardData {
   }
 }
 
+export interface AdminAccountStats {
+  total: number
+  namedCount: number
+}
+
+export interface AdminAccountItem {
+  id: number
+  username: string
+  name: string
+  realName: string
+  createTime: string
+  updateTime: string
+  isCurrent: boolean
+}
+
+export interface AdminAccountListData {
+  stats: AdminAccountStats
+  list: AdminAccountItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
+export interface AdminAccountQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+}
+
+export interface AdminAccountPayload {
+  username: string
+  realName: string
+  password?: string
+}
+
+export type AdminAccountMutationData = AdminAccountItem
+
 export interface AdminCollegeOption {
   id: number
   name: string
@@ -107,16 +147,24 @@ export interface AdminCourseStats {
   teacherCount: number
   materialCount: number
   videoCount: number
+  collegeAssignedCount: number
+  contentReadyCount: number
 }
 
 export interface AdminCourseItem {
   id: number
   name: string
   summary: string
+  teachingGoal: string
+  teachingContent: string
+  teachingIdea: string
   collegeId: number | null
   collegeName: string
   teacherId: number | null
   teacherName: string
+  teacherCollegeId?: number | null
+  teacherCollegeName?: string
+  teacherCollegeMatched?: boolean | null
   materialCount: number
   videoCount: number
   updateDate: string
@@ -153,6 +201,9 @@ export interface AdminCourseQuery {
 export interface AdminCoursePayload {
   name: string
   summary: string
+  teachingGoal: string
+  teachingContent: string
+  teachingIdea: string
   collegeId: string | number
   teacherId: string | number
 }
@@ -265,6 +316,28 @@ export interface AdminMessageQuery {
 
 export async function getAdminDashboard() {
   const response = await http.get<ApiSuccess<AdminDashboardData>>('/admin/dashboard')
+  return response.data.data
+}
+
+export async function getAdminAccountList(params: AdminAccountQuery) {
+  const response = await http.get<ApiSuccess<AdminAccountListData>>('/admin/admins', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createAdminAccount(payload: AdminAccountPayload) {
+  const response = await http.post<ApiSuccess<AdminAccountMutationData>>('/admin/admins', payload)
+  return response.data.data
+}
+
+export async function updateAdminAccount(adminId: number, payload: AdminAccountPayload) {
+  const response = await http.put<ApiSuccess<AdminAccountMutationData>>(`/admin/admins/${adminId}`, payload)
+  return response.data.data
+}
+
+export async function deleteAdminAccount(adminId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; username: string; name: string }>>(`/admin/admins/${adminId}`)
   return response.data.data
 }
 

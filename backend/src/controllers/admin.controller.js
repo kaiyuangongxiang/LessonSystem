@@ -1,17 +1,21 @@
 import {
+  createAdminAccount,
   createAdminCollege,
   createAdminCourse,
   createAdminMessageReply,
+  deleteAdminAccount,
   deleteAdminCollege,
   deleteAdminCourse,
   deleteAdminMessage,
   deleteAdminResource,
+  getAdminAccountList,
   getAdminCollegeList,
   getAdminCourseList,
   getAdminDashboardData,
   getAdminMessageDetail,
   getAdminMessageList,
   getAdminResourceList,
+  updateAdminAccount,
   updateAdminCollege,
   updateAdminCourse,
 } from '../services/admin.service.js'
@@ -23,6 +27,75 @@ export async function getDashboard(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取管理员工作台成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getAdminList(req, res, next) {
+  try {
+    const result = await getAdminAccountList({
+      adminId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取管理员账号列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function createAdmin(req, res, next) {
+  try {
+    const result = await createAdminAccount({
+      adminId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建管理员账号成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateAdmin(req, res, next) {
+  try {
+    const result = await updateAdminAccount({
+      adminId: req.auth.userId,
+      targetAdminId: req.params.adminId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新管理员账号成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteAdmin(req, res, next) {
+  try {
+    const result = await deleteAdminAccount({
+      adminId: req.auth.userId,
+      targetAdminId: req.params.adminId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除管理员账号成功',
       data: result,
     })
   } catch (error) {

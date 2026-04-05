@@ -1,23 +1,52 @@
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import http from '@/services/http';
 const router = useRouter();
 const loading = ref(false);
+const registerOptionsLoading = ref(false);
 const feedback = reactive({
     type: 'error',
     message: '',
 });
 const form = reactive({
+    teacherName: '',
     username: '',
     password: '',
     confirmPassword: '',
+    gender: '',
+    collegeId: '',
+    email: '',
+    profile: '',
 });
-const notes = ['进入教师工作台', '查看课程列表与课程详情', '上传资料、视频并管理资源'];
+const defaultGenders = ['男', '女', '未知'];
+const registerOptions = reactive({
+    colleges: [],
+    genders: [...defaultGenders],
+});
+const notes = ['进入教师工作台', '上传资料与视频', '继续完善个人资料'];
+function goTeacherLogin() {
+    router.push({ path: '/login', query: { role: 'teacher' } });
+}
+async function loadRegisterOptions() {
+    registerOptionsLoading.value = true;
+    try {
+        const response = await http.get('/auth/register-options');
+        registerOptions.colleges = response.data.data.colleges || [];
+        registerOptions.genders = response.data.data.genders?.length ? response.data.data.genders : [...defaultGenders];
+    }
+    catch (error) {
+        registerOptions.colleges = [];
+        registerOptions.genders = [...defaultGenders];
+    }
+    finally {
+        registerOptionsLoading.value = false;
+    }
+}
 async function handleSubmit() {
-    if (!form.username || !form.password || !form.confirmPassword) {
+    if (!form.teacherName || !form.username || !form.gender || !form.collegeId || !form.password || !form.confirmPassword) {
         feedback.type = 'error';
-        feedback.message = '请完整填写注册信息';
+        feedback.message = '请完整填写必填信息';
         return;
     }
     if (form.password !== form.confirmPassword) {
@@ -29,13 +58,18 @@ async function handleSubmit() {
     feedback.message = '';
     try {
         await http.post('/auth/register', {
+            teacherName: form.teacherName,
             username: form.username,
             password: form.password,
+            gender: form.gender,
+            collegeId: form.collegeId || undefined,
+            email: form.email,
+            profile: form.profile,
         });
         feedback.type = 'success';
-        feedback.message = '注册成功，正在返回登录页';
+        feedback.message = '注册成功，正在返回教师登录页';
         setTimeout(() => {
-            router.push('/login');
+            goTeacherLogin();
         }, 800);
     }
     catch (error) {
@@ -46,6 +80,9 @@ async function handleSubmit() {
         loading.value = false;
     }
 }
+onMounted(() => {
+    loadRegisterOptions();
+});
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
@@ -55,21 +92,21 @@ let __VLS_directives;
 const __VLS_0 = __VLS_asFunctionalComponent(AuthLayout, new AuthLayout({
     heroEyebrow: "TEACHER ONBOARDING",
     heroTitle: "创建教师账号",
-    heroDescription: "注册后即可进入教师中心，上传课程资料与教学视频，快速开始个人备课工作流。",
-    panelTitle: "注册完成后可执行",
+    heroDescription: "完成基础信息登记后即可进入教师中心，开始上传资料、视频并管理个人课程内容。",
+    panelTitle: "注册完成后",
     notes: (__VLS_ctx.notes),
 }));
 const __VLS_1 = __VLS_0({
     heroEyebrow: "TEACHER ONBOARDING",
     heroTitle: "创建教师账号",
-    heroDescription: "注册后即可进入教师中心，上传课程资料与教学视频，快速开始个人备课工作流。",
-    panelTitle: "注册完成后可执行",
+    heroDescription: "完成基础信息登记后即可进入教师中心，开始上传资料、视频并管理个人课程内容。",
+    panelTitle: "注册完成后",
     notes: (__VLS_ctx.notes),
 }, ...__VLS_functionalComponentArgsRest(__VLS_0));
 var __VLS_3 = {};
 __VLS_2.slots.default;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "auth-card auth-card--register" },
+    ...{ class: "auth-card auth-card--register auth-card--register-compact" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
@@ -77,7 +114,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.handleSubmit) },
-    ...{ class: "auth-form auth-form--register" },
+    ...{ class: "auth-form auth-form--register auth-form--register-compact" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-form__row auth-form__row--register" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    for: "teacherName",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    id: "teacherName",
+    value: (__VLS_ctx.form.teacherName),
+    type: "text",
+    maxlength: "50",
+    placeholder: "请输入教师真实姓名",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-field" },
@@ -85,14 +141,67 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     for: "username",
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "username",
     value: (__VLS_ctx.form.username),
     type: "text",
+    maxlength: "50",
     placeholder: "请输入唯一用户名",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "auth-form__row" },
+    ...{ class: "auth-form__row auth-form__row--register" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    for: "gender",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    id: "gender",
+    value: (__VLS_ctx.form.gender),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "",
+});
+for (const [item] of __VLS_getVForSourceType((__VLS_ctx.registerOptions.genders))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (item),
+        value: (item),
+    });
+    (item);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    for: "collegeId",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    id: "collegeId",
+    value: (__VLS_ctx.form.collegeId),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "",
+});
+for (const [college] of __VLS_getVForSourceType((__VLS_ctx.registerOptions.colleges))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (college.id),
+        value: (String(college.id)),
+    });
+    (college.name);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-form__row auth-form__row--register" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-field" },
@@ -100,10 +209,14 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     for: "password",
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "password",
     type: "password",
-    placeholder: "建议包含数字和字母",
+    maxlength: "50",
+    placeholder: "至少 6 位，建议包含数字和字母",
 });
 (__VLS_ctx.form.password);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -112,12 +225,44 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     for: "confirmPassword",
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "confirmPassword",
     type: "password",
+    maxlength: "50",
     placeholder: "请再次输入密码",
 });
 (__VLS_ctx.form.confirmPassword);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-form__row auth-form__row--register" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    for: "email",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    id: "email",
+    type: "email",
+    maxlength: "100",
+    placeholder: "请输入常用邮箱，可为空",
+});
+(__VLS_ctx.form.email);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-field auth-field--register-wide" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    for: "profile",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
+    id: "profile",
+    value: (__VLS_ctx.form.profile),
+    maxlength: "2000",
+    placeholder: "可填写研究方向、授课课程或个人简介",
+});
 if (__VLS_ctx.feedback.message) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: (['feedback-text', __VLS_ctx.feedback.type === 'error' ? 'feedback-text--error' : 'feedback-text--success']) },
@@ -131,47 +276,54 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 (__VLS_ctx.loading ? '注册中...' : '立即注册');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/login');
-        } },
+    ...{ onClick: (__VLS_ctx.goTeacherLogin) },
     ...{ class: "auth-btn--secondary" },
     type: "button",
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "auth-tip auth-tip--register" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "auth-tip__title" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
 var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['auth-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card--register']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-card--register-compact']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card__sub']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form--register']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form--register-compact']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form__row']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row--register']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row--register']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row--register']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-form__row--register']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-field--register-wide']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-tip']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-tip--register']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-tip__title']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
             AuthLayout: AuthLayout,
-            router: router,
             loading: loading,
             feedback: feedback,
             form: form,
+            registerOptions: registerOptions,
             notes: notes,
+            goTeacherLogin: goTeacherLogin,
             handleSubmit: handleSubmit,
         };
     },

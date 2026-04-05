@@ -8,6 +8,7 @@
 
       <nav class="admin-dashboard-nav">
         <button type="button" class="admin-dashboard-nav__item is-active">总览首页</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
@@ -32,9 +33,8 @@
           <p>{{ welcomeText }}</p>
         </div>
         <div class="admin-dashboard-head__actions">
-          <span class="course-chip course-chip--soft">后台概览</span>
           <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回门户</button>
-          <button type="button" class="auth-btn" @click="handleNoticeClick">发布公告</button>
+          <button type="button" class="auth-btn" @click="handleLogout">退出登录</button>
         </div>
       </header>
 
@@ -188,8 +188,9 @@ const reminderTexts = computed(() => {
   ]
 })
 
-function handleNoticeClick() {
-  window.alert('公告管理将在后续后台模块中接入。')
+async function handleLogout() {
+  authStore.logout()
+  await router.push('/login')
 }
 
 async function loadDashboard() {

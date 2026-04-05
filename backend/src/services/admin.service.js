@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs'
 import { pool } from '../config/db.js'
 import { logger } from '../utils/logger.js'
 
@@ -86,6 +87,16 @@ function normalizeCourseSummary(value) {
   return summary
 }
 
+function normalizeCourseLongText(value, label) {
+  const text = typeof value === 'string' ? value.trim() : ''
+
+  if (text.length > 5000) {
+    throw badRequest(`${label}不能超过5000个字`)
+  }
+
+  return text
+}
+
 function normalizeCollegeName(value) {
   const name = typeof value === 'string' ? value.trim() : ''
 
@@ -116,6 +127,71 @@ function normalizeCollegePayload(payload) {
   return {
     name: normalizeCollegeName(body.name),
     intro: normalizeCollegeIntro(body.intro),
+  }
+}
+
+function normalizeAdminId(value, label = '管理员') {
+  const adminId = Number(value)
+  if (!Number.isInteger(adminId) || adminId <= 0) {
+    throw badRequest(`${label}ID不合法`)
+  }
+
+  return adminId
+}
+
+function normalizeAdminUsername(value) {
+  const username = typeof value === 'string' ? value.trim() : ''
+
+  if (!username) {
+    throw badRequest('管理员账号不能为空')
+  }
+
+  if (username.length > 50) {
+    throw badRequest('管理员账号不能超过50个字符')
+  }
+
+  return username
+}
+
+function normalizeAdminRealName(value) {
+  const realName = typeof value === 'string' ? value.trim() : ''
+
+  if (realName.length > 50) {
+    throw badRequest('管理员姓名不能超过50个字')
+  }
+
+  return realName
+}
+
+function normalizeAdminPassword(value, { required = true } = {}) {
+  const password = typeof value === 'string' ? value.trim() : ''
+
+  if (!password) {
+    if (required) {
+      throw badRequest('管理员密码不能为空')
+    }
+
+    return ''
+  }
+
+  if (password.length < 6) {
+    throw badRequest('管理员密码不能少于6位')
+  }
+
+  if (password.length > 50) {
+    throw badRequest('管理员密码不能超过50位')
+  }
+
+  return password
+}
+
+function normalizeAdminPayload(payload, { requirePassword = true } = {}) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    username: normalizeAdminUsername(body.username),
+    realName: normalizeAdminRealName(body.realName),
+    password: normalizeAdminPassword(body.password, { required: requirePassword }),
   }
 }
 
@@ -151,6 +227,9 @@ function normalizeCoursePayload(payload) {
   return {
     name: normalizeCourseName(body.name),
     summary: normalizeCourseSummary(body.summary),
+    teachingGoal: normalizeCourseLongText(body.teachingGoal, '教学目标'),
+    teachingContent: normalizeCourseLongText(body.teachingContent, '教学内容'),
+    teachingIdea: normalizeCourseLongText(body.teachingIdea, '教学思路'),
     collegeId: normalizeRequiredCollegeId(body.collegeId),
     teacherId: normalizeTeacherId(body.teacherId),
   }
@@ -230,11 +309,14 @@ function buildCourseWhereClause({ keyword, collegeId }) {
     conditions.push(`(
       c.course_name LIKE ?
       OR COALESCE(c.course_summary, '') LIKE ?
+      OR COALESCE(c.teaching_goal, '') LIKE ?
+      OR COALESCE(c.teaching_content, '') LIKE ?
+      OR COALESCE(c.teaching_idea, '') LIKE ?
       OR COALESCE(col.college_name, '') LIKE ?
       OR COALESCE(t.teacher_name, '') LIKE ?
       OR COALESCE(t.username, '') LIKE ?
     )`)
-    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
   }
 
   if (collegeId) {
@@ -257,6 +339,25 @@ function buildCollegeWhereClause({ keyword }) {
     conditions.push(`(
       col.college_name LIKE ?
       OR COALESCE(col.college_intro, '') LIKE ?
+    )`)
+    params.push(keywordPattern, keywordPattern)
+  }
+
+  return {
+    whereSql: conditions.join(' AND '),
+    params,
+  }
+}
+
+function buildAdminWhereClause({ keyword }) {
+  const conditions = ['1 = 1']
+  const params = []
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    conditions.push(`(
+      a.admin_name LIKE ?
+      OR COALESCE(a.real_name, '') LIKE ?
     )`)
     params.push(keywordPattern, keywordPattern)
   }
@@ -306,6 +407,47 @@ async function getAdminProfile(adminId) {
   }
 
   return rows[0]
+}
+
+async function getManagedAdminRow(adminId) {
+  const [rows] = await pool.query(
+    `SELECT admin_id AS id,
+            admin_name AS username,
+            COALESCE(real_name, '') AS realName,
+            COALESCE(NULLIF(real_name, ''), admin_name, '系统管理员') AS name,
+            DATE_FORMAT(create_time, '%Y-%m-%d %H:%i') AS createTime,
+            DATE_FORMAT(update_time, '%Y-%m-%d %H:%i') AS updateTime
+     FROM admin
+     WHERE admin_id = ?
+     LIMIT 1`,
+    [adminId],
+  )
+
+  if (!rows.length) {
+    throw notFound('管理员账号不存在')
+  }
+
+  return rows[0]
+}
+
+async function ensureAdminUsernameAvailable(username, excludeAdminId = null) {
+  const params = [username]
+  let sql = `SELECT admin_id AS id
+             FROM admin
+             WHERE admin_name = ?`
+
+  if (excludeAdminId !== null) {
+    sql += ' AND admin_id <> ?'
+    params.push(excludeAdminId)
+  }
+
+  sql += ' LIMIT 1'
+
+  const [rows] = await pool.query(sql, params)
+
+  if (rows.length) {
+    throw badRequest('管理员账号已存在，请使用其他账号')
+  }
 }
 
 async function getAdminCourseRow(courseId) {
@@ -479,16 +621,27 @@ async function getAdminCourseDetail(courseId) {
     `SELECT c.course_id AS id,
             c.course_name AS name,
             COALESCE(c.course_summary, '') AS summary,
+            COALESCE(c.teaching_goal, '') AS teachingGoal,
+            COALESCE(c.teaching_content, '') AS teachingContent,
+            COALESCE(c.teaching_idea, '') AS teachingIdea,
             c.college_id AS collegeId,
             c.teacher_id AS teacherId,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
             COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
+            t.college_id AS teacherCollegeId,
+            COALESCE(teacherCol.college_name, '未分配学院') AS teacherCollegeName,
+            CASE
+              WHEN t.college_id IS NULL OR c.college_id IS NULL THEN NULL
+              WHEN t.college_id = c.college_id THEN 1
+              ELSE 0
+            END AS teacherCollegeMatched,
             COALESCE(videoStats.videoCount, 0) AS videoCount,
             COALESCE(materialStats.materialCount, 0) AS materialCount,
             DATE_FORMAT(c.update_time, '%Y-%m-%d') AS updateDate
      FROM course_intro c
      LEFT JOIN college col ON col.college_id = c.college_id
      LEFT JOIN teacher_user t ON t.teacher_id = c.teacher_id
+     LEFT JOIN college teacherCol ON teacherCol.college_id = t.college_id
      LEFT JOIN (
        SELECT course_id, COUNT(*) AS videoCount
        FROM course_video
@@ -515,10 +668,19 @@ async function getAdminCourseDetail(courseId) {
     id: Number(item.id),
     name: item.name,
     summary: item.summary,
+    teachingGoal: item.teachingGoal,
+    teachingContent: item.teachingContent,
+    teachingIdea: item.teachingIdea,
     collegeId: item.collegeId === null ? null : Number(item.collegeId),
     teacherId: item.teacherId === null ? null : Number(item.teacherId),
     collegeName: item.collegeName,
     teacherName: item.teacherName,
+    teacherCollegeId: item.teacherCollegeId === null ? null : Number(item.teacherCollegeId),
+    teacherCollegeName: item.teacherCollegeName,
+    teacherCollegeMatched:
+      item.teacherCollegeMatched === null || item.teacherCollegeMatched === undefined
+        ? null
+        : Boolean(item.teacherCollegeMatched),
     materialCount: Number(item.materialCount || 0),
     videoCount: Number(item.videoCount || 0),
     updateDate: item.updateDate,
@@ -749,6 +911,174 @@ export async function getAdminDashboardData(adminId) {
   }
 }
 
+export async function getAdminAccountList({ adminId, query }) {
+  await getAdminProfile(adminId)
+
+  const keyword = normalizeKeyword(query.keyword)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const { whereSql, params } = buildAdminWhereClause({ keyword })
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM admin a
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [list] = await pool.query(
+    `SELECT a.admin_id AS id,
+            a.admin_name AS username,
+            COALESCE(a.real_name, '') AS realName,
+            COALESCE(NULLIF(a.real_name, ''), a.admin_name, '系统管理员') AS name,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d %H:%i') AS createTime,
+            DATE_FORMAT(a.update_time, '%Y-%m-%d %H:%i') AS updateTime,
+            CASE WHEN a.admin_id = ? THEN 1 ELSE 0 END AS isCurrent
+     FROM admin a
+     WHERE ${whereSql}
+     ORDER BY a.update_time DESC, a.admin_id DESC
+     LIMIT ? OFFSET ?`,
+    [adminId, ...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        COUNT(*) AS total,
+        SUM(COALESCE(NULLIF(TRIM(real_name), ''), NULL) IS NOT NULL) AS namedCount
+     FROM admin`,
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    namedCount: 0,
+  }
+
+  logger.info('admin_account_list_loaded', {
+    adminId,
+    keyword,
+    page,
+    pageSize,
+    total,
+    resultCount: list.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      namedCount: Number(statsRow.namedCount || 0),
+    },
+    list: list.map((item) => ({
+      ...item,
+      id: Number(item.id),
+      isCurrent: Boolean(item.isCurrent),
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+  }
+}
+
+export async function createAdminAccount({ adminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const account = normalizeAdminPayload(payload, { requirePassword: true })
+  await ensureAdminUsernameAvailable(account.username)
+
+  const hashedPassword = await bcrypt.hash(account.password, 10)
+  const [result] = await pool.query(
+    `INSERT INTO admin (admin_name, admin_password, real_name)
+     VALUES (?, ?, ?)`,
+    [account.username, hashedPassword, account.realName || null],
+  )
+
+  logger.info('admin_account_created', {
+    operatorAdminId: adminId,
+    targetAdminId: result.insertId,
+    username: account.username,
+  })
+
+  return getManagedAdminRow(result.insertId)
+}
+
+export async function updateAdminAccount({ adminId, targetAdminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const normalizedTargetAdminId = normalizeAdminId(targetAdminId)
+  await getManagedAdminRow(normalizedTargetAdminId)
+
+  const account = normalizeAdminPayload(payload, { requirePassword: false })
+  await ensureAdminUsernameAvailable(account.username, normalizedTargetAdminId)
+
+  const params = [account.username, account.realName || null]
+  let passwordSql = ''
+
+  if (account.password) {
+    const hashedPassword = await bcrypt.hash(account.password, 10)
+    passwordSql = ', admin_password = ?'
+    params.push(hashedPassword)
+  }
+
+  params.push(normalizedTargetAdminId)
+
+  await pool.query(
+    `UPDATE admin
+     SET admin_name = ?,
+         real_name = ?${passwordSql},
+         update_time = CURRENT_TIMESTAMP
+     WHERE admin_id = ?`,
+    params,
+  )
+
+  logger.info('admin_account_updated', {
+    operatorAdminId: adminId,
+    targetAdminId: normalizedTargetAdminId,
+    username: account.username,
+    passwordChanged: Boolean(account.password),
+  })
+
+  return getManagedAdminRow(normalizedTargetAdminId)
+}
+
+export async function deleteAdminAccount({ adminId, targetAdminId }) {
+  await getAdminProfile(adminId)
+
+  const normalizedTargetAdminId = normalizeAdminId(targetAdminId)
+  const target = await getManagedAdminRow(normalizedTargetAdminId)
+
+  if (normalizedTargetAdminId === Number(adminId)) {
+    throw badRequest('不能删除当前登录的管理员账号')
+  }
+
+  const [countRows] = await pool.query('SELECT COUNT(*) AS total FROM admin')
+  const total = Number(countRows[0]?.total || 0)
+
+  if (total <= 1) {
+    throw badRequest('系统至少需要保留一个管理员账号')
+  }
+
+  await pool.query('DELETE FROM admin WHERE admin_id = ?', [normalizedTargetAdminId])
+
+  logger.info('admin_account_deleted', {
+    operatorAdminId: adminId,
+    targetAdminId: normalizedTargetAdminId,
+    username: target.username,
+  })
+
+  return {
+    id: Number(target.id),
+    username: target.username,
+    name: target.name,
+  }
+}
+
 export async function getAdminCollegeList({ adminId, query }) {
   await getAdminProfile(adminId)
 
@@ -950,17 +1280,28 @@ export async function getAdminCourseList({ adminId, query }) {
   const [list] = await pool.query(
     `SELECT c.course_id AS id,
             c.course_name AS name,
-            COALESCE(c.course_summary, '暂无课程简介') AS summary,
+            COALESCE(c.course_summary, '') AS summary,
+            COALESCE(c.teaching_goal, '') AS teachingGoal,
+            COALESCE(c.teaching_content, '') AS teachingContent,
+            COALESCE(c.teaching_idea, '') AS teachingIdea,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
             c.college_id AS collegeId,
             COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
             c.teacher_id AS teacherId,
+            t.college_id AS teacherCollegeId,
+            COALESCE(teacherCol.college_name, '未分配学院') AS teacherCollegeName,
+            CASE
+              WHEN t.college_id IS NULL OR c.college_id IS NULL THEN NULL
+              WHEN t.college_id = c.college_id THEN 1
+              ELSE 0
+            END AS teacherCollegeMatched,
             COALESCE(videoStats.videoCount, 0) AS videoCount,
             COALESCE(materialStats.materialCount, 0) AS materialCount,
             DATE_FORMAT(c.update_time, '%Y-%m-%d') AS updateDate
      FROM course_intro c
      LEFT JOIN college col ON col.college_id = c.college_id
      LEFT JOIN teacher_user t ON t.teacher_id = c.teacher_id
+     LEFT JOIN college teacherCol ON teacherCol.college_id = t.college_id
      LEFT JOIN (
        SELECT course_id, COUNT(*) AS videoCount
        FROM course_video
@@ -982,8 +1323,6 @@ export async function getAdminCourseList({ adminId, query }) {
   const [collegeRows] = await pool.query(
     `SELECT col.college_id AS id, col.college_name AS name
      FROM college col
-     INNER JOIN course_intro c ON c.college_id = col.college_id AND c.status = 1
-     GROUP BY col.college_id, col.college_name
      ORDER BY col.college_name ASC`,
   )
 
@@ -992,7 +1331,15 @@ export async function getAdminCourseList({ adminId, query }) {
         (SELECT COUNT(*) FROM course_intro WHERE status = 1) AS total,
         (SELECT COUNT(DISTINCT teacher_id) FROM course_intro WHERE status = 1 AND teacher_id IS NOT NULL) AS teacherCount,
         (SELECT COUNT(*) FROM material WHERE status = 1) AS materialCount,
-        (SELECT COUNT(*) FROM course_video WHERE status = 1) AS videoCount`,
+        (SELECT COUNT(*) FROM course_video WHERE status = 1) AS videoCount,
+        (SELECT COUNT(*) FROM course_intro WHERE status = 1 AND college_id IS NOT NULL) AS collegeAssignedCount,
+        (SELECT COUNT(*)
+         FROM course_intro
+         WHERE status = 1
+           AND COALESCE(NULLIF(TRIM(course_summary), ''), NULL) IS NOT NULL
+           AND COALESCE(NULLIF(TRIM(teaching_goal), ''), NULL) IS NOT NULL
+           AND COALESCE(NULLIF(TRIM(teaching_content), ''), NULL) IS NOT NULL
+           AND COALESCE(NULLIF(TRIM(teaching_idea), ''), NULL) IS NOT NULL) AS contentReadyCount`,
   )
 
   const statsRow = statsRows[0] || {
@@ -1000,6 +1347,8 @@ export async function getAdminCourseList({ adminId, query }) {
     teacherCount: 0,
     materialCount: 0,
     videoCount: 0,
+    collegeAssignedCount: 0,
+    contentReadyCount: 0,
   }
 
   logger.info('admin_course_list_loaded', {
@@ -1019,12 +1368,19 @@ export async function getAdminCourseList({ adminId, query }) {
       teacherCount: Number(statsRow.teacherCount || 0),
       materialCount: Number(statsRow.materialCount || 0),
       videoCount: Number(statsRow.videoCount || 0),
+      collegeAssignedCount: Number(statsRow.collegeAssignedCount || 0),
+      contentReadyCount: Number(statsRow.contentReadyCount || 0),
     },
     list: list.map((item) => ({
       ...item,
       id: Number(item.id),
       collegeId: item.collegeId === null ? null : Number(item.collegeId),
       teacherId: item.teacherId === null ? null : Number(item.teacherId),
+      teacherCollegeId: item.teacherCollegeId === null ? null : Number(item.teacherCollegeId),
+      teacherCollegeMatched:
+        item.teacherCollegeMatched === null || item.teacherCollegeMatched === undefined
+          ? null
+          : Boolean(item.teacherCollegeMatched),
       materialCount: Number(item.materialCount || 0),
       videoCount: Number(item.videoCount || 0),
     })),
@@ -1052,9 +1408,25 @@ export async function createAdminCourse({ adminId, payload }) {
   const college = await getAdminCollegeRow(course.collegeId)
 
   await pool.query(
-    `INSERT INTO course_intro (course_name, course_summary, college_id, teacher_id, status)
-     VALUES (?, ?, ?, ?, 1)`,
-    [course.name, course.summary || null, course.collegeId, course.teacherId],
+    `INSERT INTO course_intro (
+       course_name,
+       course_summary,
+       teaching_goal,
+       teaching_content,
+       teaching_idea,
+       college_id,
+       teacher_id,
+       status
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+    [
+      course.name,
+      course.summary || null,
+      course.teachingGoal || null,
+      course.teachingContent || null,
+      course.teachingIdea || null,
+      course.collegeId,
+      course.teacherId,
+    ],
   )
 
   const [resultRows] = await pool.query('SELECT LAST_INSERT_ID() AS id')
@@ -1089,11 +1461,23 @@ export async function updateAdminCourse({ adminId, courseId, payload }) {
     `UPDATE course_intro
      SET course_name = ?,
          course_summary = ?,
+         teaching_goal = ?,
+         teaching_content = ?,
+         teaching_idea = ?,
          college_id = ?,
          teacher_id = ?,
          update_time = CURRENT_TIMESTAMP
      WHERE course_id = ? AND status = 1`,
-    [course.name, course.summary || null, course.collegeId, course.teacherId, normalizedCourseId],
+    [
+      course.name,
+      course.summary || null,
+      course.teachingGoal || null,
+      course.teachingContent || null,
+      course.teachingIdea || null,
+      course.collegeId,
+      course.teacherId,
+      normalizedCourseId,
+    ],
   )
 
   logger.info('admin_course_updated', {

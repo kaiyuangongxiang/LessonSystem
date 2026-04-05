@@ -3,6 +3,24 @@ export async function getAdminDashboard() {
     const response = await http.get('/admin/dashboard');
     return response.data.data;
 }
+export async function getAdminAccountList(params) {
+    const response = await http.get('/admin/admins', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createAdminAccount(payload) {
+    const response = await http.post('/admin/admins', payload);
+    return response.data.data;
+}
+export async function updateAdminAccount(adminId, payload) {
+    const response = await http.put(`/admin/admins/${adminId}`, payload);
+    return response.data.data;
+}
+export async function deleteAdminAccount(adminId) {
+    const response = await http.delete(`/admin/admins/${adminId}`);
+    return response.data.data;
+}
 export async function getAdminCollegeList(params) {
     const response = await http.get('/admin/colleges', {
         params,

@@ -102,7 +102,7 @@ function goCourseDetail(courseId) {
 }
 function goPrimaryAction() {
     if (!authStore.isAuthenticated) {
-        router.push('/login');
+        router.push({ path: '/login', query: { role: 'teacher' } });
         return;
     }
     router.push(authStore.role === 'admin' ? '/admin' : '/teacher');

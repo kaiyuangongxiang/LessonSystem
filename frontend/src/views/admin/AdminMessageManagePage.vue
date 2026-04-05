@@ -8,6 +8,7 @@
 
       <nav class="admin-dashboard-nav">
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>

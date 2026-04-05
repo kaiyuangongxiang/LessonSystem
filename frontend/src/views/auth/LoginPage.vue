@@ -8,31 +8,54 @@
     :notes="notes"
   >
     <div class="auth-card">
-      <h2>欢迎回来</h2>
-      <p class="auth-card__sub">请输入用户名和密码，进入今日备课工作台</p>
+      <div class="auth-actions auth-actions--tabs">
+        <button
+          :class="['auth-btn--secondary', 'auth-role-btn', selectedRole === 'teacher' ? 'is-active' : '']"
+          type="button"
+          @click="selectedRole = 'teacher'"
+        >
+          教师登录
+        </button>
+        <button
+          :class="['auth-btn--secondary', 'auth-role-btn', selectedRole === 'admin' ? 'is-active' : '']"
+          type="button"
+          @click="selectedRole = 'admin'"
+        >
+          管理员登录
+        </button>
+      </div>
+
+      <h2>{{ selectedRole === 'teacher' ? '教师登录' : '管理员登录' }}</h2>
+      <p class="auth-card__sub">
+        {{ selectedRole === 'teacher' ? '请输入教师账号和密码，进入今日备课工作台' : '请输入管理员账号和密码，进入后台管理中心' }}
+      </p>
 
       <form class="auth-form" @submit.prevent="handleSubmit">
         <div class="auth-field">
           <label for="username">用户名</label>
-          <input id="username" v-model.trim="form.username" type="text" placeholder="请输入教师账号或管理员账号" />
+          <input
+            id="username"
+            v-model.trim="form.username"
+            type="text"
+            :placeholder="selectedRole === 'teacher' ? '请输入教师账号' : '请输入管理员账号'"
+          />
         </div>
 
         <div class="auth-field">
           <label for="password">密码</label>
-          <input id="password" v-model="form.password" type="password" placeholder="请输入登录密码" />
+          <input id="password" v-model="form.password" type="password" :placeholder="selectedRole === 'teacher' ? '请输入教师登录密码' : '请输入管理员登录密码'" />
         </div>
 
         <p v-if="errorMessage" class="feedback-text feedback-text--error">{{ errorMessage }}</p>
 
         <button class="auth-btn" type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '登录系统' }}
+          {{ loading ? '登录中...' : selectedRole === 'teacher' ? '教师登录' : '管理员登录' }}
         </button>
-
-        <div class="auth-actions">
-          <button class="auth-btn--secondary" type="button" @click="router.push('/register')">教师注册</button>
-          <button class="auth-btn--secondary" type="button" @click="scrollToTip">查看公告</button>
-        </div>
       </form>
+
+      <RouterLink v-if="selectedRole === 'teacher'" class="auth-inline-link" to="/register">
+        没有账号，注册账号？
+      </RouterLink>
 
       <div ref="tipRef" class="auth-tip">
         <div class="auth-tip__title">登录提示</div>
@@ -46,17 +69,18 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import http from '@/services/http'
 import { useAuthStore } from '@/stores/auth'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const tipRef = ref<HTMLElement | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const selectedRole = ref<'teacher' | 'admin'>('admin')
 
 const form = reactive({
   username: '',
@@ -75,9 +99,13 @@ const notes = [
   '课程详情可查看资料与视频',
 ]
 
-function scrollToTip() {
-  tipRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
+watch(
+  () => route.query.role,
+  (role) => {
+    selectedRole.value = role === 'teacher' ? 'teacher' : 'admin'
+  },
+  { immediate: true },
+)
 
 async function handleSubmit() {
   if (!form.username || !form.password) {
@@ -91,6 +119,11 @@ async function handleSubmit() {
   try {
     const response = await http.post('/auth/login', form)
     const payload = response.data.data
+
+    if (payload.role !== selectedRole.value) {
+      errorMessage.value = selectedRole.value === 'teacher' ? '当前账号不是教师账号' : '当前账号不是管理员账号'
+      return
+    }
 
     authStore.setAuth({
       token: payload.token,

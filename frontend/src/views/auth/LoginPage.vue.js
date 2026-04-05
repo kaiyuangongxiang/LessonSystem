@@ -1,13 +1,14 @@
-import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { reactive, ref, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import http from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const tipRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref('');
+const selectedRole = ref('admin');
 const form = reactive({
     username: '',
     password: '',
@@ -22,9 +23,9 @@ const notes = [
     '管理员登录后进入后台控制台',
     '课程详情可查看资料与视频',
 ];
-function scrollToTip() {
-    tipRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
+watch(() => route.query.role, (role) => {
+    selectedRole.value = role === 'teacher' ? 'teacher' : 'admin';
+}, { immediate: true });
 async function handleSubmit() {
     if (!form.username || !form.password) {
         errorMessage.value = '请输入用户名和密码';
@@ -35,6 +36,10 @@ async function handleSubmit() {
     try {
         const response = await http.post('/auth/login', form);
         const payload = response.data.data;
+        if (payload.role !== selectedRole.value) {
+            errorMessage.value = selectedRole.value === 'teacher' ? '当前账号不是教师账号' : '当前账号不是管理员账号';
+            return;
+        }
         authStore.setAuth({
             token: payload.token,
             role: payload.role,
@@ -76,10 +81,29 @@ __VLS_2.slots.default;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-card" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-actions auth-actions--tabs" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.selectedRole = 'teacher';
+        } },
+    ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'teacher' ? 'is-active' : '']) },
+    type: "button",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.selectedRole = 'admin';
+        } },
+    ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'admin' ? 'is-active' : '']) },
+    type: "button",
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+(__VLS_ctx.selectedRole === 'teacher' ? '教师登录' : '管理员登录');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
     ...{ class: "auth-card__sub" },
 });
+(__VLS_ctx.selectedRole === 'teacher' ? '请输入教师账号和密码，进入今日备课工作台' : '请输入管理员账号和密码，进入后台管理中心');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.handleSubmit) },
     ...{ class: "auth-form" },
@@ -94,7 +118,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "username",
     value: (__VLS_ctx.form.username),
     type: "text",
-    placeholder: "请输入教师账号或管理员账号",
+    placeholder: (__VLS_ctx.selectedRole === 'teacher' ? '请输入教师账号' : '请输入管理员账号'),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-field" },
@@ -105,7 +129,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "password",
     type: "password",
-    placeholder: "请输入登录密码",
+    placeholder: (__VLS_ctx.selectedRole === 'teacher' ? '请输入教师登录密码' : '请输入管理员登录密码'),
 });
 (__VLS_ctx.form.password);
 if (__VLS_ctx.errorMessage) {
@@ -119,22 +143,22 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "submit",
     disabled: (__VLS_ctx.loading),
 });
-(__VLS_ctx.loading ? '登录中...' : '登录系统');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "auth-actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/register');
-        } },
-    ...{ class: "auth-btn--secondary" },
-    type: "button",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.scrollToTip) },
-    ...{ class: "auth-btn--secondary" },
-    type: "button",
-});
+(__VLS_ctx.loading ? '登录中...' : __VLS_ctx.selectedRole === 'teacher' ? '教师登录' : '管理员登录');
+if (__VLS_ctx.selectedRole === 'teacher') {
+    const __VLS_4 = {}.RouterLink;
+    /** @type {[typeof __VLS_components.RouterLink, typeof __VLS_components.RouterLink, ]} */ ;
+    // @ts-ignore
+    const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
+        ...{ class: "auth-inline-link" },
+        to: "/register",
+    }));
+    const __VLS_6 = __VLS_5({
+        ...{ class: "auth-inline-link" },
+        to: "/register",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_5));
+    __VLS_7.slots.default;
+    var __VLS_7;
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ref: "tipRef",
     ...{ class: "auth-tip" },
@@ -148,6 +172,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li
 __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
 var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['auth-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-actions--tabs']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card__sub']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-field']} */ ;
@@ -155,24 +181,21 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--error']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-inline-link']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-tip__title']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            RouterLink: RouterLink,
             AuthLayout: AuthLayout,
-            router: router,
-            tipRef: tipRef,
             loading: loading,
             errorMessage: errorMessage,
+            selectedRole: selectedRole,
             form: form,
             stats: stats,
             notes: notes,
-            scrollToTip: scrollToTip,
             handleSubmit: handleSubmit,
         };
     },
