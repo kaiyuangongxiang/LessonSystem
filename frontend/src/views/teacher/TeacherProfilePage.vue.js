@@ -104,55 +104,46 @@ const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "teacher-profile-page" },
+    ...{ class: "teacher-dashboard-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
-    ...{ class: "teacher-profile-sidebar" },
+    ...{ class: "teacher-dashboard-sidebar" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-sidebar__eyebrow" },
+    ...{ class: "teacher-dashboard-sidebar__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-    ...{ class: "teacher-profile-nav" },
+    ...{ class: "teacher-dashboard-nav" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher');
         } },
     type: "button",
-    ...{ class: "teacher-profile-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/materials');
         } },
     type: "button",
-    ...{ class: "teacher-profile-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/resources');
         } },
     type: "button",
-    ...{ class: "teacher-profile-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
-    ...{ class: "teacher-profile-nav__item is-active" },
+    ...{ class: "teacher-dashboard-nav__item is-active" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "teacher-profile-side-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-side-card__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "teacher-profile-main" },
+    ...{ class: "teacher-dashboard-main teacher-profile-main" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "teacher-profile-head" },
@@ -339,17 +330,16 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-/** @type {__VLS_StyleScopedClasses['teacher-profile-page']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-sidebar']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-sidebar__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-side-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-side-card__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head__eyebrow']} */ ;

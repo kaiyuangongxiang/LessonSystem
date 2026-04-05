@@ -231,46 +231,46 @@ const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "material-upload-page" },
+    ...{ class: "teacher-dashboard-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
-    ...{ class: "material-upload-sidebar" },
+    ...{ class: "teacher-dashboard-sidebar" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "material-upload-sidebar__eyebrow" },
+    ...{ class: "teacher-dashboard-sidebar__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-    ...{ class: "material-upload-nav" },
+    ...{ class: "teacher-dashboard-nav" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher');
         } },
     type: "button",
-    ...{ class: "material-upload-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
-    ...{ class: "material-upload-nav__item is-active" },
+    ...{ class: "teacher-dashboard-nav__item is-active" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/resources');
         } },
     type: "button",
-    ...{ class: "material-upload-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.router.push('/teacher/profile');
         } },
     type: "button",
-    ...{ class: "material-upload-nav__item" },
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "material-upload-main" },
+    ...{ class: "teacher-dashboard-main material-upload-main" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "material-upload-head" },
@@ -569,15 +569,16 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn auth-btn--secondary" },
     disabled: (__VLS_ctx.submitting),
 });
-/** @type {__VLS_StyleScopedClasses['material-upload-page']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-sidebar']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-sidebar__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['material-upload-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['material-upload-head__eyebrow']} */ ;
