@@ -411,6 +411,79 @@ function normalizeManagedTeacherPayload(payload, { requirePassword = true } = {}
   }
 }
 
+function normalizeManagedStudentId(value, label = '学生用户') {
+  const studentId = Number(value)
+  if (!Number.isInteger(studentId) || studentId <= 0) {
+    throw badRequest(`${label}ID不合法`)
+  }
+
+  return studentId
+}
+
+function normalizeManagedStudentUsername(value) {
+  const username = typeof value === 'string' ? value.trim() : ''
+
+  if (!username) {
+    throw badRequest('学生用户名不能为空')
+  }
+
+  if (username.length > 50) {
+    throw badRequest('学生用户名不能超过50个字符')
+  }
+
+  return username
+}
+
+function normalizeManagedStudentName(value) {
+  const studentName = typeof value === 'string' ? value.trim() : ''
+
+  if (!studentName) {
+    throw badRequest('学生姓名不能为空')
+  }
+
+  if (studentName.length > 50) {
+    throw badRequest('学生姓名不能超过50个字符')
+  }
+
+  return studentName
+}
+
+function normalizeManagedStudentPassword(value, { required = true } = {}) {
+  const password = typeof value === 'string' ? value.trim() : ''
+
+  if (!password) {
+    if (required) {
+      throw badRequest('学生账号密码不能为空')
+    }
+
+    return ''
+  }
+
+  if (password.length < 6) {
+    throw badRequest('学生账号密码不能少于6位')
+  }
+
+  if (password.length > 50) {
+    throw badRequest('学生账号密码不能超过50位')
+  }
+
+  return password
+}
+
+function normalizeManagedStudentPayload(payload, { requirePassword = true } = {}) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    username: normalizeManagedStudentUsername(body.username),
+    studentName: normalizeManagedStudentName(body.studentName),
+    gender: normalizeManagedTeacherGender(body.gender),
+    collegeId: normalizeRequiredCollegeId(body.collegeId),
+    email: normalizeManagedTeacherEmail(body.email),
+    profile: normalizeManagedTeacherProfile(body.profile),
+    password: normalizeManagedStudentPassword(body.password, { required: requirePassword }),
+  }
+}
+
 function normalizeTeacherId(value) {
   if (value === undefined || value === null || value === '') {
     throw badRequest('课程负责人不能为空')
@@ -611,6 +684,33 @@ function buildTeacherAccountWhereClause({ keyword, collegeId }) {
   }
 }
 
+function buildStudentAccountWhereClause({ keyword, collegeId }) {
+  const conditions = ['s.status = 1']
+  const params = []
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    conditions.push(`(
+      s.username LIKE ?
+      OR COALESCE(s.student_name, '') LIKE ?
+      OR COALESCE(s.email, '') LIKE ?
+      OR COALESCE(s.profile, '') LIKE ?
+      OR COALESCE(c.college_name, '') LIKE ?
+    )`)
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+  }
+
+  if (collegeId) {
+    conditions.push('s.college_id = ?')
+    params.push(collegeId)
+  }
+
+  return {
+    whereSql: conditions.join(' AND '),
+    params,
+  }
+}
+
 async function getReplySchemaSupport() {
   if (!replySchemaSupportPromise) {
     replySchemaSupportPromise = (async () => {
@@ -749,6 +849,46 @@ async function getManagedTeacherAccountRow(teacherId) {
   }
 }
 
+async function getManagedStudentAccountRow(studentId) {
+  const [rows] = await pool.query(
+    `SELECT s.student_id AS id,
+            s.username AS username,
+            COALESCE(s.student_name, '') AS studentName,
+            COALESCE(NULLIF(s.student_name, ''), s.username, '未命名学生') AS name,
+            COALESCE(NULLIF(s.gender, ''), '未知') AS gender,
+            COALESCE(s.email, '') AS email,
+            s.college_id AS collegeId,
+            COALESCE(c.college_name, '未关联学院') AS collegeName,
+            COALESCE(s.profile, '') AS profile,
+            DATE_FORMAT(s.register_time, '%Y-%m-%d %H:%i') AS registerTime,
+            DATE_FORMAT(s.update_time, '%Y-%m-%d %H:%i') AS updateTime
+     FROM student_user s
+     LEFT JOIN college c ON c.college_id = s.college_id
+     WHERE s.student_id = ? AND s.status = 1
+     LIMIT 1`,
+    [studentId],
+  )
+
+  if (!rows.length) {
+    throw notFound('学生用户不存在或已禁用')
+  }
+
+  const item = rows[0]
+  return {
+    id: Number(item.id),
+    username: item.username,
+    studentName: item.studentName,
+    name: item.name,
+    gender: item.gender,
+    email: item.email || '',
+    collegeId: item.collegeId === null ? null : Number(item.collegeId),
+    collegeName: item.collegeName,
+    profile: item.profile || '',
+    registerTime: item.registerTime,
+    updateTime: item.updateTime,
+  }
+}
+
 async function getAdminSystemProfileDetail() {
   const heroTitleSupported = await getSystemHeroTitleSchemaSupport()
   const [rows] = await pool.query(
@@ -854,6 +994,54 @@ async function ensureTeacherUsernameAvailable(username, excludeTeacherId = null)
 
   if (rows.length) {
     throw badRequest('教师用户名已存在，请使用其他用户名')
+  }
+}
+
+async function ensureStudentUsernameAvailable(username, excludeStudentId = null) {
+  const params = [username]
+  let sql = `SELECT student_id AS id
+             FROM student_user
+             WHERE username = ?`
+
+  if (excludeStudentId !== null) {
+    sql += ' AND student_id <> ?'
+    params.push(excludeStudentId)
+  }
+
+  sql += ' LIMIT 1'
+
+  const [rows] = await pool.query(sql, params)
+
+  if (rows.length) {
+    throw badRequest('学生用户名已存在，请使用其他用户名')
+  }
+}
+
+async function ensureUsernameAvailableAcrossRoles(username, current = {}) {
+  const normalizedUsername = typeof username === 'string' ? username.trim() : ''
+  if (!normalizedUsername) {
+    return
+  }
+
+  const [adminRows] = await pool.query('SELECT admin_id AS id FROM admin WHERE admin_name = ? LIMIT 1', [normalizedUsername])
+  if (adminRows.length && !(current.role === 'admin' && Number(current.id) === Number(adminRows[0].id))) {
+    throw badRequest('账号名已被其他角色使用，请更换后再试')
+  }
+
+  const [teacherRows] = await pool.query(
+    'SELECT teacher_id AS id FROM teacher_user WHERE username = ? AND status = 1 LIMIT 1',
+    [normalizedUsername],
+  )
+  if (teacherRows.length && !(current.role === 'teacher' && Number(current.id) === Number(teacherRows[0].id))) {
+    throw badRequest('账号名已被其他角色使用，请更换后再试')
+  }
+
+  const [studentRows] = await pool.query(
+    'SELECT student_id AS id FROM student_user WHERE username = ? AND status = 1 LIMIT 1',
+    [normalizedUsername],
+  )
+  if (studentRows.length && !(current.role === 'student' && Number(current.id) === Number(studentRows[0].id))) {
+    throw badRequest('账号名已被其他角色使用，请更换后再试')
   }
 }
 
@@ -1184,6 +1372,7 @@ export async function getAdminDashboardData(adminId) {
 
   const [statRows] = await pool.query(
     `SELECT
+        (SELECT COUNT(*) FROM student_user WHERE status = 1) AS studentCount,
         (SELECT COUNT(*) FROM teacher_user WHERE status = 1) AS teacherCount,
         (SELECT COUNT(*) FROM course_intro WHERE status = 1) AS courseCount,
         (SELECT COUNT(*) FROM material WHERE status = 1) AS materialCount,
@@ -1263,6 +1452,7 @@ export async function getAdminDashboardData(adminId) {
   )
 
   const statsRow = statRows[0] || {
+    studentCount: 0,
     teacherCount: 0,
     courseCount: 0,
     materialCount: 0,
@@ -1296,6 +1486,7 @@ export async function getAdminDashboardData(adminId) {
 
   logger.info('admin_dashboard_loaded', {
     adminId,
+    studentCount: Number(statsRow.studentCount || 0),
     teacherCount: Number(statsRow.teacherCount || 0),
     courseCount: Number(statsRow.courseCount || 0),
     materialCount: Number(statsRow.materialCount || 0),
@@ -1313,6 +1504,7 @@ export async function getAdminDashboardData(adminId) {
       name: admin.name,
     },
     stats: {
+      studentCount: Number(statsRow.studentCount || 0),
       teacherCount: Number(statsRow.teacherCount || 0),
       courseCount: Number(statsRow.courseCount || 0),
       materialCount: Number(statsRow.materialCount || 0),
@@ -1574,6 +1766,7 @@ export async function createAdminAccount({ adminId, payload }) {
 
   const account = normalizeAdminPayload(payload, { requirePassword: true })
   await ensureAdminUsernameAvailable(account.username)
+  await ensureUsernameAvailableAcrossRoles(account.username)
 
   const hashedPassword = await bcrypt.hash(account.password, 10)
   const [result] = await pool.query(
@@ -1599,6 +1792,7 @@ export async function updateAdminAccount({ adminId, targetAdminId, payload }) {
 
   const account = normalizeAdminPayload(payload, { requirePassword: false })
   await ensureAdminUsernameAvailable(account.username, normalizedTargetAdminId)
+  await ensureUsernameAvailableAcrossRoles(account.username, { role: 'admin', id: normalizedTargetAdminId })
 
   const params = [account.username, account.realName || null]
   let passwordSql = ''
@@ -1788,6 +1982,7 @@ export async function createAdminTeacherUser({ adminId, payload }) {
   const teacher = normalizeManagedTeacherPayload(payload, { requirePassword: true })
   await getAdminCollegeRow(teacher.collegeId)
   await ensureTeacherUsernameAvailable(teacher.username)
+  await ensureUsernameAvailableAcrossRoles(teacher.username)
 
   const hashedPassword = await bcrypt.hash(teacher.password, 10)
   const [result] = await pool.query(
@@ -1815,6 +2010,7 @@ export async function updateAdminTeacherUser({ adminId, teacherId, payload }) {
   const teacher = normalizeManagedTeacherPayload(payload, { requirePassword: false })
   await getAdminCollegeRow(teacher.collegeId)
   await ensureTeacherUsernameAvailable(teacher.username, normalizedTeacherId)
+  await ensureUsernameAvailableAcrossRoles(teacher.username, { role: 'teacher', id: normalizedTeacherId })
 
   const params = [teacher.username, teacher.teacherName, teacher.gender, teacher.collegeId, teacher.email, teacher.profile]
   let passwordSql = ''
@@ -1876,6 +2072,200 @@ export async function deleteAdminTeacherUser({ adminId, teacherId }) {
     id: normalizedTeacherId,
     username: teacher.username,
     name: teacher.name,
+  }
+}
+
+export async function getAdminStudentUserList({ adminId, query }) {
+  await getAdminProfile(adminId)
+
+  const keyword = normalizeKeyword(query.keyword)
+  const collegeId = normalizeCollegeId(query.collegeId)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const { whereSql, params } = buildStudentAccountWhereClause({ keyword, collegeId })
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM student_user s
+     LEFT JOIN college c ON c.college_id = s.college_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [rows] = await pool.query(
+    `SELECT s.student_id AS id,
+            s.username AS username,
+            COALESCE(s.student_name, '') AS studentName,
+            COALESCE(NULLIF(s.student_name, ''), s.username, '未命名学生') AS name,
+            COALESCE(NULLIF(s.gender, ''), '未知') AS gender,
+            COALESCE(s.email, '') AS email,
+            s.college_id AS collegeId,
+            COALESCE(c.college_name, '未关联学院') AS collegeName,
+            COALESCE(s.profile, '') AS profile,
+            DATE_FORMAT(s.register_time, '%Y-%m-%d %H:%i') AS registerTime,
+            DATE_FORMAT(s.update_time, '%Y-%m-%d %H:%i') AS updateTime
+     FROM student_user s
+     LEFT JOIN college c ON c.college_id = s.college_id
+     WHERE ${whereSql}
+     ORDER BY s.update_time DESC, s.student_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        (SELECT COUNT(*) FROM student_user WHERE status = 1) AS total,
+        (SELECT COUNT(*) FROM student_user WHERE status = 1 AND college_id IS NOT NULL) AS collegeAssignedCount,
+        (SELECT COUNT(*) FROM student_user WHERE status = 1 AND email IS NOT NULL AND TRIM(email) <> '') AS emailBoundCount,
+        (SELECT COUNT(*) FROM student_user WHERE status = 1 AND profile IS NOT NULL AND TRIM(profile) <> '') AS profileCompletedCount`,
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    collegeAssignedCount: 0,
+    emailBoundCount: 0,
+    profileCompletedCount: 0,
+  }
+
+  logger.info('admin_student_user_list_loaded', {
+    adminId,
+    keyword,
+    collegeId,
+    page,
+    pageSize,
+    total,
+    resultCount: rows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      collegeAssignedCount: Number(statsRow.collegeAssignedCount || 0),
+      emailBoundCount: Number(statsRow.emailBoundCount || 0),
+      profileCompletedCount: Number(statsRow.profileCompletedCount || 0),
+    },
+    list: rows.map((item) => ({
+      id: Number(item.id),
+      username: item.username,
+      studentName: item.studentName,
+      name: item.name,
+      gender: item.gender,
+      email: item.email || '',
+      collegeId: item.collegeId === null ? null : Number(item.collegeId),
+      collegeName: item.collegeName,
+      profile: item.profile || '',
+      registerTime: item.registerTime,
+      updateTime: item.updateTime,
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    formOptions: await getAdminTeacherManageFormOptions(),
+  }
+}
+
+export async function createAdminStudentUser({ adminId, payload }) {
+  await getAdminProfile(adminId)
+
+  const student = normalizeManagedStudentPayload(payload, { requirePassword: true })
+  await getAdminCollegeRow(student.collegeId)
+  await ensureStudentUsernameAvailable(student.username)
+  await ensureUsernameAvailableAcrossRoles(student.username)
+
+  const hashedPassword = await bcrypt.hash(student.password, 10)
+  const [result] = await pool.query(
+    `INSERT INTO student_user (username, password, student_name, gender, college_id, email, profile, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+    [student.username, hashedPassword, student.studentName, student.gender, student.collegeId, student.email, student.profile],
+  )
+
+  logger.info('admin_student_user_created', {
+    adminId,
+    studentId: Number(result.insertId || 0),
+    username: student.username,
+    collegeId: student.collegeId,
+  })
+
+  return getManagedStudentAccountRow(Number(result.insertId || 0))
+}
+
+export async function updateAdminStudentUser({ adminId, studentId, payload }) {
+  await getAdminProfile(adminId)
+
+  const normalizedStudentId = normalizeManagedStudentId(studentId)
+  await getManagedStudentAccountRow(normalizedStudentId)
+
+  const student = normalizeManagedStudentPayload(payload, { requirePassword: false })
+  await getAdminCollegeRow(student.collegeId)
+  await ensureStudentUsernameAvailable(student.username, normalizedStudentId)
+  await ensureUsernameAvailableAcrossRoles(student.username, { role: 'student', id: normalizedStudentId })
+
+  const params = [student.username, student.studentName, student.gender, student.collegeId, student.email, student.profile]
+  let passwordSql = ''
+
+  if (student.password) {
+    const hashedPassword = await bcrypt.hash(student.password, 10)
+    passwordSql = ', password = ?'
+    params.push(hashedPassword)
+  }
+
+  params.push(normalizedStudentId)
+
+  await pool.query(
+    `UPDATE student_user
+     SET username = ?,
+         student_name = ?,
+         gender = ?,
+         college_id = ?,
+         email = ?,
+         profile = ?${passwordSql},
+         update_time = CURRENT_TIMESTAMP
+     WHERE student_id = ? AND status = 1`,
+    params,
+  )
+
+  logger.info('admin_student_user_updated', {
+    adminId,
+    studentId: normalizedStudentId,
+    username: student.username,
+    collegeId: student.collegeId,
+    passwordChanged: Boolean(student.password),
+  })
+
+  return getManagedStudentAccountRow(normalizedStudentId)
+}
+
+export async function deleteAdminStudentUser({ adminId, studentId }) {
+  await getAdminProfile(adminId)
+
+  const normalizedStudentId = normalizeManagedStudentId(studentId)
+  const student = await getManagedStudentAccountRow(normalizedStudentId)
+
+  await pool.query(
+    `UPDATE student_user
+     SET status = 0, update_time = CURRENT_TIMESTAMP
+     WHERE student_id = ? AND status = 1`,
+    [normalizedStudentId],
+  )
+
+  logger.info('admin_student_user_deleted', {
+    adminId,
+    studentId: normalizedStudentId,
+    username: student.username,
+  })
+
+  return {
+    id: normalizedStudentId,
+    username: student.username,
+    name: student.name,
   }
 }
 

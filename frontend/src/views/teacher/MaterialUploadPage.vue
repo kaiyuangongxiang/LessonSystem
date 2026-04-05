@@ -7,7 +7,7 @@
       </div>
 
       <nav class="teacher-dashboard-nav">
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">工作台首页</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">总览首页</button>
         <button type="button" class="teacher-dashboard-nav__item is-active">资源上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>

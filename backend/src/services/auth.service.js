@@ -16,21 +16,21 @@ function unauthorized(message) {
   return error
 }
 
-function normalizeTeacherUsername(value) {
+function normalizeUsername(value, label = '用户名') {
   const username = typeof value === 'string' ? value.trim() : ''
 
   if (!username) {
-    throw badRequest('用户名不能为空')
+    throw badRequest(`${label}不能为空`)
   }
 
   if (username.length > 50) {
-    throw badRequest('用户名不能超过50个字符')
+    throw badRequest(`${label}不能超过50个字符`)
   }
 
   return username
 }
 
-function normalizeTeacherPassword(value) {
+function normalizePassword(value) {
   const password = typeof value === 'string' ? value.trim() : ''
 
   if (!password) {
@@ -48,18 +48,18 @@ function normalizeTeacherPassword(value) {
   return password
 }
 
-function normalizeTeacherName(value) {
-  const teacherName = typeof value === 'string' ? value.trim() : ''
+function normalizeDisplayName(value, label) {
+  const name = typeof value === 'string' ? value.trim() : ''
 
-  if (!teacherName) {
-    throw badRequest('教师姓名不能为空')
+  if (!name) {
+    throw badRequest(`${label}不能为空`)
   }
 
-  if (teacherName.length > 50) {
-    throw badRequest('教师姓名不能超过50个字')
+  if (name.length > 50) {
+    throw badRequest(`${label}不能超过50个字符`)
   }
 
-  return teacherName
+  return name
 }
 
 function normalizeGender(value) {
@@ -120,11 +120,19 @@ function normalizeRequiredCollegeId(value) {
   return collegeId
 }
 
-async function ensureCollegeExists(collegeId) {
-  if (collegeId === null) {
-    return null
+function normalizeRegisterRole(value) {
+  return value === 'student' ? 'student' : 'teacher'
+}
+
+function normalizeLoginRole(value) {
+  if (value === 'teacher' || value === 'student' || value === 'admin') {
+    return value
   }
 
+  throw badRequest('登录角色不合法')
+}
+
+async function ensureCollegeExists(collegeId) {
   const [rows] = await pool.query(
     `SELECT college_id AS id, college_name AS name
      FROM college
@@ -140,11 +148,34 @@ async function ensureCollegeExists(collegeId) {
   return rows[0]
 }
 
+async function ensureUsernameUnusedAcrossRoles(username, current = {}) {
+  const [teacherRows] = await pool.query(
+    'SELECT teacher_id AS id FROM teacher_user WHERE username = ? AND status = 1 LIMIT 1',
+    [username],
+  )
+  if (teacherRows.length && !(current.role === 'teacher' && Number(current.id) === Number(teacherRows[0].id))) {
+    throw badRequest('用户名已存在，请更换后再试')
+  }
+
+  const [studentRows] = await pool.query(
+    'SELECT student_id AS id FROM student_user WHERE username = ? AND status = 1 LIMIT 1',
+    [username],
+  )
+  if (studentRows.length && !(current.role === 'student' && Number(current.id) === Number(studentRows[0].id))) {
+    throw badRequest('用户名已存在，请更换后再试')
+  }
+
+  const [adminRows] = await pool.query('SELECT admin_id AS id FROM admin WHERE admin_name = ? LIMIT 1', [username])
+  if (adminRows.length && !(current.role === 'admin' && Number(current.id) === Number(adminRows[0].id))) {
+    throw badRequest('用户名已存在，请更换后再试')
+  }
+}
+
 function signToken(payload) {
   return jwt.sign(payload, env.jwtSecret, { expiresIn: '7d' })
 }
 
-export async function getTeacherRegisterOptions() {
+export async function getRegisterOptions() {
   const [collegeRows] = await pool.query(
     `SELECT college_id AS id, college_name AS name
      FROM college
@@ -157,25 +188,21 @@ export async function getTeacherRegisterOptions() {
       name: item.name,
     })),
     genders: ['男', '女', '未知'],
+    roles: ['teacher', 'student'],
   }
 }
 
-export async function registerTeacher({ username, password, teacherName, gender, collegeId, email, profile }) {
-  const normalizedUsername = normalizeTeacherUsername(username)
-  const normalizedPassword = normalizeTeacherPassword(password)
-  const normalizedTeacherName = normalizeTeacherName(teacherName)
+async function registerTeacher({ username, password, teacherName, gender, collegeId, email, profile }) {
+  const normalizedUsername = normalizeUsername(username)
+  const normalizedPassword = normalizePassword(password)
+  const normalizedTeacherName = normalizeDisplayName(teacherName, '教师姓名')
   const normalizedGender = normalizeGender(gender)
   const normalizedCollegeId = normalizeRequiredCollegeId(collegeId)
   const normalizedEmail = normalizeOptionalEmail(email)
   const normalizedProfile = normalizeOptionalProfile(profile)
 
   await ensureCollegeExists(normalizedCollegeId)
-
-  const [existing] = await pool.query('SELECT teacher_id FROM teacher_user WHERE username = ? LIMIT 1', [normalizedUsername])
-  if (existing.length > 0) {
-    logger.warn('teacher_register_conflict', { username: normalizedUsername })
-    throw badRequest('用户名已存在')
-  }
+  await ensureUsernameUnusedAcrossRoles(normalizedUsername)
 
   const hashedPassword = await bcrypt.hash(normalizedPassword, 10)
   const [result] = await pool.query(
@@ -191,81 +218,180 @@ export async function registerTeacher({ username, password, teacherName, gender,
   })
 
   return {
-    teacherId: result.insertId,
+    id: Number(result.insertId),
+    role: 'teacher',
     username: normalizedUsername,
-    teacherName: normalizedTeacherName,
+    name: normalizedTeacherName,
   }
 }
 
-export async function login({ username, password }) {
-  const trimmedUsername = username?.trim()
+async function registerStudent({ username, password, studentName, gender, collegeId, email, profile }) {
+  const normalizedUsername = normalizeUsername(username)
+  const normalizedPassword = normalizePassword(password)
+  const normalizedStudentName = normalizeDisplayName(studentName, '学生姓名')
+  const normalizedGender = normalizeGender(gender)
+  const normalizedCollegeId = normalizeRequiredCollegeId(collegeId)
+  const normalizedEmail = normalizeOptionalEmail(email)
+  const normalizedProfile = normalizeOptionalProfile(profile)
 
-  if (!trimmedUsername || !password) {
+  await ensureCollegeExists(normalizedCollegeId)
+  await ensureUsernameUnusedAcrossRoles(normalizedUsername)
+
+  const hashedPassword = await bcrypt.hash(normalizedPassword, 10)
+  const [result] = await pool.query(
+    `INSERT INTO student_user (username, password, student_name, gender, college_id, email, profile)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [normalizedUsername, hashedPassword, normalizedStudentName, normalizedGender, normalizedCollegeId, normalizedEmail, normalizedProfile],
+  )
+
+  logger.info('student_register_success', {
+    username: normalizedUsername,
+    studentId: result.insertId,
+    collegeId: normalizedCollegeId,
+  })
+
+  return {
+    id: Number(result.insertId),
+    role: 'student',
+    username: normalizedUsername,
+    name: normalizedStudentName,
+  }
+}
+
+export async function registerUser(payload) {
+  const role = normalizeRegisterRole(payload?.role)
+
+  if (role === 'student') {
+    return registerStudent(payload)
+  }
+
+  return registerTeacher(payload)
+}
+
+async function loginTeacher(username, password) {
+  const [teachers] = await pool.query(
+    'SELECT teacher_id, username, teacher_name, password, status FROM teacher_user WHERE username = ? LIMIT 1',
+    [username],
+  )
+
+  if (!teachers.length) {
+    logger.warn('teacher_login_failed', { username, reason: 'user_not_found' })
+    throw unauthorized('教师账号或密码错误')
+  }
+
+  const teacher = teachers[0]
+  const passwordMatched = await bcrypt.compare(password, teacher.password)
+
+  if (!passwordMatched) {
+    logger.warn('teacher_login_failed', { username, reason: 'password_mismatch' })
+    throw unauthorized('教师账号或密码错误')
+  }
+
+  if (teacher.status !== 1) {
+    logger.warn('teacher_login_failed', { username, reason: 'disabled' })
+    throw unauthorized('当前教师账号不可用')
+  }
+
+  logger.info('teacher_login_success', { username, teacherId: teacher.teacher_id })
+
+  return {
+    token: signToken({ userId: teacher.teacher_id, role: 'teacher' }),
+    role: 'teacher',
+    user: {
+      id: Number(teacher.teacher_id),
+      username: teacher.username,
+      name: teacher.teacher_name,
+    },
+  }
+}
+
+async function loginStudent(username, password) {
+  const [students] = await pool.query(
+    'SELECT student_id, username, student_name, password, status FROM student_user WHERE username = ? LIMIT 1',
+    [username],
+  )
+
+  if (!students.length) {
+    logger.warn('student_login_failed', { username, reason: 'user_not_found' })
+    throw unauthorized('学生账号或密码错误')
+  }
+
+  const student = students[0]
+  const passwordMatched = await bcrypt.compare(password, student.password)
+
+  if (!passwordMatched) {
+    logger.warn('student_login_failed', { username, reason: 'password_mismatch' })
+    throw unauthorized('学生账号或密码错误')
+  }
+
+  if (student.status !== 1) {
+    logger.warn('student_login_failed', { username, reason: 'disabled' })
+    throw unauthorized('当前学生账号不可用')
+  }
+
+  logger.info('student_login_success', { username, studentId: student.student_id })
+
+  return {
+    token: signToken({ userId: student.student_id, role: 'student' }),
+    role: 'student',
+    user: {
+      id: Number(student.student_id),
+      username: student.username,
+      name: student.student_name,
+    },
+  }
+}
+
+async function loginAdmin(username, password) {
+  const [admins] = await pool.query(
+    'SELECT admin_id, admin_name, real_name, admin_password FROM admin WHERE admin_name = ? LIMIT 1',
+    [username],
+  )
+
+  if (!admins.length) {
+    logger.warn('admin_login_failed', { username, reason: 'user_not_found' })
+    throw unauthorized('管理员账号或密码错误')
+  }
+
+  const admin = admins[0]
+  const plainMatched = password === admin.admin_password
+  const hashMatched = admin.admin_password.startsWith('$2') ? await bcrypt.compare(password, admin.admin_password) : false
+
+  if (!plainMatched && !hashMatched) {
+    logger.warn('admin_login_failed', { username, reason: 'password_mismatch' })
+    throw unauthorized('管理员账号或密码错误')
+  }
+
+  logger.info('admin_login_success', { username, adminId: admin.admin_id })
+
+  return {
+    token: signToken({ userId: admin.admin_id, role: 'admin' }),
+    role: 'admin',
+    user: {
+      id: Number(admin.admin_id),
+      username: admin.admin_name,
+      name: admin.real_name,
+    },
+  }
+}
+
+export async function login({ username, password, role }) {
+  const normalizedUsername = typeof username === 'string' ? username.trim() : ''
+  const normalizedPassword = typeof password === 'string' ? password : ''
+
+  if (!normalizedUsername || !normalizedPassword) {
     throw badRequest('请输入用户名和密码')
   }
 
-  const [teachers] = await pool.query(
-    'SELECT teacher_id, username, teacher_name, password, status FROM teacher_user WHERE username = ? LIMIT 1',
-    [trimmedUsername],
-  )
+  const normalizedRole = normalizeLoginRole(role)
 
-  if (teachers.length > 0) {
-    const teacher = teachers[0]
-    const passwordMatched = await bcrypt.compare(password, teacher.password)
-
-    if (!passwordMatched) {
-      logger.warn('teacher_login_failed', { username: trimmedUsername, reason: 'password_mismatch' })
-      throw unauthorized('账号或密码错误')
-    }
-
-    if (teacher.status !== 1) {
-      logger.warn('teacher_login_failed', { username: trimmedUsername, reason: 'disabled' })
-      throw unauthorized('当前教师账号不可用')
-    }
-
-    logger.info('teacher_login_success', { username: trimmedUsername, teacherId: teacher.teacher_id })
-
-    return {
-      token: signToken({ userId: teacher.teacher_id, role: 'teacher' }),
-      role: 'teacher',
-      user: {
-        id: teacher.teacher_id,
-        username: teacher.username,
-        name: teacher.teacher_name,
-      },
-    }
+  if (normalizedRole === 'teacher') {
+    return loginTeacher(normalizedUsername, normalizedPassword)
   }
 
-  const [admins] = await pool.query(
-    'SELECT admin_id, admin_name, real_name, admin_password FROM admin WHERE admin_name = ? LIMIT 1',
-    [trimmedUsername],
-  )
-
-  if (admins.length > 0) {
-    const admin = admins[0]
-    const plainMatched = password === admin.admin_password
-    const hashMatched = admin.admin_password.startsWith('$2')
-      ? await bcrypt.compare(password, admin.admin_password)
-      : false
-
-    if (!plainMatched && !hashMatched) {
-      logger.warn('admin_login_failed', { username: trimmedUsername, reason: 'password_mismatch' })
-      throw unauthorized('账号或密码错误')
-    }
-
-    logger.info('admin_login_success', { username: trimmedUsername, adminId: admin.admin_id })
-
-    return {
-      token: signToken({ userId: admin.admin_id, role: 'admin' }),
-      role: 'admin',
-      user: {
-        id: admin.admin_id,
-        username: admin.admin_name,
-        name: admin.real_name,
-      },
-    }
+  if (normalizedRole === 'student') {
+    return loginStudent(normalizedUsername, normalizedPassword)
   }
 
-  logger.warn('login_failed', { username: trimmedUsername, reason: 'user_not_found' })
-  throw unauthorized('账号或密码错误')
+  return loginAdmin(normalizedUsername, normalizedPassword)
 }

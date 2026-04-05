@@ -1,11 +1,11 @@
-import { getTeacherRegisterOptions, login, registerTeacher } from '../services/auth.service.js'
+import { getRegisterOptions, login, registerUser } from '../services/auth.service.js'
 
-export async function getRegisterOptions(req, res, next) {
+export async function getRegisterOptionsController(req, res, next) {
   try {
-    const result = await getTeacherRegisterOptions()
+    const result = await getRegisterOptions()
     res.status(200).json({
       code: 200,
-      message: '获取教师注册选项成功',
+      message: '获取注册选项成功',
       data: result,
     })
   } catch (error) {
@@ -15,7 +15,7 @@ export async function getRegisterOptions(req, res, next) {
 
 export async function register(req, res, next) {
   try {
-    const result = await registerTeacher(req.body)
+    const result = await registerUser(req.body)
     res.status(201).json({
       code: 201,
       message: '注册成功',

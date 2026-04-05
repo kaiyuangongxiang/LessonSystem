@@ -47,16 +47,34 @@ export async function getAdminTeacherUserList(params) {
     });
     return response.data.data;
 }
+export async function getAdminStudentUserList(params) {
+    const response = await http.get('/admin/students', {
+        params,
+    });
+    return response.data.data;
+}
 export async function createAdminTeacherUser(payload) {
     const response = await http.post('/admin/teachers', payload);
+    return response.data.data;
+}
+export async function createAdminStudentUser(payload) {
+    const response = await http.post('/admin/students', payload);
     return response.data.data;
 }
 export async function updateAdminTeacherUser(teacherId, payload) {
     const response = await http.put(`/admin/teachers/${teacherId}`, payload);
     return response.data.data;
 }
+export async function updateAdminStudentUser(studentId, payload) {
+    const response = await http.put(`/admin/students/${studentId}`, payload);
+    return response.data.data;
+}
 export async function deleteAdminTeacherUser(teacherId) {
     const response = await http.delete(`/admin/teachers/${teacherId}`);
+    return response.data.data;
+}
+export async function deleteAdminStudentUser(studentId) {
+    const response = await http.delete(`/admin/students/${studentId}`);
     return response.data.data;
 }
 export async function getAdminCollegeList(params) {

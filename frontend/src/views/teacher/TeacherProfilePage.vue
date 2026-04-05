@@ -7,8 +7,8 @@
       </div>
 
       <nav class="teacher-dashboard-nav">
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">工作台首页</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资料上传</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">总览首页</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item is-active">个人资料</button>
       </nav>
@@ -23,9 +23,8 @@
         </div>
 
         <div class="teacher-profile-head__actions">
-          <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="resetForm">恢复原值</button>
-          <button type="button" class="auth-btn" :disabled="saving" @click="submitProfile">
-            {{ saving ? '保存中...' : '保存资料' }}
+          <button type="button" class="auth-btn" :disabled="loading || saving" @click="openEditor">
+            {{ saving ? '保存中...' : '编辑资料' }}
           </button>
         </div>
       </header>
@@ -33,100 +32,100 @@
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success teacher-profile-feedback">{{ successMessage }}</p>
 
-      <section class="teacher-profile-grid">
-        <article class="teacher-profile-panel teacher-profile-panel--form">
-          <div class="teacher-profile-panel__head">
-            <div>
-              <div class="teacher-profile-panel__eyebrow">BASIC INFO</div>
-              <h3>基础资料</h3>
-            </div>
+      <article class="teacher-profile-panel teacher-profile-panel--preview">
+        <div class="teacher-profile-panel__head teacher-profile-panel__head--preview">
+          <div>
+            <div class="teacher-profile-panel__eyebrow">PROFILE SUMMARY</div>
+            <h3>资料预览</h3>
+          </div>
+          <span class="teacher-profile-panel__status">{{ selectedCollegeName }}</span>
+        </div>
+
+        <div class="teacher-profile-summary teacher-profile-summary--wide">
+          <div class="teacher-profile-summary__item" v-for="item in previewItems" :key="item.label">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
           </div>
 
-          <form class="teacher-profile-form" @submit.prevent="submitProfile">
-            <div class="teacher-profile-form__row">
-              <label class="teacher-profile-field">
-                <span>用户名</span>
-                <input v-model.trim="form.username" type="text" maxlength="50" placeholder="请输入用户名" />
-              </label>
-
-              <label class="teacher-profile-field">
-                <span>教师姓名</span>
-                <input v-model.trim="form.teacherName" type="text" maxlength="50" placeholder="请输入教师姓名" />
-              </label>
-            </div>
-
-            <div class="teacher-profile-form__row">
-              <label class="teacher-profile-field">
-                <span>性别</span>
-                <select v-model="form.gender">
-                  <option value="">请选择性别</option>
-                  <option v-for="item in genderOptions" :key="item" :value="item">
-                    {{ item }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="teacher-profile-field">
-                <span>所属学院</span>
-                <select v-model="form.collegeId">
-                  <option value="">请选择所属学院</option>
-                  <option v-for="college in collegeOptions" :key="college.id" :value="String(college.id)">
-                    {{ college.name }}
-                  </option>
-                </select>
-              </label>
-            </div>
-
-            <div class="teacher-profile-form__row">
-              <label class="teacher-profile-field teacher-profile-field--full">
-                <span>邮箱</span>
-                <input v-model.trim="form.email" type="email" maxlength="100" placeholder="请输入邮箱，可为空" />
-              </label>
-            </div>
-
-            <div class="teacher-profile-form__row">
-              <label class="teacher-profile-field teacher-profile-field--full">
-                <span>个人简介</span>
-                <textarea v-model.trim="form.profile" rows="7" maxlength="2000" placeholder="请输入个人简介，可为空"></textarea>
-              </label>
-            </div>
-          </form>
-        </article>
-
-        <article class="teacher-profile-panel teacher-profile-panel--summary">
-          <div class="teacher-profile-panel__head">
-            <div>
-              <div class="teacher-profile-panel__eyebrow">PROFILE SUMMARY</div>
-              <h3>资料预览</h3>
-            </div>
+          <div class="teacher-profile-summary__item teacher-profile-summary__item--full">
+            <span>个人简介</span>
+            <strong>{{ profileText }}</strong>
           </div>
+        </div>
 
-          <div class="teacher-profile-summary">
-            <div class="teacher-profile-summary__item">
-              <span>当前用户名</span>
-              <strong>{{ form.username || '未填写' }}</strong>
-            </div>
-            <div class="teacher-profile-summary__item">
-              <span>教师姓名</span>
-              <strong>{{ form.teacherName || '未填写' }}</strong>
-            </div>
-            <div class="teacher-profile-summary__item">
-              <span>所属学院</span>
-              <strong>{{ selectedCollegeName }}</strong>
-            </div>
-            <div class="teacher-profile-summary__item">
-              <span>联系邮箱</span>
-              <strong>{{ form.email || '未填写' }}</strong>
-            </div>
-          </div>
-
-          <div class="teacher-profile-note">
-            <strong>说明</strong>
-            <p>修改后会立即保存到教师账户信息中，后续教师端页面展示名称也会同步更新。</p>
-          </div>
-        </article>
-      </section>
+        <div class="teacher-profile-note teacher-profile-note--full">
+          <strong>说明</strong>
+          <p>这里展示当前已保存的教师资料。点击右上角“编辑资料”后会在弹窗中修改，保存成功后下方预览会立即同步更新。</p>
+        </div>
+      </article>
     </section>
+
+    <div v-if="showEditor" class="teacher-profile-editor-mask" @click.self="closeEditor">
+      <section class="teacher-profile-editor">
+        <div class="teacher-profile-editor__head">
+          <div>
+            <div class="teacher-profile-panel__eyebrow">BASIC INFO</div>
+            <h3>编辑基础资料</h3>
+          </div>
+          <button type="button" class="course-chip course-chip--soft" :disabled="saving" @click="closeEditor">关闭</button>
+        </div>
+
+        <form class="teacher-profile-form" @submit.prevent="submitProfile">
+          <div class="teacher-profile-form__row">
+            <label class="teacher-profile-field">
+              <span>用户名</span>
+              <input v-model.trim="editForm.username" type="text" maxlength="50" placeholder="请输入用户名" />
+            </label>
+
+            <label class="teacher-profile-field">
+              <span>教师姓名</span>
+              <input v-model.trim="editForm.teacherName" type="text" maxlength="50" placeholder="请输入教师姓名" />
+            </label>
+          </div>
+
+          <div class="teacher-profile-form__row">
+            <label class="teacher-profile-field">
+              <span>性别</span>
+              <select v-model="editForm.gender">
+                <option value="">请选择性别</option>
+                <option v-for="item in genderOptions" :key="item" :value="item">
+                  {{ item }}
+                </option>
+              </select>
+            </label>
+
+            <label class="teacher-profile-field">
+              <span>所属学院</span>
+              <select v-model="editForm.collegeId">
+                <option value="">请选择所属学院</option>
+                <option v-for="college in collegeOptions" :key="college.id" :value="String(college.id)">
+                  {{ college.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <div class="teacher-profile-form__row">
+            <label class="teacher-profile-field teacher-profile-field--full">
+              <span>邮箱</span>
+              <input v-model.trim="editForm.email" type="email" maxlength="100" placeholder="请输入邮箱，可为空" />
+            </label>
+          </div>
+
+          <div class="teacher-profile-form__row">
+            <label class="teacher-profile-field teacher-profile-field--full">
+              <span>个人简介</span>
+              <textarea v-model.trim="editForm.profile" rows="7" maxlength="2000" placeholder="请输入个人简介，可为空"></textarea>
+            </label>
+          </div>
+
+          <div class="teacher-profile-editor__actions">
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
+            <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -145,13 +144,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
+const showEditor = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const collegeOptions = ref<TeacherCourseOption[]>([])
 const genderOptions = ref<string[]>([])
 const originalProfile = ref<TeacherProfileFormData | null>(null)
 
-const form = reactive({
+const editForm = reactive({
   username: '',
   teacherName: '',
   gender: '',
@@ -162,31 +162,45 @@ const form = reactive({
 
 const headerText = computed(() => {
   const name = originalProfile.value?.teacherName || authStore.profile?.name || authStore.profile?.username || '教师用户'
-  return `${name}，你可以在这里维护教师账号的基础信息。`
+  return `${name}，你可以在这里查看当前资料，并通过弹窗更新教师账户的基础信息。`
 })
 
 const selectedCollegeName = computed(() => {
-  const college = collegeOptions.value.find((item) => String(item.id) === form.collegeId)
-  return college?.name || '未选择'
+  const collegeId = originalProfile.value?.collegeId
+  const college = collegeOptions.value.find((item) => String(item.id) === String(collegeId))
+  return college?.name || originalProfile.value?.collegeName || '未选择'
 })
 
-function fillForm(profile: TeacherProfileFormData) {
-  form.username = profile.username || ''
-  form.teacherName = profile.teacherName || ''
-  form.gender = profile.gender || ''
-  form.email = profile.email || ''
-  form.collegeId = profile.collegeId ? String(profile.collegeId) : ''
-  form.profile = profile.profile || ''
+const profileText = computed(() => originalProfile.value?.profile?.trim() || '暂未填写个人简介')
+
+const previewItems = computed(() => [
+  { label: '当前用户名', value: originalProfile.value?.username || '未填写' },
+  { label: '教师姓名', value: originalProfile.value?.teacherName || '未填写' },
+  { label: '性别', value: originalProfile.value?.gender || '未填写' },
+  { label: '联系邮箱', value: originalProfile.value?.email || '未填写' },
+])
+
+function fillEditForm(profile: TeacherProfileFormData) {
+  editForm.username = profile.username || ''
+  editForm.teacherName = profile.teacherName || ''
+  editForm.gender = profile.gender || ''
+  editForm.email = profile.email || ''
+  editForm.collegeId = profile.collegeId ? String(profile.collegeId) : ''
+  editForm.profile = profile.profile || ''
 }
 
-function resetForm() {
-  if (!originalProfile.value) {
-    return
+function openEditor() {
+  if (originalProfile.value) {
+    fillEditForm(originalProfile.value)
   }
 
-  fillForm(originalProfile.value)
   errorMessage.value = ''
   successMessage.value = ''
+  showEditor.value = true
+}
+
+function closeEditor() {
+  showEditor.value = false
 }
 
 async function loadProfile() {
@@ -198,7 +212,7 @@ async function loadProfile() {
     originalProfile.value = result.profile
     collegeOptions.value = result.options.colleges
     genderOptions.value = result.options.genders
-    fillForm(result.profile)
+    fillEditForm(result.profile)
   } catch (error: any) {
     originalProfile.value = null
     collegeOptions.value = []
@@ -213,7 +227,7 @@ async function submitProfile() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!form.username || !form.teacherName || !form.gender || !form.collegeId) {
+  if (!editForm.username || !editForm.teacherName || !editForm.gender || !editForm.collegeId) {
     errorMessage.value = '请完整填写基础信息'
     return
   }
@@ -222,21 +236,22 @@ async function submitProfile() {
 
   try {
     const result = await updateTeacherProfile({
-      username: form.username,
-      teacherName: form.teacherName,
-      gender: form.gender,
-      email: form.email,
-      collegeId: form.collegeId,
-      profile: form.profile,
+      username: editForm.username,
+      teacherName: editForm.teacherName,
+      gender: editForm.gender,
+      email: editForm.email,
+      collegeId: editForm.collegeId,
+      profile: editForm.profile,
     })
 
     originalProfile.value = result
-    fillForm(result)
+    fillEditForm(result)
     authStore.updateProfile({
       id: result.id,
       username: result.username,
       name: result.teacherName,
     })
+    showEditor.value = false
     successMessage.value = '教师个人资料已更新'
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '教师资料保存失败'

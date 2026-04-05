@@ -1,16 +1,16 @@
-import { onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import http from '@/services/http';
+const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
-const registerOptionsLoading = ref(false);
 const feedback = reactive({
     type: 'error',
     message: '',
 });
 const form = reactive({
-    teacherName: '',
+    displayName: '',
     username: '',
     password: '',
     confirmPassword: '',
@@ -19,32 +19,36 @@ const form = reactive({
     email: '',
     profile: '',
 });
+const selectedRole = ref('teacher');
 const defaultGenders = ['男', '女', '未知'];
 const registerOptions = reactive({
     colleges: [],
     genders: [...defaultGenders],
 });
-const notes = ['进入教师工作台', '上传资料与视频', '继续完善个人资料'];
-function goTeacherLogin() {
-    router.push({ path: '/login', query: { role: 'teacher' } });
+const notes = ['教师、学生都支持自助注册', '注册成功后跳回对应登录页', '学院与性别选项来自系统配置'];
+function resolveRole(value) {
+    return value === 'student' ? 'student' : 'teacher';
+}
+function changeRole(role) {
+    selectedRole.value = role;
+    router.replace({ path: '/register', query: { role } });
+}
+function goLogin() {
+    router.push({ path: '/login', query: { role: selectedRole.value } });
 }
 async function loadRegisterOptions() {
-    registerOptionsLoading.value = true;
     try {
         const response = await http.get('/auth/register-options');
         registerOptions.colleges = response.data.data.colleges || [];
         registerOptions.genders = response.data.data.genders?.length ? response.data.data.genders : [...defaultGenders];
     }
-    catch (error) {
+    catch {
         registerOptions.colleges = [];
         registerOptions.genders = [...defaultGenders];
     }
-    finally {
-        registerOptionsLoading.value = false;
-    }
 }
 async function handleSubmit() {
-    if (!form.teacherName || !form.username || !form.gender || !form.collegeId || !form.password || !form.confirmPassword) {
+    if (!form.displayName || !form.username || !form.gender || !form.collegeId || !form.password || !form.confirmPassword) {
         feedback.type = 'error';
         feedback.message = '请完整填写必填信息';
         return;
@@ -58,18 +62,19 @@ async function handleSubmit() {
     feedback.message = '';
     try {
         await http.post('/auth/register', {
-            teacherName: form.teacherName,
+            role: selectedRole.value,
             username: form.username,
             password: form.password,
             gender: form.gender,
             collegeId: form.collegeId || undefined,
             email: form.email,
             profile: form.profile,
+            ...(selectedRole.value === 'student' ? { studentName: form.displayName } : { teacherName: form.displayName }),
         });
         feedback.type = 'success';
-        feedback.message = '注册成功，正在返回教师登录页';
+        feedback.message = `注册成功，正在返回${selectedRole.value === 'student' ? '学生' : '教师'}登录页`;
         setTimeout(() => {
-            goTeacherLogin();
+            goLogin();
         }, 800);
     }
     catch (error) {
@@ -80,6 +85,9 @@ async function handleSubmit() {
         loading.value = false;
     }
 }
+watch(() => route.query.role, (role) => {
+    selectedRole.value = resolveRole(role);
+}, { immediate: true });
 onMounted(() => {
     loadRegisterOptions();
 });
@@ -90,17 +98,17 @@ let __VLS_directives;
 /** @type {[typeof AuthLayout, typeof AuthLayout, ]} */ ;
 // @ts-ignore
 const __VLS_0 = __VLS_asFunctionalComponent(AuthLayout, new AuthLayout({
-    heroEyebrow: "TEACHER ONBOARDING",
-    heroTitle: "创建教师账号",
-    heroDescription: "完成基础信息登记后即可进入教师中心，开始上传资料、视频并管理个人课程内容。",
-    panelTitle: "注册完成后",
+    heroEyebrow: "ACCOUNT REGISTER",
+    heroTitle: (__VLS_ctx.selectedRole === 'student' ? '创建学生账号' : '创建教师账号'),
+    heroDescription: "完成基础信息登记后即可进入对应工作台。邮箱和个人简介为选填，其他信息为必填。",
+    panelTitle: "注册说明",
     notes: (__VLS_ctx.notes),
 }));
 const __VLS_1 = __VLS_0({
-    heroEyebrow: "TEACHER ONBOARDING",
-    heroTitle: "创建教师账号",
-    heroDescription: "完成基础信息登记后即可进入教师中心，开始上传资料、视频并管理个人课程内容。",
-    panelTitle: "注册完成后",
+    heroEyebrow: "ACCOUNT REGISTER",
+    heroTitle: (__VLS_ctx.selectedRole === 'student' ? '创建学生账号' : '创建教师账号'),
+    heroDescription: "完成基础信息登记后即可进入对应工作台。邮箱和个人简介为选填，其他信息为必填。",
+    panelTitle: "注册说明",
     notes: (__VLS_ctx.notes),
 }, ...__VLS_functionalComponentArgsRest(__VLS_0));
 var __VLS_3 = {};
@@ -108,7 +116,25 @@ __VLS_2.slots.default;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-card auth-card--register auth-card--register-compact" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "auth-actions auth-actions--tabs" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changeRole('teacher');
+        } },
+    ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'teacher' ? 'is-active' : '']) },
+    type: "button",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changeRole('student');
+        } },
+    ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'student' ? 'is-active' : '']) },
+    type: "button",
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+(__VLS_ctx.selectedRole === 'student' ? '学生快速注册' : '教师快速注册');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
     ...{ class: "auth-card__sub" },
 });
@@ -123,17 +149,17 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "auth-field" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    for: "teacherName",
+    for: "displayName",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "auth-required" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    id: "teacherName",
-    value: (__VLS_ctx.form.teacherName),
+    id: "displayName",
+    value: (__VLS_ctx.form.displayName),
     type: "text",
     maxlength: "50",
-    placeholder: "请输入教师真实姓名",
+    placeholder: (__VLS_ctx.selectedRole === 'student' ? '请输入学生真实姓名' : '请输入教师真实姓名'),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-field" },
@@ -261,7 +287,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicEleme
     id: "profile",
     value: (__VLS_ctx.form.profile),
     maxlength: "2000",
-    placeholder: "可填写研究方向、授课课程或个人简介",
+    placeholder: "可填写研究方向、学习方向或个人简介",
 });
 if (__VLS_ctx.feedback.message) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
@@ -276,7 +302,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 (__VLS_ctx.loading ? '注册中...' : '立即注册');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goTeacherLogin) },
+    ...{ onClick: (__VLS_ctx.goLogin) },
     ...{ class: "auth-btn--secondary" },
     type: "button",
 });
@@ -284,6 +310,8 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['auth-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card--register']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card--register-compact']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-actions--tabs']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-card__sub']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-form--register']} */ ;
@@ -321,9 +349,11 @@ const __VLS_self = (await import('vue')).defineComponent({
             loading: loading,
             feedback: feedback,
             form: form,
+            selectedRole: selectedRole,
             registerOptions: registerOptions,
             notes: notes,
-            goTeacherLogin: goTeacherLogin,
+            changeRole: changeRole,
+            goLogin: goLogin,
             handleSubmit: handleSubmit,
         };
     },

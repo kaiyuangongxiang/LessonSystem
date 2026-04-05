@@ -5,6 +5,7 @@ import {
   createCollege,
   createCourse,
   createTeacherUser,
+  createStudentUser,
   createNotice,
   deleteAdmin,
   deleteCollege,
@@ -13,6 +14,7 @@ import {
   deleteMessage,
   deleteMessageReply,
   deleteNotice,
+  deleteStudentUser,
   deleteTeacherUser,
   deleteVideo,
   getAdminList,
@@ -23,6 +25,7 @@ import {
   getMessageDetail,
   getMessageList,
   getSystemManage,
+  getStudentUserList,
   getTeacherUserList,
   getVideoList,
   postMessageReply,
@@ -30,6 +33,7 @@ import {
   updateAdmin,
   updateCollege,
   updateCourse,
+  updateStudentUser,
   updateTeacherUser,
   updateSystemProfile,
 } from '../controllers/admin.controller.js'
@@ -52,6 +56,10 @@ router.get('/teachers', getTeacherUserList)
 router.post('/teachers', createTeacherUser)
 router.put('/teachers/:teacherId', updateTeacherUser)
 router.delete('/teachers/:teacherId', deleteTeacherUser)
+router.get('/students', getStudentUserList)
+router.post('/students', createStudentUser)
+router.put('/students/:studentId', updateStudentUser)
+router.delete('/students/:studentId', deleteStudentUser)
 
 router.get('/colleges', getCollegeList)
 router.post('/colleges', createCollege)

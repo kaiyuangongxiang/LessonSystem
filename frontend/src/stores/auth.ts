@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-type UserRole = 'teacher' | 'admin' | ''
+type UserRole = 'teacher' | 'admin' | 'student' | ''
 
 interface UserProfile {
   id: number

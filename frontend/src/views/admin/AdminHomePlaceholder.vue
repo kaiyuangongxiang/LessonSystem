@@ -10,11 +10,12 @@
         <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
         <button type="button" class="admin-dashboard-nav__item is-active">总览首页</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/students')">学生用户</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">教学交流</button>
       </nav>
 
       <section class="admin-dashboard-reminder-card">
@@ -157,10 +158,11 @@ const todayText = new Intl.DateTimeFormat('zh-CN', {
   .format(new Date())
   .replace(/\//g, '-')
 
-const welcomeText = computed(() => `${adminName.value}，这里用于查看教师、课程、资源与教学交流的全局概览。`)
+const welcomeText = computed(() => `${adminName.value}，这里用于查看教师、学生、课程、资源与教学交流的全局概览。`)
 
 const metricCards = computed(() => {
   const stats = dashboard.value?.stats || {
+    studentCount: 0,
     teacherCount: 0,
     courseCount: 0,
     materialCount: 0,
@@ -170,6 +172,7 @@ const metricCards = computed(() => {
 
   return [
     { label: '教师总数', value: stats.teacherCount, tip: '当前可用教师账号数量' },
+    { label: '学生总数', value: stats.studentCount, tip: '当前可用学生账号数量' },
     { label: '课程总数', value: stats.courseCount, tip: '系统内已发布课程总览' },
     { label: '资料总数', value: stats.materialCount, tip: '教师上传资料累计数量' },
     { label: '视频总数', value: stats.videoCount, tip: '课程视频资源累计数量' },
@@ -180,11 +183,11 @@ const metricCards = computed(() => {
 const reminderTexts = computed(() => {
   const stats = dashboard.value?.stats
   if (!stats) {
-    return ['正在加载后台统计数据', '稍后可查看最新教师与资源动态']
+    return ['正在加载后台统计数据', '稍后可查看最新教师、学生与资源动态']
   }
 
   return [
-    stats.teacherCount > 0 ? `当前共有 ${stats.teacherCount} 位教师处于可用状态。` : '当前还没有可用教师账号。',
+    stats.studentCount > 0 ? `当前共有 ${stats.studentCount} 位学生账号已开通。` : '当前还没有学生账号，可先补齐学生端基础角色。',
     stats.topicCount > 0 ? `当前共有 ${stats.topicCount} 条交流主题可继续跟进。` : '当前还没有交流主题，后续可关注教师讨论情况。',
   ]
 })

@@ -1,6 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+function resolveHomeByRole(role: string) {
+  if (role === 'admin') {
+    return { name: 'admin-home' }
+  }
+
+  if (role === 'student') {
+    return { name: 'student-home' }
+  }
+
+  return { name: 'teacher-home' }
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -67,6 +79,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'teacher' },
     },
     {
+      path: '/student',
+      name: 'student-home',
+      component: () => import('@/views/student/StudentHomePlaceholder.vue'),
+      meta: { requiresAuth: true, role: 'student' },
+    },
+    {
       path: '/admin',
       name: 'admin-home',
       component: () => import('@/views/admin/AdminHomePlaceholder.vue'),
@@ -76,6 +94,12 @@ const router = createRouter({
       path: '/admin/teachers',
       name: 'admin-teachers',
       component: () => import('@/views/admin/AdminTeacherManagePage.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/admin/students',
+      name: 'admin-students',
+      component: () => import('@/views/admin/AdminStudentManagePage.vue'),
       meta: { requiresAuth: true, role: 'admin' },
     },
     {
@@ -130,11 +154,11 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return authStore.role === 'admin' ? { name: 'admin-home' } : { name: 'teacher-home' }
+    return resolveHomeByRole(authStore.role)
   }
 
   if (to.meta.role && to.meta.role !== authStore.role) {
-    return authStore.role === 'admin' ? { name: 'admin-home' } : { name: 'teacher-home' }
+    return resolveHomeByRole(authStore.role)
   }
 
   return true

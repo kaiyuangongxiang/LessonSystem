@@ -4,23 +4,27 @@ import {
   createAdminCourse,
   createAdminNotice,
   createAdminTeacherUser,
+  createAdminStudentUser,
   deleteAdminAccount,
   deleteAdminCollege,
   deleteAdminCourse,
   deleteAdminNotice,
   deleteAdminResource,
+  deleteAdminStudentUser,
   deleteAdminTeacherUser,
   getAdminAccountList,
   getAdminCollegeList,
   getAdminCourseList,
   getAdminDashboardData,
   getAdminResourceList,
+  getAdminStudentUserList,
   getAdminSystemManageData,
   getAdminTeacherUserList,
   updateAdminNotice,
   updateAdminAccount,
   updateAdminCollege,
   updateAdminCourse,
+  updateAdminStudentUser,
   updateAdminSystemProfile,
   updateAdminTeacherUser,
 } from '../services/admin.service.js'
@@ -263,6 +267,75 @@ export async function deleteTeacherUser(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '删除教师用户成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getStudentUserList(req, res, next) {
+  try {
+    const result = await getAdminStudentUserList({
+      adminId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取学生用户列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function createStudentUser(req, res, next) {
+  try {
+    const result = await createAdminStudentUser({
+      adminId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建学生用户成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateStudentUser(req, res, next) {
+  try {
+    const result = await updateAdminStudentUser({
+      adminId: req.auth.userId,
+      studentId: req.params.studentId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新学生用户成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deleteStudentUser(req, res, next) {
+  try {
+    const result = await deleteAdminStudentUser({
+      adminId: req.auth.userId,
+      studentId: req.params.studentId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除学生用户成功',
       data: result,
     })
   } catch (error) {

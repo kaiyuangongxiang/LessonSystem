@@ -1,4 +1,4 @@
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import http from '@/services/http';
@@ -8,7 +8,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
 const errorMessage = ref('');
-const selectedRole = ref('admin');
+const selectedRole = ref('teacher');
 const form = reactive({
     username: '',
     password: '',
@@ -16,15 +16,56 @@ const form = reactive({
 const stats = [
     { label: '课程总量', value: '128' },
     { label: '资料总量', value: '2860' },
-    { label: '视频总量', value: '640' },
+    { label: '交流主题', value: '96' },
 ];
-const notes = [
-    '教师登录后进入教师中心首页',
-    '管理员登录后进入后台控制台',
-    '课程详情可查看资料与视频',
-];
+const notes = ['教师、学生、管理员统一入口', '教学资源与交流逐步联通', '支持多角色登录跳转'];
+const roleTitle = computed(() => {
+    if (selectedRole.value === 'student') {
+        return '学生登录';
+    }
+    if (selectedRole.value === 'admin') {
+        return '管理员登录';
+    }
+    return '教师登录';
+});
+const roleDescription = computed(() => {
+    if (selectedRole.value === 'student') {
+        return '请输入学生账号和密码，进入学生中心。';
+    }
+    if (selectedRole.value === 'admin') {
+        return '请输入管理员账号和密码，进入后台管理中心。';
+    }
+    return '请输入教师账号和密码，进入教师工作台。';
+});
+const rolePlaceholder = computed(() => {
+    if (selectedRole.value === 'student') {
+        return {
+            username: '请输入学生账号',
+            password: '请输入学生登录密码',
+        };
+    }
+    if (selectedRole.value === 'admin') {
+        return {
+            username: '请输入管理员账号',
+            password: '请输入管理员登录密码',
+        };
+    }
+    return {
+        username: '请输入教师账号',
+        password: '请输入教师登录密码',
+    };
+});
+function resolveRole(value) {
+    if (value === 'student') {
+        return 'student';
+    }
+    if (value === 'admin') {
+        return 'admin';
+    }
+    return 'teacher';
+}
 watch(() => route.query.role, (role) => {
-    selectedRole.value = role === 'teacher' ? 'teacher' : 'admin';
+    selectedRole.value = resolveRole(role);
 }, { immediate: true });
 async function handleSubmit() {
     if (!form.username || !form.password) {
@@ -34,10 +75,13 @@ async function handleSubmit() {
     loading.value = true;
     errorMessage.value = '';
     try {
-        const response = await http.post('/auth/login', form);
+        const response = await http.post('/auth/login', {
+            ...form,
+            role: selectedRole.value,
+        });
         const payload = response.data.data;
         if (payload.role !== selectedRole.value) {
-            errorMessage.value = selectedRole.value === 'teacher' ? '当前账号不是教师账号' : '当前账号不是管理员账号';
+            errorMessage.value = `当前账号不是${roleTitle.value.replace('登录', '')}账号`;
             return;
         }
         authStore.setAuth({
@@ -45,7 +89,15 @@ async function handleSubmit() {
             role: payload.role,
             profile: payload.user,
         });
-        await router.push(payload.role === 'admin' ? '/admin' : '/teacher');
+        if (payload.role === 'admin') {
+            await router.push('/admin');
+        }
+        else if (payload.role === 'student') {
+            await router.push('/student');
+        }
+        else {
+            await router.push('/teacher');
+        }
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '登录失败，请检查账号或密码';
@@ -61,17 +113,17 @@ let __VLS_directives;
 /** @type {[typeof AuthLayout, typeof AuthLayout, ]} */ ;
 // @ts-ignore
 const __VLS_0 = __VLS_asFunctionalComponent(AuthLayout, new AuthLayout({
-    heroEyebrow: "TEACHER PREP PORTAL",
+    heroEyebrow: "LESSON PREP PORTAL",
     heroTitle: "在线教师备课系统",
-    heroDescription: "围绕课程、资料与视频的统一备课平台，教师登录后即可进入今日备课工作台。",
+    heroDescription: "围绕课程、资料、视频与教学交流的统一入口，教师、学生和管理员都可从这里进入各自工作台。",
     panelTitle: "系统公告",
     stats: (__VLS_ctx.stats),
     notes: (__VLS_ctx.notes),
 }));
 const __VLS_1 = __VLS_0({
-    heroEyebrow: "TEACHER PREP PORTAL",
+    heroEyebrow: "LESSON PREP PORTAL",
     heroTitle: "在线教师备课系统",
-    heroDescription: "围绕课程、资料与视频的统一备课平台，教师登录后即可进入今日备课工作台。",
+    heroDescription: "围绕课程、资料、视频与教学交流的统一入口，教师、学生和管理员都可从这里进入各自工作台。",
     panelTitle: "系统公告",
     stats: (__VLS_ctx.stats),
     notes: (__VLS_ctx.notes),
@@ -93,17 +145,24 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
+            __VLS_ctx.selectedRole = 'student';
+        } },
+    ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'student' ? 'is-active' : '']) },
+    type: "button",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
             __VLS_ctx.selectedRole = 'admin';
         } },
     ...{ class: (['auth-btn--secondary', 'auth-role-btn', __VLS_ctx.selectedRole === 'admin' ? 'is-active' : '']) },
     type: "button",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-(__VLS_ctx.selectedRole === 'teacher' ? '教师登录' : '管理员登录');
+(__VLS_ctx.roleTitle);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
     ...{ class: "auth-card__sub" },
 });
-(__VLS_ctx.selectedRole === 'teacher' ? '请输入教师账号和密码，进入今日备课工作台' : '请输入管理员账号和密码，进入后台管理中心');
+(__VLS_ctx.roleDescription);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.handleSubmit) },
     ...{ class: "auth-form" },
@@ -118,7 +177,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "username",
     value: (__VLS_ctx.form.username),
     type: "text",
-    placeholder: (__VLS_ctx.selectedRole === 'teacher' ? '请输入教师账号' : '请输入管理员账号'),
+    placeholder: (__VLS_ctx.rolePlaceholder.username),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "auth-field" },
@@ -129,7 +188,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     id: "password",
     type: "password",
-    placeholder: (__VLS_ctx.selectedRole === 'teacher' ? '请输入教师登录密码' : '请输入管理员登录密码'),
+    placeholder: (__VLS_ctx.rolePlaceholder.password),
 });
 (__VLS_ctx.form.password);
 if (__VLS_ctx.errorMessage) {
@@ -143,18 +202,18 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     type: "submit",
     disabled: (__VLS_ctx.loading),
 });
-(__VLS_ctx.loading ? '登录中...' : __VLS_ctx.selectedRole === 'teacher' ? '教师登录' : '管理员登录');
-if (__VLS_ctx.selectedRole === 'teacher') {
+(__VLS_ctx.loading ? '登录中...' : __VLS_ctx.roleTitle);
+if (__VLS_ctx.selectedRole !== 'admin') {
     const __VLS_4 = {}.RouterLink;
     /** @type {[typeof __VLS_components.RouterLink, typeof __VLS_components.RouterLink, ]} */ ;
     // @ts-ignore
     const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
         ...{ class: "auth-inline-link" },
-        to: "/register",
+        to: (`/register?role=${__VLS_ctx.selectedRole}`),
     }));
     const __VLS_6 = __VLS_5({
         ...{ class: "auth-inline-link" },
-        to: "/register",
+        to: (`/register?role=${__VLS_ctx.selectedRole}`),
     }, ...__VLS_functionalComponentArgsRest(__VLS_5));
     __VLS_7.slots.default;
     var __VLS_7;
@@ -168,6 +227,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "auth-tip__title" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({});
 var __VLS_2;
@@ -196,6 +256,9 @@ const __VLS_self = (await import('vue')).defineComponent({
             form: form,
             stats: stats,
             notes: notes,
+            roleTitle: roleTitle,
+            roleDescription: roleDescription,
+            rolePlaceholder: rolePlaceholder,
             handleSubmit: handleSubmit,
         };
     },

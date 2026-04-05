@@ -1,6 +1,7 @@
 import http, { type ApiSuccess } from './http'
 
 export interface AdminDashboardStats {
+  studentCount: number
   teacherCount: number
   courseCount: number
   materialCount: number
@@ -149,6 +150,63 @@ export interface AdminTeacherPayload {
 }
 
 export type AdminTeacherMutationData = AdminTeacherItem
+
+export interface AdminStudentStats {
+  total: number
+  collegeAssignedCount: number
+  emailBoundCount: number
+  profileCompletedCount: number
+}
+
+export interface AdminStudentItem {
+  id: number
+  username: string
+  studentName: string
+  name: string
+  gender: string
+  email: string
+  collegeId: number | null
+  collegeName: string
+  profile: string
+  registerTime: string
+  updateTime: string
+}
+
+export interface AdminStudentFormOptions {
+  colleges: AdminCollegeOption[]
+  genders: string[]
+}
+
+export interface AdminStudentListData {
+  stats: AdminStudentStats
+  list: AdminStudentItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  formOptions: AdminStudentFormOptions
+}
+
+export interface AdminStudentQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  collegeId?: string
+}
+
+export interface AdminStudentPayload {
+  username: string
+  studentName: string
+  gender: string
+  collegeId: string | number
+  email: string
+  profile: string
+  password?: string
+}
+
+export type AdminStudentMutationData = AdminStudentItem
 
 export interface AdminCollegeOption {
   id: number
@@ -501,8 +559,20 @@ export async function getAdminTeacherUserList(params: AdminTeacherQuery) {
   return response.data.data
 }
 
+export async function getAdminStudentUserList(params: AdminStudentQuery) {
+  const response = await http.get<ApiSuccess<AdminStudentListData>>('/admin/students', {
+    params,
+  })
+  return response.data.data
+}
+
 export async function createAdminTeacherUser(payload: AdminTeacherPayload) {
   const response = await http.post<ApiSuccess<AdminTeacherMutationData>>('/admin/teachers', payload)
+  return response.data.data
+}
+
+export async function createAdminStudentUser(payload: AdminStudentPayload) {
+  const response = await http.post<ApiSuccess<AdminStudentMutationData>>('/admin/students', payload)
   return response.data.data
 }
 
@@ -511,8 +581,18 @@ export async function updateAdminTeacherUser(teacherId: number, payload: AdminTe
   return response.data.data
 }
 
+export async function updateAdminStudentUser(studentId: number, payload: AdminStudentPayload) {
+  const response = await http.put<ApiSuccess<AdminStudentMutationData>>(`/admin/students/${studentId}`, payload)
+  return response.data.data
+}
+
 export async function deleteAdminTeacherUser(teacherId: number) {
   const response = await http.delete<ApiSuccess<{ id: number; username: string; name: string }>>(`/admin/teachers/${teacherId}`)
+  return response.data.data
+}
+
+export async function deleteAdminStudentUser(studentId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; username: string; name: string }>>(`/admin/students/${studentId}`)
   return response.data.data
 }
 
