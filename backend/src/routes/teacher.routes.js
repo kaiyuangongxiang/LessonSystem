@@ -9,15 +9,19 @@ import {
   getDashboard,
   getMessageDetail,
   getMessages,
+  getPreps,
   getProfile,
   getResourceDetail,
   getResources,
   postAsset,
   postMaterial,
+  postPrep,
   postResourceBundle,
   postMessage,
   postMessageReply,
   postVideo,
+  putPrep,
+  removePrep,
   removeResource,
   updateAsset,
   updateProfile,
@@ -31,6 +35,10 @@ const router = Router()
 router.use(authenticate, requireRole('teacher'))
 router.get('/dashboard', getDashboard)
 router.get('/courses/options', getCourseOptions)
+router.get('/preps', getPreps)
+router.post('/preps', postPrep)
+router.put('/preps/:prepId', putPrep)
+router.delete('/preps/:prepId', removePrep)
 router.get('/assets', getAssets)
 router.post('/assets', uploadAssetFile.single('file'), postAsset)
 router.get('/assets/:assetId', getAssetDetail)

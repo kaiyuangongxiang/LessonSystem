@@ -7,6 +7,24 @@ export async function getTeacherCourseOptions() {
     const response = await http.get('/teacher/courses/options');
     return response.data.data;
 }
+export async function getTeacherPreps(params) {
+    const response = await http.get('/teacher/preps', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createTeacherPrep(payload) {
+    const response = await http.post('/teacher/preps', payload);
+    return response.data.data;
+}
+export async function updateTeacherPrep(prepId, payload) {
+    const response = await http.put(`/teacher/preps/${prepId}`, payload);
+    return response.data.data;
+}
+export async function deleteTeacherPrep(prepId) {
+    const response = await http.delete(`/teacher/preps/${prepId}`);
+    return response.data.data;
+}
 export async function getTeacherAssets(params) {
     const response = await http.get('/teacher/assets', {
         params,

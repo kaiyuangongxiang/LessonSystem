@@ -9,6 +9,7 @@ import {
   deleteAdminAccount,
   deleteAdminCollege,
   deleteAdminCourse,
+  deleteAdminPrep,
   deleteAdminNotice,
   deleteAdminResource,
   deleteAdminStudentUser,
@@ -18,6 +19,7 @@ import {
   getAdminCollegeList,
   getAdminCourseList,
   getAdminDashboardData,
+  getAdminPrepList,
   getAdminResourceList,
   getAdminStudentUserList,
   getAdminSystemManageData,
@@ -476,6 +478,40 @@ export async function deleteCourse(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '删除课程成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPrepList(req, res, next) {
+  try {
+    const result = await getAdminPrepList({
+      adminId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取备课单管理列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deletePrep(req, res, next) {
+  try {
+    const result = await deleteAdminPrep({
+      adminId: req.auth.userId,
+      prepId: req.params.prepId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除备课单成功',
       data: result,
     })
   } catch (error) {

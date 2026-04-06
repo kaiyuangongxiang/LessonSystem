@@ -10,6 +10,7 @@
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">总览首页</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/assets')">素材库</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/preps')">备课单管理</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item is-active">个人资料</button>
       </nav>

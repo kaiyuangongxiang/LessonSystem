@@ -687,6 +687,67 @@ export async function deleteAdminCourse(courseId: number) {
   return response.data.data
 }
 
+export interface AdminPrepStats {
+  total: number
+  draftCount: number
+  publishedCount: number
+  teacherCount: number
+}
+
+export interface AdminPrepItem {
+  id: number
+  teacherId: number
+  courseId: number
+  title: string
+  courseName: string
+  teacherName: string
+  teachingObjective: string
+  keyPoints: string
+  difficultyPoints: string
+  studentAnalysis: string
+  teachingContent: string
+  teachingProcess: string
+  reflectionNotes: string
+  status: 'draft' | 'published' | 'archived'
+  statusLabel: string
+  createTime: string
+  updateTime: string
+}
+
+export interface AdminPrepListData {
+  stats: AdminPrepStats
+  list: AdminPrepItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: AdminCourseOption[]
+  }
+}
+
+export interface AdminPrepQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  status?: 'all' | 'draft' | 'published' | 'archived'
+}
+
+export async function getAdminPrepList(params: AdminPrepQuery) {
+  const response = await http.get<ApiSuccess<AdminPrepListData>>('/admin/preps', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function deleteAdminPrep(prepId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/admin/preps/${prepId}`)
+  return response.data.data
+}
+
 export async function getAdminAssetList(params: AdminAssetQuery) {
   const response = await http.get<ApiSuccess<AdminAssetListData>>('/admin/assets', {
     params,

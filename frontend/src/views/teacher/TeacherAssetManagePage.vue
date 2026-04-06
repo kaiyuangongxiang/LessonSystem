@@ -12,6 +12,7 @@
         <button type="button" class="teacher-dashboard-nav__item is-active">素材库</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/preps')">备课单管理</button>
       </nav>
     </aside>
 

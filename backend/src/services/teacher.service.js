@@ -12,6 +12,7 @@ const MAX_DESCRIPTION_LENGTH = 2000
 const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
+const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
 
 function badRequest(message) {
   const error = new Error(message)
@@ -213,6 +214,76 @@ function normalizeAssetContent(value, required = false) {
   return assetContent
 }
 
+function normalizePrepId(value) {
+  const prepId = Number(value)
+  if (!Number.isInteger(prepId) || prepId <= 0) {
+    throw badRequest('备课单ID不合法')
+  }
+
+  return prepId
+}
+
+function normalizePrepTitle(value) {
+  const title = typeof value === 'string' ? value.trim() : ''
+  if (!title) {
+    throw badRequest('备课单标题不能为空')
+  }
+
+  if (title.length > 200) {
+    throw badRequest('备课单标题不能超过200个字')
+  }
+
+  return title
+}
+
+function normalizePrepStatus(value, { allowArchived = true } = {}) {
+  const status = typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+  if (!PREP_STATUSES.has(status)) {
+    throw badRequest('备课单状态不合法')
+  }
+
+  if (!allowArchived && status === 'archived') {
+    throw badRequest('当前操作不支持归档状态')
+  }
+
+  return status
+}
+
+function normalizePrepFilterStatus(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  return normalizePrepStatus(value)
+}
+
+function normalizePrepText(value, label) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (text.length > 5000) {
+    throw badRequest(`${label}不能超过5000个字`)
+  }
+
+  return text
+}
+
+function normalizePrepPayload(payload, { allowArchived = false } = {}) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+
+  return {
+    courseId: normalizeCourseId(body.courseId),
+    title: normalizePrepTitle(body.title),
+    status: normalizePrepStatus(body.status || 'draft', { allowArchived }),
+    teachingObjective: normalizePrepText(body.teachingObjective, '教学目标'),
+    keyPoints: normalizePrepText(body.keyPoints, '教学重点'),
+    difficultyPoints: normalizePrepText(body.difficultyPoints, '教学难点'),
+    studentAnalysis: normalizePrepText(body.studentAnalysis, '学情分析'),
+    teachingContent: normalizePrepText(body.teachingContent, '教学内容'),
+    teachingProcess: normalizePrepText(body.teachingProcess, '教学过程'),
+    reflectionNotes: normalizePrepText(body.reflectionNotes, '教学反思'),
+  }
+}
+
 function extractFileFormat(fileName, fallback = '') {
   const extension = path.extname(String(fileName || '')).replace('.', '').trim().toUpperCase()
   return extension || fallback
@@ -224,6 +295,39 @@ function buildResourcePreviewUrl(type, resourceId) {
 
 function buildAssetPreviewUrl(assetId) {
   return `/portal/assets/${assetId}/file`
+}
+
+function getPrepStatusLabel(status) {
+  if (status === 'published') {
+    return '已发布'
+  }
+
+  if (status === 'archived') {
+    return '已归档'
+  }
+
+  return '草稿'
+}
+
+function mapTeacherPrepItem(item) {
+  return {
+    id: Number(item.id),
+    teacherId: Number(item.teacherId || 0),
+    courseId: Number(item.courseId || 0),
+    courseName: item.courseName,
+    title: item.title,
+    teachingObjective: item.teachingObjective || '',
+    keyPoints: item.keyPoints || '',
+    difficultyPoints: item.difficultyPoints || '',
+    studentAnalysis: item.studentAnalysis || '',
+    teachingContent: item.teachingContent || '',
+    teachingProcess: item.teachingProcess || '',
+    reflectionNotes: item.reflectionNotes || '',
+    status: item.status,
+    statusLabel: getPrepStatusLabel(item.status),
+    createTime: item.createTime,
+    updateTime: item.updateTime,
+  }
 }
 
 function formatDate(value) {
@@ -337,6 +441,20 @@ async function ensureAssetLibraryReady() {
 
   if (!rows.length) {
     throw badRequest('当前数据库尚未初始化素材库表，请先执行素材库升级 SQL')
+  }
+}
+
+async function ensureTeachingPrepReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'teaching_prep'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw badRequest('当前数据库尚未初始化备课单表，请先执行备课单升级 SQL')
   }
 }
 
@@ -617,6 +735,39 @@ async function getOwnedAssetRow(assetId, teacherId) {
   return rows[0]
 }
 
+async function getOwnedPrepRow(prepId, teacherId) {
+  await ensureTeachingPrepReady()
+
+  const [rows] = await pool.query(
+    `SELECT p.prep_id AS id,
+            p.teacher_id AS teacherId,
+            p.course_id AS courseId,
+            p.prep_title AS title,
+            COALESCE(p.teaching_objective, '') AS teachingObjective,
+            COALESCE(p.key_points, '') AS keyPoints,
+            COALESCE(p.difficulty_points, '') AS difficultyPoints,
+            COALESCE(p.student_analysis, '') AS studentAnalysis,
+            COALESCE(p.teaching_content, '') AS teachingContent,
+            COALESCE(p.teaching_process, '') AS teachingProcess,
+            COALESCE(p.reflection_notes, '') AS reflectionNotes,
+            p.status AS status,
+            DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
+            DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
+            COALESCE(c.course_name, '未关联课程') AS courseName
+     FROM teaching_prep p
+     LEFT JOIN course_intro c ON c.course_id = p.course_id
+     WHERE p.prep_id = ? AND p.teacher_id = ?
+     LIMIT 1`,
+    [prepId, teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('备课单不存在或无权操作')
+  }
+
+  return rows[0]
+}
+
 async function getOwnedMessageRow(messageId, teacherId) {
   const [rows] = await pool.query(
     `SELECT topic_id AS id, teacher_id AS teacherId, title, content, status, create_time, update_time
@@ -779,6 +930,261 @@ export async function getTeacherCourseOptions(teacherId) {
   })
 
   return rows
+}
+
+export async function getTeacherPrepList({ teacherId, query }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepReady()
+
+  const keyword = normalizeKeyword(query.keyword)
+  const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
+  const status = normalizePrepFilterStatus(query.status)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const params = [teacherId]
+  let whereSql = 'p.teacher_id = ?'
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    whereSql += ` AND (
+      p.prep_title LIKE ?
+      OR COALESCE(c.course_name, '') LIKE ?
+      OR COALESCE(p.teaching_objective, '') LIKE ?
+      OR COALESCE(p.key_points, '') LIKE ?
+      OR COALESCE(p.difficulty_points, '') LIKE ?
+      OR COALESCE(p.student_analysis, '') LIKE ?
+      OR COALESCE(p.teaching_content, '') LIKE ?
+      OR COALESCE(p.teaching_process, '') LIKE ?
+      OR COALESCE(p.reflection_notes, '') LIKE ?
+    )`
+    params.push(
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+    )
+  }
+
+  if (courseId) {
+    whereSql += ' AND p.course_id = ?'
+    params.push(courseId)
+  }
+
+  if (status !== 'all') {
+    whereSql += ' AND p.status = ?'
+    params.push(status)
+  }
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM teaching_prep p
+     LEFT JOIN course_intro c ON c.course_id = p.course_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [listRows] = await pool.query(
+    `SELECT p.prep_id AS id,
+            p.teacher_id AS teacherId,
+            p.course_id AS courseId,
+            p.prep_title AS title,
+            COALESCE(p.teaching_objective, '') AS teachingObjective,
+            COALESCE(p.key_points, '') AS keyPoints,
+            COALESCE(p.difficulty_points, '') AS difficultyPoints,
+            COALESCE(p.student_analysis, '') AS studentAnalysis,
+            COALESCE(p.teaching_content, '') AS teachingContent,
+            COALESCE(p.teaching_process, '') AS teachingProcess,
+            COALESCE(p.reflection_notes, '') AS reflectionNotes,
+            p.status AS status,
+            DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
+            DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
+            COALESCE(c.course_name, '未关联课程') AS courseName
+     FROM teaching_prep p
+     LEFT JOIN course_intro c ON c.course_id = p.course_id
+     WHERE ${whereSql}
+     ORDER BY p.update_time DESC, p.prep_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT COUNT(*) AS total,
+            COALESCE(SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END), 0) AS draftCount,
+            COALESCE(SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END), 0) AS publishedCount,
+            COUNT(DISTINCT course_id) AS courseCount
+     FROM teaching_prep
+     WHERE teacher_id = ?`,
+    [teacherId],
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    draftCount: 0,
+    publishedCount: 0,
+    courseCount: 0,
+  }
+
+  logger.info('teacher_prep_list_loaded', {
+    teacherId,
+    keyword,
+    courseId,
+    status,
+    page,
+    pageSize,
+    total,
+    resultCount: listRows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      draftCount: Number(statsRow.draftCount || 0),
+      publishedCount: Number(statsRow.publishedCount || 0),
+      courseCount: Number(statsRow.courseCount || 0),
+    },
+    list: listRows.map(mapTeacherPrepItem),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    filters: {
+      courses: await getTeacherCourseOptions(teacherId),
+    },
+  }
+}
+
+export async function createTeacherPrep({ teacherId, payload }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepReady()
+
+  const prep = normalizePrepPayload(payload, { allowArchived: false })
+  await getOwnedCourseRow(prep.courseId, teacherId)
+
+  const [result] = await pool.query(
+    `INSERT INTO teaching_prep (
+       teacher_id,
+       course_id,
+       prep_title,
+       teaching_objective,
+       key_points,
+       difficulty_points,
+       student_analysis,
+       teaching_content,
+       teaching_process,
+       reflection_notes,
+       status
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      teacherId,
+      prep.courseId,
+      prep.title,
+      prep.teachingObjective || null,
+      prep.keyPoints || null,
+      prep.difficultyPoints || null,
+      prep.studentAnalysis || null,
+      prep.teachingContent || null,
+      prep.teachingProcess || null,
+      prep.reflectionNotes || null,
+      prep.status,
+    ],
+  )
+
+  const prepId = Number(result.insertId || 0)
+
+  logger.info('teacher_prep_created', {
+    teacherId,
+    prepId,
+    courseId: prep.courseId,
+    status: prep.status,
+  })
+
+  return mapTeacherPrepItem(await getOwnedPrepRow(prepId, teacherId))
+}
+
+export async function updateTeacherPrep({ teacherId, prepId, payload }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+  const prep = normalizePrepPayload(payload, { allowArchived: false })
+  await getOwnedCourseRow(prep.courseId, teacherId)
+
+  await pool.query(
+    `UPDATE teaching_prep
+     SET course_id = ?,
+         prep_title = ?,
+         teaching_objective = ?,
+         key_points = ?,
+         difficulty_points = ?,
+         student_analysis = ?,
+         teaching_content = ?,
+         teaching_process = ?,
+         reflection_notes = ?,
+         status = ?,
+         update_time = CURRENT_TIMESTAMP
+     WHERE prep_id = ? AND teacher_id = ?`,
+    [
+      prep.courseId,
+      prep.title,
+      prep.teachingObjective || null,
+      prep.keyPoints || null,
+      prep.difficultyPoints || null,
+      prep.studentAnalysis || null,
+      prep.teachingContent || null,
+      prep.teachingProcess || null,
+      prep.reflectionNotes || null,
+      prep.status,
+      normalizedPrepId,
+      teacherId,
+    ],
+  )
+
+  logger.info('teacher_prep_updated', {
+    teacherId,
+    prepId: normalizedPrepId,
+    courseId: prep.courseId,
+    status: prep.status,
+  })
+
+  return mapTeacherPrepItem(await getOwnedPrepRow(normalizedPrepId, teacherId))
+}
+
+export async function deleteTeacherPrep({ teacherId, prepId }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  const prep = await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+  await pool.query(
+    `DELETE FROM teaching_prep
+     WHERE prep_id = ? AND teacher_id = ?`,
+    [normalizedPrepId, teacherId],
+  )
+
+  logger.info('teacher_prep_deleted', {
+    teacherId,
+    prepId: normalizedPrepId,
+  })
+
+  return {
+    id: normalizedPrepId,
+    title: prep.title,
+  }
 }
 
 export async function getTeacherAssetList({ teacherId, query }) {

@@ -1,11 +1,10 @@
 *
+!/.gitignore
 !/backend/
 !/backend/**
 !/frontend/
 !/frontend/**
 
-# .gitignore
-/.gitignore
 
 # dependencies
 backend/node_modules/

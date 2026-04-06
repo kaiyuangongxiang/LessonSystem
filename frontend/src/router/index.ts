@@ -56,6 +56,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'teacher' },
     },
     {
+      path: '/teacher/preps',
+      name: 'teacher-preps',
+      component: () => import('@/views/teacher/TeacherPrepManagePage.vue'),
+      meta: { requiresAuth: true, role: 'teacher' },
+    },
+    {
       path: '/teacher/materials',
       name: 'teacher-material-upload',
       component: () => import('@/views/teacher/MaterialUploadPage.vue'),
@@ -124,6 +130,12 @@ const router = createRouter({
       path: '/admin/courses',
       name: 'admin-courses',
       component: () => import('@/views/admin/AdminCourseManagePage.vue'),
+      meta: { requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/admin/preps',
+      name: 'admin-preps',
+      component: () => import('@/views/admin/AdminPrepManagePage.vue'),
       meta: { requiresAuth: true, role: 'admin' },
     },
     {

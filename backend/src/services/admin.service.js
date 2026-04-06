@@ -7,6 +7,7 @@ const MAX_PAGE_SIZE = 12
 const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
+const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
 let replySchemaSupportPromise = null
 function badRequest(message) {
   const error = new Error(message)
@@ -173,6 +174,32 @@ function normalizeSystemProfilePayload(payload) {
     heroTitle: normalizeSystemHeroTitle(body.heroTitle),
     systemIntro: normalizeSystemIntro(body.systemIntro),
   }
+}
+
+function normalizePrepId(value) {
+  const prepId = Number(value)
+  if (!Number.isInteger(prepId) || prepId <= 0) {
+    throw badRequest('备课单ID不合法')
+  }
+
+  return prepId
+}
+
+function normalizePrepStatus(value) {
+  const status = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (!PREP_STATUSES.has(status)) {
+    throw badRequest('备课单状态不合法')
+  }
+
+  return status
+}
+
+function normalizePrepFilterStatus(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  return normalizePrepStatus(value)
 }
 
 function normalizeNoticeId(value) {
@@ -606,6 +633,40 @@ function buildAssetPreviewUrl(assetId) {
   return `/portal/assets/${assetId}/file`
 }
 
+function getPrepStatusLabel(status) {
+  if (status === 'published') {
+    return '已发布'
+  }
+
+  if (status === 'archived') {
+    return '已归档'
+  }
+
+  return '草稿'
+}
+
+function mapAdminPrepItem(item) {
+  return {
+    id: Number(item.id),
+    teacherId: Number(item.teacherId || 0),
+    courseId: Number(item.courseId || 0),
+    title: item.title,
+    courseName: item.courseName,
+    teacherName: item.teacherName,
+    teachingObjective: item.teachingObjective || '',
+    keyPoints: item.keyPoints || '',
+    difficultyPoints: item.difficultyPoints || '',
+    studentAnalysis: item.studentAnalysis || '',
+    teachingContent: item.teachingContent || '',
+    teachingProcess: item.teachingProcess || '',
+    reflectionNotes: item.reflectionNotes || '',
+    status: item.status,
+    statusLabel: getPrepStatusLabel(item.status),
+    createTime: item.createTime,
+    updateTime: item.updateTime,
+  }
+}
+
 async function ensureAssetLibraryReady() {
   const [rows] = await pool.query(
     `SELECT 1
@@ -617,6 +678,20 @@ async function ensureAssetLibraryReady() {
 
   if (!rows.length) {
     throw badRequest('当前数据库尚未初始化素材库表，请先执行素材库升级 SQL')
+  }
+}
+
+async function ensureTeachingPrepReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'teaching_prep'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw badRequest('当前数据库尚未初始化备课单表，请先执行备课单升级 SQL')
   }
 }
 
@@ -1382,6 +1457,41 @@ async function getAdminVideoRow(videoId) {
 
   if (!rows.length) {
     throw notFound('视频不存在或已删除')
+  }
+
+  return rows[0]
+}
+
+async function getAdminPrepRow(prepId) {
+  await ensureTeachingPrepReady()
+
+  const [rows] = await pool.query(
+    `SELECT p.prep_id AS id,
+            p.teacher_id AS teacherId,
+            p.course_id AS courseId,
+            p.prep_title AS title,
+            COALESCE(p.teaching_objective, '') AS teachingObjective,
+            COALESCE(p.key_points, '') AS keyPoints,
+            COALESCE(p.difficulty_points, '') AS difficultyPoints,
+            COALESCE(p.student_analysis, '') AS studentAnalysis,
+            COALESCE(p.teaching_content, '') AS teachingContent,
+            COALESCE(p.teaching_process, '') AS teachingProcess,
+            COALESCE(p.reflection_notes, '') AS reflectionNotes,
+            p.status AS status,
+            DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
+            DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
+            COALESCE(ci.course_name, '未关联课程') AS courseName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未命名教师') AS teacherName
+     FROM teaching_prep p
+     LEFT JOIN course_intro ci ON ci.course_id = p.course_id
+     LEFT JOIN teacher_user t ON t.teacher_id = p.teacher_id
+     WHERE p.prep_id = ?
+     LIMIT 1`,
+    [prepId],
+  )
+
+  if (!rows.length) {
+    throw notFound('备课单不存在或已删除')
   }
 
   return rows[0]
@@ -2781,6 +2891,179 @@ export async function deleteAdminCourse({ adminId, courseId }) {
   return {
     id: normalizedCourseId,
     name: course.name,
+  }
+}
+
+export async function getAdminPrepList({ adminId, query }) {
+  await getAdminProfile(adminId)
+  await ensureTeachingPrepReady()
+
+  const keyword = normalizeKeyword(query.keyword)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
+  const status = normalizePrepFilterStatus(query.status)
+  const params = []
+  let whereSql = '1 = 1'
+
+  if (courseId) {
+    whereSql += ' AND p.course_id = ?'
+    params.push(courseId)
+  }
+
+  if (status !== 'all') {
+    whereSql += ' AND p.status = ?'
+    params.push(status)
+  }
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    whereSql += ` AND (
+      p.prep_title LIKE ?
+      OR COALESCE(ci.course_name, '') LIKE ?
+      OR COALESCE(t.teacher_name, '') LIKE ?
+      OR COALESCE(t.username, '') LIKE ?
+      OR COALESCE(p.teaching_objective, '') LIKE ?
+      OR COALESCE(p.key_points, '') LIKE ?
+      OR COALESCE(p.difficulty_points, '') LIKE ?
+      OR COALESCE(p.student_analysis, '') LIKE ?
+      OR COALESCE(p.teaching_content, '') LIKE ?
+      OR COALESCE(p.teaching_process, '') LIKE ?
+      OR COALESCE(p.reflection_notes, '') LIKE ?
+    )`
+    params.push(
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+      keywordPattern,
+    )
+  }
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM teaching_prep p
+     LEFT JOIN course_intro ci ON ci.course_id = p.course_id
+     LEFT JOIN teacher_user t ON t.teacher_id = p.teacher_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [listRows] = await pool.query(
+    `SELECT p.prep_id AS id,
+            p.teacher_id AS teacherId,
+            p.course_id AS courseId,
+            p.prep_title AS title,
+            COALESCE(p.teaching_objective, '') AS teachingObjective,
+            COALESCE(p.key_points, '') AS keyPoints,
+            COALESCE(p.difficulty_points, '') AS difficultyPoints,
+            COALESCE(p.student_analysis, '') AS studentAnalysis,
+            COALESCE(p.teaching_content, '') AS teachingContent,
+            COALESCE(p.teaching_process, '') AS teachingProcess,
+            COALESCE(p.reflection_notes, '') AS reflectionNotes,
+            p.status AS status,
+            DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
+            DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
+            COALESCE(ci.course_name, '未关联课程') AS courseName,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未命名教师') AS teacherName
+     FROM teaching_prep p
+     LEFT JOIN course_intro ci ON ci.course_id = p.course_id
+     LEFT JOIN teacher_user t ON t.teacher_id = p.teacher_id
+     WHERE ${whereSql}
+     ORDER BY p.update_time DESC, p.prep_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT COUNT(*) AS total,
+            COALESCE(SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END), 0) AS draftCount,
+            COALESCE(SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END), 0) AS publishedCount,
+            COUNT(DISTINCT teacher_id) AS teacherCount
+     FROM teaching_prep`,
+  )
+
+  const [courseRows] = await pool.query(
+    `SELECT course_id AS id, course_name AS name
+     FROM course_intro
+     WHERE status = 1
+     ORDER BY update_time DESC, course_id DESC`,
+  )
+
+  const statsRow = statsRows[0] || {
+    total: 0,
+    draftCount: 0,
+    publishedCount: 0,
+    teacherCount: 0,
+  }
+
+  logger.info('admin_prep_list_loaded', {
+    adminId,
+    keyword,
+    courseId,
+    status,
+    page,
+    pageSize,
+    total,
+    resultCount: listRows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRow.total || 0),
+      draftCount: Number(statsRow.draftCount || 0),
+      publishedCount: Number(statsRow.publishedCount || 0),
+      teacherCount: Number(statsRow.teacherCount || 0),
+    },
+    list: listRows.map(mapAdminPrepItem),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+    filters: {
+      courses: courseRows.map((item) => ({
+        id: Number(item.id),
+        name: item.name,
+      })),
+    },
+  }
+}
+
+export async function deleteAdminPrep({ adminId, prepId }) {
+  await getAdminProfile(adminId)
+  await ensureTeachingPrepReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  const prep = await getAdminPrepRow(normalizedPrepId)
+
+  await pool.query(
+    `DELETE FROM teaching_prep
+     WHERE prep_id = ?`,
+    [normalizedPrepId],
+  )
+
+  logger.info('admin_prep_deleted', {
+    adminId,
+    prepId: normalizedPrepId,
+    teacherId: Number(prep.teacherId || 0),
+  })
+
+  return {
+    id: normalizedPrepId,
+    title: prep.title,
   }
 }
 

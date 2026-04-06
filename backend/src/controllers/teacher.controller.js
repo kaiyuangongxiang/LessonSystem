@@ -1,18 +1,22 @@
 import {
   createTeacherAsset,
+  createTeacherPrep,
   createTeacherMaterial,
   createTeacherResourceBundle,
   createTeacherVideo,
   deleteTeacherAsset,
+  deleteTeacherPrep,
   deleteTeacherResource,
   getTeacherAssetDetail,
   getTeacherAssetList,
   getTeacherCourseOptions,
   getTeacherDashboardData,
+  getTeacherPrepList,
   getTeacherProfileDetail,
   getTeacherResourceDetail,
   getTeacherResourceList,
   updateTeacherAsset,
+  updateTeacherPrep,
   updateTeacherProfileInfo,
   updateTeacherResource,
 } from '../services/teacher.service.js'
@@ -46,6 +50,75 @@ export async function getCourseOptions(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取教师课程选项成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPreps(req, res, next) {
+  try {
+    const result = await getTeacherPrepList({
+      teacherId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取备课单列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postPrep(req, res, next) {
+  try {
+    const result = await createTeacherPrep({
+      teacherId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建备课单成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function putPrep(req, res, next) {
+  try {
+    const result = await updateTeacherPrep({
+      teacherId: req.auth.userId,
+      prepId: req.params.prepId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新备课单成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function removePrep(req, res, next) {
+  try {
+    const result = await deleteTeacherPrep({
+      teacherId: req.auth.userId,
+      prepId: req.params.prepId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除备课单成功',
       data: result,
     })
   } catch (error) {

@@ -129,6 +129,89 @@ export async function getTeacherCourseOptions() {
   return response.data.data
 }
 
+export interface TeacherPrepStats {
+  total: number
+  draftCount: number
+  publishedCount: number
+  courseCount: number
+}
+
+export interface TeacherPrepItem {
+  id: number
+  teacherId: number
+  courseId: number
+  courseName: string
+  title: string
+  teachingObjective: string
+  keyPoints: string
+  difficultyPoints: string
+  studentAnalysis: string
+  teachingContent: string
+  teachingProcess: string
+  reflectionNotes: string
+  status: 'draft' | 'published' | 'archived'
+  statusLabel: string
+  createTime: string
+  updateTime: string
+}
+
+export interface TeacherPrepListData {
+  stats: TeacherPrepStats
+  list: TeacherPrepItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: TeacherCourseOption[]
+  }
+}
+
+export interface TeacherPrepQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  status?: 'all' | 'draft' | 'published' | 'archived'
+}
+
+export interface TeacherPrepPayload {
+  courseId: string
+  title: string
+  status: 'draft' | 'published'
+  teachingObjective: string
+  keyPoints: string
+  difficultyPoints: string
+  studentAnalysis: string
+  teachingContent: string
+  teachingProcess: string
+  reflectionNotes: string
+}
+
+export async function getTeacherPreps(params: TeacherPrepQuery) {
+  const response = await http.get<ApiSuccess<TeacherPrepListData>>('/teacher/preps', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createTeacherPrep(payload: TeacherPrepPayload) {
+  const response = await http.post<ApiSuccess<TeacherPrepItem>>('/teacher/preps', payload)
+  return response.data.data
+}
+
+export async function updateTeacherPrep(prepId: number, payload: TeacherPrepPayload) {
+  const response = await http.put<ApiSuccess<TeacherPrepItem>>(`/teacher/preps/${prepId}`, payload)
+  return response.data.data
+}
+
+export async function deleteTeacherPrep(prepId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/teacher/preps/${prepId}`)
+  return response.data.data
+}
+
 export type TeacherAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
 
 export interface TeacherAssetItem {

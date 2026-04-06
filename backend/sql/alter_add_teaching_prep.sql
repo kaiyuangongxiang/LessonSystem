@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS teaching_prep (
+  prep_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  teacher_id BIGINT NOT NULL,
+  course_id BIGINT NOT NULL,
+  prep_title VARCHAR(200) NOT NULL,
+  teaching_objective TEXT NULL,
+  key_points TEXT NULL,
+  difficulty_points TEXT NULL,
+  student_analysis TEXT NULL,
+  teaching_content TEXT NULL,
+  teaching_process TEXT NULL,
+  reflection_notes TEXT NULL,
+  status ENUM('draft', 'published', 'archived') NOT NULL DEFAULT 'draft',
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_teaching_prep_teacher FOREIGN KEY (teacher_id) REFERENCES teacher_user(teacher_id) ON DELETE CASCADE,
+  CONSTRAINT fk_teaching_prep_course FOREIGN KEY (course_id) REFERENCES course_intro(course_id) ON DELETE CASCADE,
+  INDEX idx_teaching_prep_teacher_status (teacher_id, status),
+  INDEX idx_teaching_prep_course_status (course_id, status),
+  INDEX idx_teaching_prep_update_time (update_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
