@@ -4281,6 +4281,282 @@ body.body-teacher-locked #app {
   opacity: 0.62;
 }
 
+.admin-prep-main,
+.admin-asset-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-prep-header,
+.admin-asset-header {
+  padding: 4px 2px 2px;
+}
+
+.admin-prep-header__eyebrow,
+.admin-prep-card__eyebrow,
+.admin-asset-header__eyebrow,
+.admin-asset-card__eyebrow {
+  color: #6b85a4;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.admin-prep-header h2,
+.admin-prep-card h3,
+.admin-asset-header h2,
+.admin-asset-card h3 {
+  margin: 8px 0 0;
+  color: $text-main;
+}
+
+.admin-prep-header p,
+.admin-asset-header p {
+  margin: 10px 0 0;
+  color: $text-muted;
+  line-height: 1.7;
+}
+
+.admin-prep-stats,
+.admin-asset-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-prep-stat-card,
+.admin-prep-card,
+.admin-asset-stat-card,
+.admin-asset-card {
+  padding: 20px 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(220, 230, 241, 0.95);
+  box-shadow: 0 14px 34px rgba(18, 56, 109, 0.08);
+}
+
+.admin-prep-stat-card span,
+.admin-asset-stat-card span {
+  color: #6b85a4;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-prep-stat-card strong,
+.admin-asset-stat-card strong {
+  display: block;
+  margin-top: 10px;
+  color: $text-main;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.admin-prep-filter,
+.admin-asset-filter {
+  display: grid;
+  gap: 14px;
+  align-items: end;
+}
+
+.admin-prep-filter {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(180px, 0.9fr)) auto;
+}
+
+.admin-asset-filter {
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(160px, 0.85fr)) auto;
+}
+
+.admin-prep-filter label,
+.admin-asset-filter label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-prep-filter span,
+.admin-asset-filter span {
+  color: #395984;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-prep-filter input,
+.admin-prep-filter select,
+.admin-asset-filter input,
+.admin-asset-filter select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d7e3f2;
+  border-radius: 16px;
+  background: #f8fbff;
+  color: $text-main;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.admin-prep-filter input:focus,
+.admin-prep-filter select:focus,
+.admin-asset-filter input:focus,
+.admin-asset-filter select:focus {
+  border-color: #2a7dd2;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(42, 125, 210, 0.12);
+}
+
+.admin-prep-filter__actions,
+.admin-asset-filter__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-self: end;
+}
+
+.admin-prep-card__head,
+.admin-asset-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-prep-card__meta,
+.admin-asset-card__meta {
+  color: $text-muted;
+  font-size: 13px;
+}
+
+.admin-prep-list,
+.admin-asset-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-prep-item,
+.admin-asset-item {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid #dbe6f3;
+  background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.admin-prep-item__head,
+.admin-prep-item__actions,
+.admin-asset-item__head,
+.admin-asset-item__actions,
+.admin-asset-item__tags {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-prep-item__head,
+.admin-asset-item__head {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.admin-prep-item__head strong,
+.admin-asset-item__head strong {
+  display: block;
+  color: $text-main;
+  font-size: 18px;
+}
+
+.admin-prep-item__head p,
+.admin-asset-item__head p {
+  margin: 8px 0 0;
+  color: $text-muted;
+  line-height: 1.6;
+}
+
+.admin-prep-item__head span {
+  color: #6f88a6;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.admin-prep-item__content,
+.admin-asset-item__desc,
+.admin-asset-item__meta {
+  margin-top: 12px;
+  color: #567290;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.admin-asset-item__desc {
+  white-space: pre-wrap;
+}
+
+.admin-prep-item__attachments {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-prep-item__attachments strong {
+  color: #173963;
+}
+
+.admin-prep-item__attachment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-prep-item__attachment-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #25548e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-prep-item__actions {
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+.admin-asset-item__actions {
+  margin-top: 14px;
+}
+
+.admin-asset-item__tags {
+  justify-content: flex-end;
+}
+
+.admin-asset-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-asset-badge.is-public {
+  background: rgba(29, 127, 86, 0.12);
+  color: $success;
+}
+
+.admin-asset-badge.is-private {
+  background: rgba(145, 109, 34, 0.12);
+  color: #8c651d;
+}
+
 .admin-course-toolbar {
   display: grid;
   gap: 18px;
@@ -4736,6 +5012,18 @@ body.body-teacher-locked #app {
     justify-content: stretch;
   }
 
+  .admin-prep-stats,
+  .admin-asset-stats,
+  .admin-prep-filter,
+  .admin-asset-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-prep-filter__actions,
+  .admin-asset-filter__actions {
+    grid-column: 1 / -1;
+  }
+
   .admin-manage-table__head {
     display: none;
   }
@@ -4822,6 +5110,13 @@ body.body-teacher-locked #app {
     grid-template-columns: 1fr;
   }
 
+  .admin-prep-stats,
+  .admin-asset-stats,
+  .admin-prep-filter,
+  .admin-asset-filter {
+    grid-template-columns: 1fr;
+  }
+
   .admin-manage-head__actions,
   .admin-manage-filter-actions,
   .admin-manage-pagination__actions,
@@ -4894,6 +5189,18 @@ body.body-teacher-locked #app {
     max-height: none;
     overflow: visible;
     padding: 0 0 24px;
+  }
+
+  .admin-prep-item__head,
+  .admin-prep-item__actions,
+  .admin-asset-item__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-asset-item__tags,
+  .admin-asset-item__actions {
+    justify-content: flex-start;
   }
 }
 

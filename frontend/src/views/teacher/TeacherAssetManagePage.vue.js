@@ -381,9 +381,84 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (`${__VLS_ctx.stats.imageCount} / ${__VLS_ctx.stats.audioCount + __VLS_ctx.stats.videoCount} / ${__VLS_ctx.stats.contentCount}`);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "teacher-dashboard-grid teacher-dashboard-grid--middle" },
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "my-resources-filter-panel" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "my-resources-filter-panel__head" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "my-resources-filter-panel__eyebrow" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "my-resources-panel__meta" },
+});
+(__VLS_ctx.pagination.total);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+    ...{ onSubmit: (__VLS_ctx.applySearch) },
+    ...{ class: "my-resources-filter-form" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "my-resources-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    value: (__VLS_ctx.filters.keyword),
+    type: "text",
+    maxlength: "200",
+    placeholder: "搜索标题、说明、内容或文件名",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "my-resources-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.filters.type),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "all",
+});
+for (const [option] of __VLS_getVForSourceType((__VLS_ctx.assetTypeOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (option.value),
+        value: (option.value),
+    });
+    (option.label);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "my-resources-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.filters.visibility),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "all",
+});
+for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (option.value),
+        value: (option.value),
+    });
+    (option.label);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "my-resources-filter-actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.resetFilters) },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+    disabled: (__VLS_ctx.loading),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "submit",
+    ...{ class: "auth-btn" },
+    disabled: (__VLS_ctx.loading),
+});
+(__VLS_ctx.loading ? '加载中...' : '应用筛选');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ...{ class: "my-resources-panel" },
 });
@@ -518,84 +593,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     disabled: (__VLS_ctx.saving),
 });
 (__VLS_ctx.saving ? '提交中...' : __VLS_ctx.editingId ? '保存素材' : '创建素材');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "my-resources-filter-panel" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-filter-panel__head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-filter-panel__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-panel__meta" },
-});
-(__VLS_ctx.pagination.total);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-    ...{ onSubmit: (__VLS_ctx.applySearch) },
-    ...{ class: "my-resources-filter-form" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "my-resources-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    value: (__VLS_ctx.filters.keyword),
-    type: "text",
-    maxlength: "200",
-    placeholder: "搜索标题、说明、内容或文件名",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "my-resources-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.filters.type),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-    value: "all",
-});
-for (const [option] of __VLS_getVForSourceType((__VLS_ctx.assetTypeOptions))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (option.value),
-        value: (option.value),
-    });
-    (option.label);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "my-resources-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.filters.visibility),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-    value: "all",
-});
-for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (option.value),
-        value: (option.value),
-    });
-    (option.label);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-filter-actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.resetFilters) },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: (__VLS_ctx.loading),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "submit",
-    ...{ class: "auth-btn" },
-    disabled: (__VLS_ctx.loading),
-});
-(__VLS_ctx.loading ? '加载中...' : '搜索素材');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "my-resources-panel" },
 });
@@ -750,8 +747,18 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid--middle']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-panel__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-form']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__eyebrow']} */ ;
@@ -773,18 +780,6 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['asset-upload-picker__button']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-upload-picker__name']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-field-tip']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-panel__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-form']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;

@@ -161,24 +161,6 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
-/** @type {__VLS_StyleScopedClasses['admin-asset-header']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-item__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-item__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-badge']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-badge']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-asset-item__head']} */ ;
-// CSS variable injection 
-// CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "admin-manage-page admin-asset-page" },
 });

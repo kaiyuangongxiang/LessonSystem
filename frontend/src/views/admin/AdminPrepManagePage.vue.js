@@ -141,23 +141,6 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
-/** @type {__VLS_StyleScopedClasses['admin-prep-header']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-item__attachment-tags']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-item__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-item__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-prep-item__actions']} */ ;
-// CSS variable injection 
-// CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "admin-manage-page admin-prep-page" },
 });
