@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
 import { createTeacherAsset, deleteTeacherAssetDetail, getTeacherAssetDetail, getTeacherAssets, updateTeacherAssetDetail, } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
@@ -317,41 +318,68 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "teacher-dashboard-sidebar__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-    ...{ class: "teacher-dashboard-nav" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/materials');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item is-active" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/resources');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher/profile');
-        } },
-    type: "button",
-    ...{ class: "teacher-dashboard-nav__item" },
-});
+/** @type {[typeof TeacherSidebarNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(TeacherSidebarNav, new TeacherSidebarNav({
+    active: "assets",
+}));
+const __VLS_1 = __VLS_0({
+    active: "assets",
+}, ...__VLS_functionalComponentArgsRest(__VLS_0));
+if (false) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
+        ...{ class: "teacher-dashboard-nav" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/teacher');
+            } },
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/teacher/materials');
+            } },
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item is-active" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/teacher/resources');
+            } },
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/teacher/profile');
+            } },
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/teacher/preps');
+            } },
+        type: "button",
+        ...{ class: "teacher-dashboard-nav__item" },
+    });
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-main asset-manage-main" },
 });
@@ -770,6 +798,7 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-head']} */ ;
@@ -850,6 +879,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            TeacherSidebarNav: TeacherSidebarNav,
             router: router,
             loading: loading,
             saving: saving,

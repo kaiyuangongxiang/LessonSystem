@@ -6,6 +6,10 @@
       <span class="teacher-message-page__mesh"></span>
     </div>
 
+    <section class="teacher-message-page__nav">
+      <TeacherSidebarNav active="messages" />
+    </section>
+
     <header class="teacher-message-hero">
       <section class="teacher-message-hero__intro">
         <div class="teacher-message-kicker">Teaching Exchange</div>
@@ -351,6 +355,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
 import {
   createTeacherMessage,
   createTeacherMessageReply,

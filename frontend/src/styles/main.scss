@@ -2313,6 +2313,33 @@ body.body-teacher-locked #app {
   padding: 32px 0 48px;
 }
 
+.teacher-message-page__nav {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(7, 40, 100, 0.84);
+  box-shadow: 0 24px 48px rgba(13, 55, 128, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.teacher-message-page__nav .teacher-dashboard-nav {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.teacher-message-page__nav .teacher-dashboard-nav__item {
+  width: 100%;
+  min-height: 46px;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: 15px;
+}
+
 .teacher-message-page__ambient {
   position: absolute;
   inset: 0;
@@ -2905,6 +2932,15 @@ body.body-teacher-locked #app {
   .teacher-message-page {
     width: auto;
     padding: 16px;
+  }
+
+  .teacher-message-page__nav {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .teacher-message-page__nav .teacher-dashboard-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .teacher-message-hero,

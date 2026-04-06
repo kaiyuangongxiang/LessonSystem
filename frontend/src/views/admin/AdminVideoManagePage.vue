@@ -6,7 +6,8 @@
         <h1>管理员中心</h1>
       </div>
 
-      <nav class="admin-dashboard-nav">
+      <AdminSidebarNav active="materials" />
+      <nav v-if="false" class="admin-dashboard-nav">
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
@@ -160,6 +161,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue'
 import {
   deleteAdminVideo,
   getAdminVideoList,

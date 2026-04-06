@@ -6,7 +6,8 @@
         <h1>教师中心</h1>
       </div>
 
-      <nav class="teacher-dashboard-nav">
+      <TeacherSidebarNav active="assets" />
+      <nav v-if="false" class="teacher-dashboard-nav">
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">总览首页</button>
         <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
         <button type="button" class="teacher-dashboard-nav__item is-active">素材库</button>
@@ -235,6 +236,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
 import {
   createTeacherAsset,
   deleteTeacherAssetDetail,

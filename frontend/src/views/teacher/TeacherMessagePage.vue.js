@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
 import { createTeacherMessage, createTeacherMessageReply, deleteTeacherMessage, deleteTeacherMessageReply, getTeacherMessageDetail, getTeacherMessageList, } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
@@ -319,6 +320,17 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "teacher-message-page__mesh" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+    ...{ class: "teacher-message-page__nav" },
+});
+/** @type {[typeof TeacherSidebarNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(TeacherSidebarNav, new TeacherSidebarNav({
+    active: "messages",
+}));
+const __VLS_1 = __VLS_0({
+    active: "messages",
+}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "teacher-message-hero" },
 });
@@ -957,6 +969,7 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__orb']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__orb--two']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__mesh']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-page__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero__intro']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-kicker']} */ ;
@@ -1073,6 +1086,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            TeacherSidebarNav: TeacherSidebarNav,
             router: router,
             loading: loading,
             submittingTopic: submittingTopic,

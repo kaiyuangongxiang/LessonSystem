@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+function isAdminRoutePath(path: unknown) {
+  return typeof path === 'string' && path.startsWith('/admin')
+}
+
 function resolveHomeByRole(role: string) {
   if (role === 'admin') {
     return { name: 'admin-home' }
@@ -193,7 +197,7 @@ router.afterEach((to) => {
     return
   }
 
-  const isAdminPage = typeof to.path === 'string' && to.path.startsWith('/admin')
+  const isAdminPage = isAdminRoutePath(to.path)
   const isTeacherPage = typeof to.path === 'string' && to.path.startsWith('/teacher')
   document.body.classList.toggle('body-admin-locked', isAdminPage)
   document.body.classList.toggle('body-teacher-locked', isTeacherPage)

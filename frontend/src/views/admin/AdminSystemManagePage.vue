@@ -6,7 +6,8 @@
         <h1>管理员中心</h1>
       </div>
 
-      <nav class="admin-dashboard-nav">
+      <AdminSidebarNav active="system" />
+      <nav v-if="false" class="admin-dashboard-nav">
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
@@ -212,6 +213,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue'
 import {
   createAdminNotice,
   deleteAdminNotice,

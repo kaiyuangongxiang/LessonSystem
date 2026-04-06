@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue';
 import { createAdminMessage, createAdminMessageReply, deleteAdminMessage, deleteAdminMessageReply, getAdminMessageDetail, getAdminMessageList, } from '@/services/admin';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
@@ -293,69 +294,95 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "admin-dashboard-sidebar__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-    ...{ class: "admin-dashboard-nav" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/system');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/teachers');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/accounts');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/colleges');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/courses');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/assets');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/admin/materials');
-        } },
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "button",
-    ...{ class: "admin-dashboard-nav__item is-active" },
-});
+/** @type {[typeof AdminSidebarNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(AdminSidebarNav, new AdminSidebarNav({
+    active: "messages",
+}));
+const __VLS_1 = __VLS_0({
+    active: "messages",
+}, ...__VLS_functionalComponentArgsRest(__VLS_0));
+if (false) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
+        ...{ class: "admin-dashboard-nav" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/system');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/teachers');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/accounts');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/colleges');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/courses');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/assets');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(false))
+                    return;
+                __VLS_ctx.router.push('/admin/materials');
+            } },
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        type: "button",
+        ...{ class: "admin-dashboard-nav__item is-active" },
+    });
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-dashboard-reminder-card admin-dashboard-reminder-card--manage" },
 });
@@ -1052,6 +1079,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            AdminSidebarNav: AdminSidebarNav,
             router: router,
             loading: loading,
             submittingTopic: submittingTopic,
