@@ -11,6 +11,7 @@ const videoCoverUploadRoot = path.resolve(projectRoot, 'uploads', 'video-covers'
 const assetImageUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'images')
 const assetAudioUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'audios')
 const assetVideoUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'videos')
+const prepAttachmentUploadRoot = path.resolve(projectRoot, 'uploads', 'preps', 'attachments')
 
 const materialExtensions = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx'])
 const materialMimeTypes = new Set([
@@ -43,6 +44,20 @@ const assetAudioMimeTypes = new Set([
   'audio/mp4',
   'audio/x-m4a',
   'application/octet-stream',
+])
+const prepAttachmentExtensions = new Set([
+  ...materialExtensions,
+  ...videoExtensions,
+  ...coverExtensions,
+  ...assetImageExtensions,
+  ...assetAudioExtensions,
+])
+const prepAttachmentMimeTypes = new Set([
+  ...materialMimeTypes,
+  ...videoMimeTypes,
+  ...coverMimeTypes,
+  ...assetImageMimeTypes,
+  ...assetAudioMimeTypes,
 ])
 
 function ensureUploadDir(uploadRoot) {
@@ -112,6 +127,11 @@ const assetStorage = createStorage({
     return assetImageUploadRoot
   },
   fallbackBaseName: 'asset',
+})
+
+const prepAttachmentStorage = createStorage({
+  destinationRoot: prepAttachmentUploadRoot,
+  fallbackBaseName: 'prep-attachment',
 })
 
 function materialFileFilter(req, file, callback) {
@@ -262,6 +282,36 @@ export const uploadAssetFile = multer({
   fileFilter: assetFileFilter,
   limits: {
     files: 1,
+    fileSize: 500 * 1024 * 1024,
+  },
+})
+
+function prepAttachmentFileFilter(req, file, callback) {
+  if (file.fieldname !== 'files') {
+    const error = new Error('涓嶆敮鎸佺殑涓婁紶瀛楁')
+    error.status = 400
+    callback(error)
+    return
+  }
+
+  const extension = path.extname(file.originalname || '').toLowerCase()
+  const mimeType = String(file.mimetype || '').toLowerCase()
+
+  if (!prepAttachmentExtensions.has(extension) || !prepAttachmentMimeTypes.has(mimeType)) {
+    const error = new Error('备课附件仅支持文档、图片、音频、视频类文件')
+    error.status = 400
+    callback(error)
+    return
+  }
+
+  callback(null, true)
+}
+
+export const uploadPrepAttachments = multer({
+  storage: prepAttachmentStorage,
+  fileFilter: prepAttachmentFileFilter,
+  limits: {
+    files: 10,
     fileSize: 500 * 1024 * 1024,
   },
 })

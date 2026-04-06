@@ -24,7 +24,7 @@
       <nav class="portal-links">
         <button type="button" class="is-active" @click="scrollToTop">首页</button>
         <button type="button" @click="router.push('/courses')">课程中心</button>
-        <button type="button" @click="scrollToSection('resources')">资源库</button>
+        <button type="button" @click="scrollToSection('resources')">素材库</button>
         <button type="button" @click="goTeachingMessages">教学交流</button>
       </nav>
 
@@ -245,7 +245,7 @@ const resourceSectionRef = ref<HTMLElement | null>(null)
 
 const home = reactive<HomeResponse>({
   profile: {
-    heroTitle: '让课程、资料与视频在一个入口里协同',
+    heroTitle: DEFAULT_HERO_TITLE,
     systemName: '在线教师备课系统',
     systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
   },
@@ -360,12 +360,15 @@ function scrollToTop() {
 }
 
 function scrollToSection(section: 'notices' | 'courses' | 'resources') {
+  if (section === 'resources') {
+    void router.push('/assets')
+    return
+  }
+
   const target =
     section === 'notices'
       ? noticeSectionRef.value
-      : section === 'courses'
-        ? courseSectionRef.value
-        : resourceSectionRef.value
+      : courseSectionRef.value
 
   target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }

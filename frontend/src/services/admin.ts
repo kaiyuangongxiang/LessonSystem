@@ -333,7 +333,8 @@ export type AdminAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' |
 
 export interface AdminAssetStats {
   total: number
-  courseCount: number
+  publicCount: number
+  privateCount: number
   teacherCount: number
   fileCount: number
 }
@@ -343,6 +344,7 @@ export interface AdminAssetItem {
   type: AdminAssetType
   teacherId: number
   courseId: number
+  visibility: 'public' | 'private'
   title: string
   courseName: string
   teacherName: string
@@ -364,6 +366,7 @@ export interface AdminAssetListData {
     totalPages: number
   }
   filters: {
+    visibilityOptions?: Array<{ value: string; label: string }>
     courses: AdminCourseOption[]
   }
 }
@@ -374,6 +377,7 @@ export interface AdminAssetQuery {
   keyword?: string
   courseId?: string
   type?: AdminAssetType | 'all'
+  visibility?: 'all' | 'public' | 'private'
 }
 
 export interface AdminResourceStats {
@@ -701,17 +705,26 @@ export interface AdminPrepItem {
   title: string
   courseName: string
   teacherName: string
-  teachingObjective: string
-  keyPoints: string
-  difficultyPoints: string
-  studentAnalysis: string
   teachingContent: string
-  teachingProcess: string
-  reflectionNotes: string
   status: 'draft' | 'published' | 'archived'
   statusLabel: string
   createTime: string
   updateTime: string
+  attachmentCount: number
+  attachments: Array<{
+    id: number
+    sourceType: 'upload' | 'asset'
+    sourceLabel: string
+    assetId: number | null
+    type: string
+    title: string
+    fileName: string
+    fileSize: number
+    mimeType: string
+    visibility: 'public' | 'private'
+    uploadTime: string
+    previewUrl: string
+  }>
 }
 
 export interface AdminPrepListData {

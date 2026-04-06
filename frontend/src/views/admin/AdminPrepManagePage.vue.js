@@ -2,10 +2,8 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue';
 import { deleteAdminPrep, getAdminPrepList } from '@/services/admin';
-import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
-const authStore = useAuthStore();
 const loading = ref(false);
 const deletingId = ref(null);
 const errorMessage = ref('');
@@ -29,13 +27,9 @@ const pagination = reactive({
     total: 0,
     totalPages: 0,
 });
-const headerText = computed(() => {
-    const name = authStore.profile?.name || authStore.profile?.username || '系统管理员';
-    return `${name}，这里统一查看教师提交的备课单，便于按课程和状态进行管理。`;
-});
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
+    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
 });
 function normalizePage(value) {
     const page = Number(value);
@@ -45,21 +39,11 @@ function clearMessages() {
     errorMessage.value = '';
     successMessage.value = '';
 }
-function renderExcerpt(content, fallback = '暂未填写') {
+function renderExcerpt(content, fallback = '暂无内容') {
     const text = (content || '').trim();
-    if (!text) {
+    if (!text)
         return fallback;
-    }
-    return text.length > 100 ? `${text.slice(0, 100)}...` : text;
-}
-function buildSummary(item) {
-    const parts = [
-        item.keyPoints?.trim() ? `重点：${renderExcerpt(item.keyPoints, '')}` : '',
-        item.difficultyPoints?.trim() ? `难点：${renderExcerpt(item.difficultyPoints, '')}` : '',
-        item.teachingContent?.trim() ? `内容：${renderExcerpt(item.teachingContent, '')}` : '',
-        item.reflectionNotes?.trim() ? `反思：${renderExcerpt(item.reflectionNotes, '')}` : '',
-    ].filter(Boolean);
-    return parts.join(' ｜ ') || '这份备课单还没有填写完整摘要。';
+    return text.length > 160 ? `${text.slice(0, 160)}...` : text;
 }
 function syncFiltersWithRoute() {
     filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
@@ -70,7 +54,7 @@ function syncFiltersWithRoute() {
             : 'all';
 }
 function updateRoute(page = 1) {
-    router.push({
+    void router.push({
         path: '/admin/preps',
         query: {
             page: String(page),
@@ -100,8 +84,8 @@ async function removePrep(item) {
     deletingId.value = item.id;
     try {
         await deleteAdminPrep(item.id);
-        successMessage.value = `备课单“${item.title}”已删除`;
         await loadPreps();
+        successMessage.value = `备课单“${item.title}”已删除`;
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '备课单删除失败';
@@ -157,8 +141,25 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['admin-prep-header']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__attachment-tags']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stats']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stats']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__actions']} */ ;
+// CSS variable injection 
+// CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "admin-manage-page prep-page" },
+    ...{ class: "admin-manage-page admin-prep-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
     ...{ class: "admin-dashboard-sidebar" },
@@ -176,118 +177,18 @@ const __VLS_0 = __VLS_asFunctionalComponent(AdminSidebarNav, new AdminSidebarNav
 const __VLS_1 = __VLS_0({
     active: "preps",
 }, ...__VLS_functionalComponentArgsRest(__VLS_0));
-if (false) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-        ...{ class: "admin-dashboard-nav" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/system');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item admin-dashboard-nav__item--system" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/teachers');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/students');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/accounts');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/colleges');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/courses');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item is-active" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/assets');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/materials');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/admin/messages');
-            } },
-        type: "button",
-        ...{ class: "admin-dashboard-nav__item" },
-    });
-}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-main" },
+    ...{ class: "admin-manage-main admin-prep-main" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
-    ...{ class: "admin-manage-head" },
+    ...{ class: "admin-prep-header" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-head__eyebrow" },
+    ...{ class: "admin-prep-header__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.headerText);
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
@@ -296,63 +197,45 @@ if (__VLS_ctx.errorMessage) {
 }
 if (__VLS_ctx.successMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
-        ...{ class: "feedback-text feedback-text--success admin-manage-feedback" },
+        ...{ class: "feedback-text feedback-text--success" },
     });
     (__VLS_ctx.successMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-stats" },
+    ...{ class: "admin-prep-stats" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
+    ...{ class: "admin-prep-stat-card" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.stats.total);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
+    ...{ class: "admin-prep-stat-card" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.stats.draftCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
+    ...{ class: "admin-prep-stat-card" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.stats.publishedCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card is-highlight" },
+    ...{ class: "admin-prep-stat-card" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.stats.teacherCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-filter-panel" },
+    ...{ class: "admin-prep-card" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-filter-panel__head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__meta" },
-});
-(__VLS_ctx.pagination.total);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.applySearch) },
-    ...{ class: "admin-manage-filter-form admin-manage-filter-form--resource" },
+    ...{ class: "admin-prep-filter" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "admin-manage-field" },
-});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     value: (__VLS_ctx.filters.keyword),
@@ -360,9 +243,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     maxlength: "200",
     placeholder: "搜索标题、教师名、课程名或教学内容",
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "admin-manage-field" },
-});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
     value: (__VLS_ctx.filters.courseId),
@@ -377,9 +258,7 @@ for (const [course] of __VLS_getVForSourceType((__VLS_ctx.courseOptions))) {
     });
     (course.name);
 }
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "admin-manage-field" },
-});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
     value: (__VLS_ctx.filters.status),
@@ -397,7 +276,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElement
     value: "archived",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-filter-actions" },
+    ...{ class: "admin-prep-filter__actions" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (__VLS_ctx.resetFilters) },
@@ -410,79 +289,65 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: "auth-btn" },
     disabled: (__VLS_ctx.loading),
 });
-(__VLS_ctx.loading ? '加载中...' : '搜索备课单');
+(__VLS_ctx.loading ? '加载中...' : '应用筛选');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-panel" },
+    ...{ class: "admin-prep-card" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__head" },
+    ...{ class: "admin-prep-card__head" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__eyebrow" },
+    ...{ class: "admin-prep-card__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "admin-manage-panel__meta" },
+    ...{ class: "admin-prep-card__meta" },
 });
+(__VLS_ctx.pagination.total);
 if (__VLS_ctx.prepList.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "prep-manage-list prep-manage-list--admin" },
+        ...{ class: "admin-prep-list" },
     });
     for (const [item] of __VLS_getVForSourceType((__VLS_ctx.prepList))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
             key: (item.id),
-            ...{ class: "prep-manage-item prep-manage-item--admin" },
+            ...{ class: "admin-prep-item" },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "prep-manage-item__header" },
+            ...{ class: "admin-prep-item__head" },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.title);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "prep-manage-item__meta" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "teacher-dashboard-tag" },
-        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+        (item.teacherName);
+        (item.courseName);
         (item.statusLabel);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.teacherName);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.courseName);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "prep-manage-item__time" },
-        });
         (item.updateTime);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+            ...{ class: "admin-prep-item__content" },
+        });
+        (__VLS_ctx.renderExcerpt(item.teachingContent, '暂无教学内容'));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "prep-manage-item__summary" },
+            ...{ class: "admin-prep-item__attachments" },
         });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (__VLS_ctx.buildSummary(item));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+        (item.attachmentCount);
+        if (item.attachments.length) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                ...{ class: "admin-prep-item__attachment-tags" },
+            });
+            for (const [attachment] of __VLS_getVForSourceType((item.attachments))) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+                    key: (attachment.id),
+                });
+                (attachment.title);
+            }
+        }
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "prep-manage-item__sections" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-            ...{ class: "prep-manage-item__section" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (__VLS_ctx.renderExcerpt(item.teachingObjective));
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-            ...{ class: "prep-manage-item__section" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (__VLS_ctx.renderExcerpt(item.studentAnalysis));
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-            ...{ class: "prep-manage-item__section" },
-        });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-        (__VLS_ctx.renderExcerpt(item.teachingProcess));
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-            ...{ class: "prep-manage-item__actions" },
+            ...{ class: "admin-prep-item__actions" },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
             ...{ onClick: (...[$event]) => {
@@ -508,7 +373,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElemen
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "admin-manage-pagination__desc" },
 });
-(__VLS_ctx.pagination.total);
 (__VLS_ctx.pagination.page);
 (Math.max(__VLS_ctx.pagination.totalPages, 1));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -535,67 +399,38 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
     (pageNumber);
 }
 /** @type {__VLS_StyleScopedClasses['admin-manage-page']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item--system']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-main']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-main']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-header']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-header__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-feedback']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-filter-panel']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-filter-panel__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-filter-form']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-filter-form--resource']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-filter-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stats']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-filter__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-panel__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-list']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-list--admin']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item--admin']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__header']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-tag']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__time']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__summary']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__sections']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__section']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__section']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__section']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-item__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-card__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-list']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__content']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__attachments']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__attachment-tags']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-prep-item__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-delete-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-detail-empty']} */ ;
@@ -608,7 +443,6 @@ const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
             AdminSidebarNav: AdminSidebarNav,
-            router: router,
             loading: loading,
             deletingId: deletingId,
             errorMessage: errorMessage,
@@ -618,10 +452,8 @@ const __VLS_self = (await import('vue')).defineComponent({
             stats: stats,
             filters: filters,
             pagination: pagination,
-            headerText: headerText,
             pageNumbers: pageNumbers,
             renderExcerpt: renderExcerpt,
-            buildSummary: buildSummary,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,

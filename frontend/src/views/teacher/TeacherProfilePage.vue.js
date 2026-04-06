@@ -1,19 +1,15 @@
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
-import { getTeacherProfile, updateTeacherProfile, } from '@/services/teacher';
+import { getTeacherProfile, updateTeacherProfile } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
-const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
 const saving = ref(false);
-const showEditor = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const collegeOptions = ref([]);
 const genderOptions = ref([]);
-const originalProfile = ref(null);
-const editForm = reactive({
+const form = reactive({
     username: '',
     teacherName: '',
     gender: '',
@@ -21,53 +17,29 @@ const editForm = reactive({
     collegeId: '',
     profile: '',
 });
-const headerText = computed(() => {
-    const name = originalProfile.value?.teacherName || authStore.profile?.name || authStore.profile?.username || '教师用户';
-    return `${name}，你可以在这里查看当前资料，并通过弹窗更新教师账户的基础信息。`;
-});
 const selectedCollegeName = computed(() => {
-    const collegeId = originalProfile.value?.collegeId;
-    const college = collegeOptions.value.find((item) => String(item.id) === String(collegeId));
-    return college?.name || originalProfile.value?.collegeName || '未选择';
+    const college = collegeOptions.value.find((item) => String(item.id) === form.collegeId);
+    return college?.name || '未选择学院';
 });
-const profileText = computed(() => originalProfile.value?.profile?.trim() || '暂未填写个人简介');
-const previewItems = computed(() => [
-    { label: '当前用户名', value: originalProfile.value?.username || '未填写' },
-    { label: '教师姓名', value: originalProfile.value?.teacherName || '未填写' },
-    { label: '性别', value: originalProfile.value?.gender || '未填写' },
-    { label: '联系邮箱', value: originalProfile.value?.email || '未填写' },
-]);
-function fillEditForm(profile) {
-    editForm.username = profile.username || '';
-    editForm.teacherName = profile.teacherName || '';
-    editForm.gender = profile.gender || '';
-    editForm.email = profile.email || '';
-    editForm.collegeId = profile.collegeId ? String(profile.collegeId) : '';
-    editForm.profile = profile.profile || '';
-}
-function openEditor() {
-    if (originalProfile.value) {
-        fillEditForm(originalProfile.value);
-    }
-    errorMessage.value = '';
-    successMessage.value = '';
-    showEditor.value = true;
-}
-function closeEditor() {
-    showEditor.value = false;
+function fillForm(profile) {
+    form.username = profile.username || '';
+    form.teacherName = profile.teacherName || '';
+    form.gender = profile.gender || '';
+    form.email = profile.email || '';
+    form.collegeId = profile.collegeId ? String(profile.collegeId) : '';
+    form.profile = profile.profile || '';
 }
 async function loadProfile() {
     loading.value = true;
     errorMessage.value = '';
+    successMessage.value = '';
     try {
         const result = await getTeacherProfile();
-        originalProfile.value = result.profile;
         collegeOptions.value = result.options.colleges;
         genderOptions.value = result.options.genders;
-        fillEditForm(result.profile);
+        fillForm(result.profile);
     }
     catch (error) {
-        originalProfile.value = null;
         collegeOptions.value = [];
         genderOptions.value = ['男', '女', '未知'];
         errorMessage.value = error?.response?.data?.message || '教师资料加载失败';
@@ -79,32 +51,30 @@ async function loadProfile() {
 async function submitProfile() {
     errorMessage.value = '';
     successMessage.value = '';
-    if (!editForm.username || !editForm.teacherName || !editForm.gender || !editForm.collegeId) {
-        errorMessage.value = '请完整填写基础信息';
+    if (!form.username || !form.teacherName || !form.gender || !form.collegeId) {
+        errorMessage.value = '请完整填写必填信息';
         return;
     }
     saving.value = true;
     try {
         const result = await updateTeacherProfile({
-            username: editForm.username,
-            teacherName: editForm.teacherName,
-            gender: editForm.gender,
-            email: editForm.email,
-            collegeId: editForm.collegeId,
-            profile: editForm.profile,
+            username: form.username,
+            teacherName: form.teacherName,
+            gender: form.gender,
+            email: form.email,
+            collegeId: form.collegeId,
+            profile: form.profile,
         });
-        originalProfile.value = result;
-        fillEditForm(result);
+        fillForm(result);
         authStore.updateProfile({
             id: result.id,
             username: result.username,
             name: result.teacherName,
         });
-        showEditor.value = false;
-        successMessage.value = '教师个人资料已更新';
+        successMessage.value = '个人资料已更新';
     }
     catch (error) {
-        errorMessage.value = error?.response?.data?.message || '教师资料保存失败';
+        errorMessage.value = error?.response?.data?.message || '个人资料保存失败';
     }
     finally {
         saving.value = false;
@@ -136,60 +106,6 @@ const __VLS_0 = __VLS_asFunctionalComponent(TeacherSidebarNav, new TeacherSideba
 const __VLS_1 = __VLS_0({
     active: "profile",
 }, ...__VLS_functionalComponentArgsRest(__VLS_0));
-if (false) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-        ...{ class: "teacher-dashboard-nav" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/materials');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/assets');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/preps');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/resources');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item is-active" },
-    });
-}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-main teacher-profile-main" },
 });
@@ -202,17 +118,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.headerText);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-head__actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.openEditor) },
-    type: "button",
-    ...{ class: "auth-btn" },
-    disabled: (__VLS_ctx.loading || __VLS_ctx.saving),
-});
-(__VLS_ctx.saving ? '保存中...' : '编辑资料');
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
@@ -226,7 +131,7 @@ if (__VLS_ctx.successMessage) {
     (__VLS_ctx.successMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "teacher-profile-panel teacher-profile-panel--preview" },
+    ...{ class: "teacher-profile-panel" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-profile-panel__head teacher-profile-panel__head--preview" },
@@ -240,198 +145,171 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.
     ...{ class: "teacher-profile-panel__status" },
 });
 (__VLS_ctx.selectedCollegeName);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+    ...{ onSubmit: (__VLS_ctx.submitProfile) },
+    ...{ class: "teacher-profile-form" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-form__row" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    value: (__VLS_ctx.form.username),
+    type: "text",
+    maxlength: "50",
+    placeholder: "请输入用户名",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    value: (__VLS_ctx.form.teacherName),
+    type: "text",
+    maxlength: "50",
+    placeholder: "请输入教师姓名",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-form__row" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.form.gender),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "",
+});
+for (const [item] of __VLS_getVForSourceType((__VLS_ctx.genderOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (item),
+        value: (item),
+    });
+    (item);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.form.collegeId),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "",
+});
+for (const [college] of __VLS_getVForSourceType((__VLS_ctx.collegeOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (college.id),
+        value: (String(college.id)),
+    });
+    (college.name);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-form__row" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field teacher-profile-field--full" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    type: "email",
+    maxlength: "100",
+    placeholder: "请输入邮箱，可为空",
+});
+(__VLS_ctx.form.email);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-form__row" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "teacher-profile-field teacher-profile-field--full" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
+    value: (__VLS_ctx.form.profile),
+    rows: "7",
+    maxlength: "2000",
+    placeholder: "请输入个人简介，可为空",
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-editor__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.loadProfile) },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+    disabled: (__VLS_ctx.loading || __VLS_ctx.saving),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "submit",
+    ...{ class: "auth-btn" },
+    disabled: (__VLS_ctx.loading || __VLS_ctx.saving),
+});
+(__VLS_ctx.saving ? '保存中...' : '保存资料');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "teacher-profile-panel teacher-profile-panel--preview" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-panel__head" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-panel__eyebrow" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-profile-summary teacher-profile-summary--wide" },
 });
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.previewItems))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-summary__item" },
-        key: (item.label),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (item.label);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-    (item.value);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.username || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.teacherName || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.gender || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.email || '未填写');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-profile-summary__item teacher-profile-summary__item--full" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.profileText);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-note teacher-profile-note--full" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-if (__VLS_ctx.showEditor) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ onClick: (__VLS_ctx.closeEditor) },
-        ...{ class: "teacher-profile-editor-mask" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-        ...{ class: "teacher-profile-editor" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-editor__head" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-panel__eyebrow" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.closeEditor) },
-        type: "button",
-        ...{ class: "course-chip course-chip--soft" },
-        disabled: (__VLS_ctx.saving),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-        ...{ onSubmit: (__VLS_ctx.submitProfile) },
-        ...{ class: "teacher-profile-form" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-form__row" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-        value: (__VLS_ctx.editForm.username),
-        type: "text",
-        maxlength: "50",
-        placeholder: "请输入用户名",
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-        value: (__VLS_ctx.editForm.teacherName),
-        type: "text",
-        maxlength: "50",
-        placeholder: "请输入教师姓名",
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-form__row" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-        value: (__VLS_ctx.editForm.gender),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        value: "",
-    });
-    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.genderOptions))) {
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-            key: (item),
-            value: (item),
-        });
-        (item);
-    }
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-        value: (__VLS_ctx.editForm.collegeId),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        value: "",
-    });
-    for (const [college] of __VLS_getVForSourceType((__VLS_ctx.collegeOptions))) {
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-            key: (college.id),
-            value: (String(college.id)),
-        });
-        (college.name);
-    }
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-form__row" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field teacher-profile-field--full" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-        type: "email",
-        maxlength: "100",
-        placeholder: "请输入邮箱，可为空",
-    });
-    (__VLS_ctx.editForm.email);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-form__row" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "teacher-profile-field teacher-profile-field--full" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-        value: (__VLS_ctx.editForm.profile),
-        rows: "7",
-        maxlength: "2000",
-        placeholder: "请输入个人简介，可为空",
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-profile-editor__actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.closeEditor) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.saving),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        type: "submit",
-        ...{ class: "auth-btn" },
-        disabled: (__VLS_ctx.saving),
-    });
-    (__VLS_ctx.saving ? '保存中...' : '保存资料');
-}
+(__VLS_ctx.form.profile || '暂未填写个人简介');
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-head__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel--preview']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head--preview']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__status']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary--wide']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-note']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-note--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-editor-mask']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-editor']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-editor__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-form__row']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-field']} */ ;
@@ -449,26 +327,32 @@ if (__VLS_ctx.showEditor) {
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-panel--preview']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary--wide']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item--full']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
             TeacherSidebarNav: TeacherSidebarNav,
-            router: router,
             loading: loading,
             saving: saving,
-            showEditor: showEditor,
             errorMessage: errorMessage,
             successMessage: successMessage,
             collegeOptions: collegeOptions,
             genderOptions: genderOptions,
-            editForm: editForm,
-            headerText: headerText,
+            form: form,
             selectedCollegeName: selectedCollegeName,
-            profileText: profileText,
-            previewItems: previewItems,
-            openEditor: openEditor,
-            closeEditor: closeEditor,
+            loadProfile: loadProfile,
             submitProfile: submitProfile,
         };
     },

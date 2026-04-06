@@ -6,6 +6,7 @@ import {
   getPortalCourseListData,
   getPortalHomeData,
   getPortalMaterialDownloadData,
+  getPortalPublicAssetListData,
   getPortalVideoPlayData,
 } from '../services/portal.service.js'
 
@@ -28,6 +29,19 @@ export async function getPortalCourses(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取课程列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPortalPublicAssets(req, res, next) {
+  try {
+    const result = await getPortalPublicAssetListData(req.query)
+    res.status(200).json({
+      code: 200,
+      message: '获取公共素材成功',
       data: result,
     })
   } catch (error) {
@@ -75,6 +89,15 @@ export async function getPortalAssetFile(req, res, next) {
     const result = await getPortalAssetFileData(req.params.assetId)
     res.type(path.extname(result.fileName) || 'application/octet-stream')
     res.sendFile(result.filePath)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function downloadPortalAsset(req, res, next) {
+  try {
+    const result = await getPortalAssetFileData(req.params.assetId)
+    res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)
   }

@@ -1,16 +1,20 @@
 import {
+  addTeacherPrepAssetAttachments,
+  addTeacherPrepUploadAttachments,
   createTeacherAsset,
   createTeacherPrep,
   createTeacherMaterial,
   createTeacherResourceBundle,
   createTeacherVideo,
   deleteTeacherAsset,
+  deleteTeacherPrepAttachment,
   deleteTeacherPrep,
   deleteTeacherResource,
   getTeacherAssetDetail,
   getTeacherAssetList,
   getTeacherCourseOptions,
   getTeacherDashboardData,
+  getTeacherPrepAttachmentFileData,
   getTeacherPrepList,
   getTeacherProfileDetail,
   getTeacherResourceDetail,
@@ -20,6 +24,14 @@ import {
   updateTeacherProfileInfo,
   updateTeacherResource,
 } from '../services/teacher.service.js'
+import {
+  createTeacherCourseware,
+  deleteTeacherCourseware,
+  getTeacherCoursewareDetail,
+  getTeacherCoursewareList,
+  publishTeacherCourseware,
+  updateTeacherCourseware,
+} from '../services/courseware.service.js'
 import {
   createDiscussionReply,
   createDiscussionTopic,
@@ -36,6 +48,109 @@ export async function getDashboard(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取教师工作台成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getCoursewares(req, res, next) {
+  try {
+    const result = await getTeacherCoursewareList({
+      teacherId: req.auth.userId,
+      query: req.query,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取教师课件列表成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postCourseware(req, res, next) {
+  try {
+    const result = await createTeacherCourseware({
+      teacherId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '创建课件成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getCoursewareDetail(req, res, next) {
+  try {
+    const result = await getTeacherCoursewareDetail({
+      teacherId: req.auth.userId,
+      coursewareId: req.params.coursewareId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '获取课件详情成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function putCourseware(req, res, next) {
+  try {
+    const result = await updateTeacherCourseware({
+      teacherId: req.auth.userId,
+      coursewareId: req.params.coursewareId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '保存课件成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function removeCourseware(req, res, next) {
+  try {
+    const result = await deleteTeacherCourseware({
+      teacherId: req.auth.userId,
+      coursewareId: req.params.coursewareId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除课件成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function publishCourseware(req, res, next) {
+  try {
+    const result = await publishTeacherCourseware({
+      teacherId: req.auth.userId,
+      coursewareId: req.params.coursewareId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '发布课件成功',
       data: result,
     })
   } catch (error) {
@@ -121,6 +236,73 @@ export async function removePrep(req, res, next) {
       message: '删除备课单成功',
       data: result,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postPrepAssetAttachments(req, res, next) {
+  try {
+    const result = await addTeacherPrepAssetAttachments({
+      teacherId: req.auth.userId,
+      prepId: req.params.prepId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '关联个人素材成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postPrepUploadAttachments(req, res, next) {
+  try {
+    const result = await addTeacherPrepUploadAttachments({
+      teacherId: req.auth.userId,
+      prepId: req.params.prepId,
+      files: req.files,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '上传备课附件成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deletePrepAttachment(req, res, next) {
+  try {
+    const result = await deleteTeacherPrepAttachment({
+      teacherId: req.auth.userId,
+      prepId: req.params.prepId,
+      attachmentId: req.params.attachmentId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除备课附件成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPrepAttachmentFile(req, res, next) {
+  try {
+    const result = await getTeacherPrepAttachmentFileData({
+      teacherId: req.auth.userId,
+      attachmentId: req.params.attachmentId,
+    })
+
+    res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)
   }

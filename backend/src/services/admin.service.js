@@ -7,6 +7,7 @@ const MAX_PAGE_SIZE = 12
 const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
+const ASSET_VISIBILITIES = new Set(['private', 'public'])
 const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
 let replySchemaSupportPromise = null
 function badRequest(message) {
@@ -615,6 +616,19 @@ function normalizeAssetType(value) {
   throw badRequest('素材类型不合法')
 }
 
+function normalizeAssetVisibility(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  const visibility = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (ASSET_VISIBILITIES.has(visibility)) {
+    return visibility
+  }
+
+  throw badRequest('素材公开范围不合法')
+}
+
 function formatDate(value) {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -653,17 +667,13 @@ function mapAdminPrepItem(item) {
     title: item.title,
     courseName: item.courseName,
     teacherName: item.teacherName,
-    teachingObjective: item.teachingObjective || '',
-    keyPoints: item.keyPoints || '',
-    difficultyPoints: item.difficultyPoints || '',
-    studentAnalysis: item.studentAnalysis || '',
     teachingContent: item.teachingContent || '',
-    teachingProcess: item.teachingProcess || '',
-    reflectionNotes: item.reflectionNotes || '',
     status: item.status,
     statusLabel: getPrepStatusLabel(item.status),
     createTime: item.createTime,
     updateTime: item.updateTime,
+    attachmentCount: Array.isArray(item.attachments) ? item.attachments.length : Number(item.attachmentCount || 0),
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
   }
 }
 
@@ -693,6 +703,124 @@ async function ensureTeachingPrepReady() {
   if (!rows.length) {
     throw badRequest('当前数据库尚未初始化备课单表，请先执行备课单升级 SQL')
   }
+}
+
+async function ensureAssetLibraryVisibilityReady() {
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'asset_library'
+       AND COLUMN_NAME = 'visibility'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw badRequest('当前数据库缺少素材公开范围字段，请先执行教师中心简化升级 SQL')
+  }
+}
+
+async function hasTeachingPrepAttachmentReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'teaching_prep_attachment'
+     LIMIT 1`,
+  )
+
+  return rows.length > 0
+}
+
+function inferPrepAttachmentType(mimeType, fileName) {
+  const rawMimeType = String(mimeType || '').toLowerCase()
+  const lowerFileName = String(fileName || '').toLowerCase()
+
+  if (rawMimeType.startsWith('image/')) {
+    return 'image'
+  }
+
+  if (rawMimeType.startsWith('audio/')) {
+    return 'audio'
+  }
+
+  if (rawMimeType.startsWith('video/')) {
+    return 'video'
+  }
+
+  if (lowerFileName.endsWith('.txt') || lowerFileName.endsWith('.md')) {
+    return 'text'
+  }
+
+  return 'file'
+}
+
+function mapAdminPrepAttachmentItem(item) {
+  const sourceType = item.sourceType
+  const assetId = item.assetId ? Number(item.assetId) : null
+  const fileName = item.fileName || ''
+  const mimeType = item.mimeType || ''
+  const type = sourceType === 'asset'
+    ? item.assetType || inferPrepAttachmentType(mimeType, fileName)
+    : inferPrepAttachmentType(mimeType, fileName)
+
+  return {
+    id: Number(item.id),
+    sourceType,
+    sourceLabel: sourceType === 'asset' ? '个人素材' : '本地上传',
+    assetId,
+    type,
+    title: item.title || fileName || '未命名附件',
+    fileName,
+    fileSize: Number(item.fileSize || 0),
+    mimeType,
+    visibility: item.visibility || 'private',
+    uploadTime: item.createTime,
+    previewUrl: sourceType === 'asset' && assetId ? buildAssetPreviewUrl(assetId) : '',
+  }
+}
+
+async function getPrepAttachmentMap(prepIds) {
+  if (!prepIds.length || !(await hasTeachingPrepAttachmentReady())) {
+    return new Map()
+  }
+
+  const placeholders = prepIds.map(() => '?').join(', ')
+  const [rows] = await pool.query(
+    `SELECT pa.attachment_id AS id,
+            pa.prep_id AS prepId,
+            pa.source_type AS sourceType,
+            pa.asset_id AS assetId,
+            COALESCE(a.asset_type, '') AS assetType,
+            COALESCE(a.asset_title, pa.file_name, '') AS title,
+            COALESCE(a.visibility, 'private') AS visibility,
+            COALESCE(a.file_name, pa.file_name, '') AS fileName,
+            COALESCE(a.file_size, pa.file_size, 0) AS fileSize,
+            COALESCE(pa.mime_type, '') AS mimeType,
+            DATE_FORMAT(pa.create_time, '%Y-%m-%d') AS createTime
+     FROM teaching_prep_attachment pa
+     LEFT JOIN asset_library a ON a.asset_id = pa.asset_id
+     WHERE pa.status = 1 AND pa.prep_id IN (${placeholders})
+     ORDER BY pa.sort_order ASC, pa.attachment_id ASC`,
+    prepIds,
+  )
+
+  const attachmentMap = new Map()
+  for (const prepId of prepIds) {
+    attachmentMap.set(Number(prepId), [])
+  }
+
+  for (const item of rows) {
+    const prepId = Number(item.prepId || 0)
+    if (!attachmentMap.has(prepId)) {
+      attachmentMap.set(prepId, [])
+    }
+    attachmentMap.get(prepId)?.push(mapAdminPrepAttachmentItem(item))
+  }
+
+  return attachmentMap
 }
 
 function getStatusLabel(status) {
@@ -1470,13 +1598,7 @@ async function getAdminPrepRow(prepId) {
             p.teacher_id AS teacherId,
             p.course_id AS courseId,
             p.prep_title AS title,
-            COALESCE(p.teaching_objective, '') AS teachingObjective,
-            COALESCE(p.key_points, '') AS keyPoints,
-            COALESCE(p.difficulty_points, '') AS difficultyPoints,
-            COALESCE(p.student_analysis, '') AS studentAnalysis,
             COALESCE(p.teaching_content, '') AS teachingContent,
-            COALESCE(p.teaching_process, '') AS teachingProcess,
-            COALESCE(p.reflection_notes, '') AS reflectionNotes,
             p.status AS status,
             DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
             DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
@@ -1494,17 +1616,26 @@ async function getAdminPrepRow(prepId) {
     throw notFound('备课单不存在或已删除')
   }
 
-  return rows[0]
+  const prep = rows[0]
+  const attachmentMap = await getPrepAttachmentMap([prepId])
+  const attachments = attachmentMap.get(Number(prepId)) || []
+
+  return {
+    ...prep,
+    attachments,
+    attachmentCount: attachments.length,
+  }
 }
 
 async function getAdminAssetRow(assetId) {
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   const [rows] = await pool.query(
     `SELECT a.asset_id AS id,
             a.asset_type AS type,
             a.teacher_id AS teacherId,
             a.course_id AS courseId,
+            COALESCE(a.visibility, 'private') AS visibility,
             a.asset_title AS title,
             COALESCE(a.asset_description, '') AS description,
             COALESCE(a.asset_content, '') AS content,
@@ -2923,21 +3054,9 @@ export async function getAdminPrepList({ adminId, query }) {
       OR COALESCE(ci.course_name, '') LIKE ?
       OR COALESCE(t.teacher_name, '') LIKE ?
       OR COALESCE(t.username, '') LIKE ?
-      OR COALESCE(p.teaching_objective, '') LIKE ?
-      OR COALESCE(p.key_points, '') LIKE ?
-      OR COALESCE(p.difficulty_points, '') LIKE ?
-      OR COALESCE(p.student_analysis, '') LIKE ?
       OR COALESCE(p.teaching_content, '') LIKE ?
-      OR COALESCE(p.teaching_process, '') LIKE ?
-      OR COALESCE(p.reflection_notes, '') LIKE ?
     )`
     params.push(
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
       keywordPattern,
       keywordPattern,
       keywordPattern,
@@ -2965,13 +3084,7 @@ export async function getAdminPrepList({ adminId, query }) {
             p.teacher_id AS teacherId,
             p.course_id AS courseId,
             p.prep_title AS title,
-            COALESCE(p.teaching_objective, '') AS teachingObjective,
-            COALESCE(p.key_points, '') AS keyPoints,
-            COALESCE(p.difficulty_points, '') AS difficultyPoints,
-            COALESCE(p.student_analysis, '') AS studentAnalysis,
             COALESCE(p.teaching_content, '') AS teachingContent,
-            COALESCE(p.teaching_process, '') AS teachingProcess,
-            COALESCE(p.reflection_notes, '') AS reflectionNotes,
             p.status AS status,
             DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
             DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
@@ -3007,6 +3120,7 @@ export async function getAdminPrepList({ adminId, query }) {
     publishedCount: 0,
     teacherCount: 0,
   }
+  const attachmentMap = await getPrepAttachmentMap(listRows.map((item) => Number(item.id)))
 
   logger.info('admin_prep_list_loaded', {
     adminId,
@@ -3026,7 +3140,12 @@ export async function getAdminPrepList({ adminId, query }) {
       publishedCount: Number(statsRow.publishedCount || 0),
       teacherCount: Number(statsRow.teacherCount || 0),
     },
-    list: listRows.map(mapAdminPrepItem),
+    list: listRows.map((item) =>
+      mapAdminPrepItem({
+        ...item,
+        attachments: attachmentMap.get(Number(item.id)) || [],
+      }),
+    ),
     pagination: {
       page,
       pageSize,
@@ -3069,13 +3188,14 @@ export async function deleteAdminPrep({ adminId, prepId }) {
 
 export async function getAdminAssetList({ adminId, query }) {
   await getAdminProfile(adminId)
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   const keyword = normalizeKeyword(query.keyword)
   const requestedPage = normalizePageNumber(query.page)
   const pageSize = normalizePageSize(query.pageSize)
   const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
   const type = normalizeAssetType(query.type)
+  const visibility = normalizeAssetVisibility(query.visibility)
   const params = []
   let whereSql = 'a.status = 1'
 
@@ -3087,6 +3207,11 @@ export async function getAdminAssetList({ adminId, query }) {
   if (type !== 'all') {
     whereSql += ' AND a.asset_type = ?'
     params.push(type)
+  }
+
+  if (visibility !== 'all') {
+    whereSql += ' AND COALESCE(a.visibility, \'private\') = ?'
+    params.push(visibility)
   }
 
   if (keyword) {
@@ -3120,6 +3245,7 @@ export async function getAdminAssetList({ adminId, query }) {
             a.asset_type AS type,
             a.teacher_id AS teacherId,
             a.course_id AS courseId,
+            COALESCE(a.visibility, 'private') AS visibility,
             a.asset_title AS title,
             COALESCE(a.asset_description, '') AS description,
             COALESCE(a.asset_content, '') AS content,
@@ -3140,7 +3266,8 @@ export async function getAdminAssetList({ adminId, query }) {
   const [statsRows] = await pool.query(
     `SELECT
         COUNT(*) AS total,
-        COUNT(DISTINCT course_id) AS courseCount,
+        SUM(CASE WHEN COALESCE(visibility, 'private') = 'public' THEN 1 ELSE 0 END) AS publicCount,
+        SUM(CASE WHEN COALESCE(visibility, 'private') = 'private' THEN 1 ELSE 0 END) AS privateCount,
         COUNT(DISTINCT teacher_id) AS teacherCount,
         SUM(CASE WHEN asset_type IN ('image', 'audio', 'video') THEN 1 ELSE 0 END) AS fileCount
      FROM asset_library
@@ -3156,7 +3283,8 @@ export async function getAdminAssetList({ adminId, query }) {
 
   const statsRow = statsRows[0] || {
     total: 0,
-    courseCount: 0,
+    publicCount: 0,
+    privateCount: 0,
     teacherCount: 0,
     fileCount: 0,
   }
@@ -3166,6 +3294,7 @@ export async function getAdminAssetList({ adminId, query }) {
     keyword,
     courseId,
     type,
+    visibility,
     page,
     pageSize,
     total,
@@ -3175,7 +3304,8 @@ export async function getAdminAssetList({ adminId, query }) {
   return {
     stats: {
       total: Number(statsRow.total || 0),
-      courseCount: Number(statsRow.courseCount || 0),
+      publicCount: Number(statsRow.publicCount || 0),
+      privateCount: Number(statsRow.privateCount || 0),
       teacherCount: Number(statsRow.teacherCount || 0),
       fileCount: Number(statsRow.fileCount || 0),
     },
@@ -3184,6 +3314,7 @@ export async function getAdminAssetList({ adminId, query }) {
       type: item.type,
       teacherId: Number(item.teacherId || 0),
       courseId: Number(item.courseId || 0),
+      visibility: item.visibility || 'private',
       title: item.title,
       description: item.description || '',
       content: item.content || '',
@@ -3201,6 +3332,11 @@ export async function getAdminAssetList({ adminId, query }) {
       totalPages,
     },
     filters: {
+      visibilityOptions: [
+        { value: 'all', label: '全部' },
+        { value: 'public', label: '公开' },
+        { value: 'private', label: '私密' },
+      ],
       courses: courseRows.map((item) => ({
         id: Number(item.id),
         name: item.name,

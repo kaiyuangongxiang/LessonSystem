@@ -2,30 +2,22 @@
   <main class="teacher-dashboard-page">
     <aside class="teacher-dashboard-sidebar">
       <div>
-        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER WORKSPACE</div>
+        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER CENTER</div>
         <h1>教师中心</h1>
       </div>
 
       <TeacherSidebarNav active="home" />
-      <nav v-if="false" class="teacher-dashboard-nav">
-        <button type="button" class="teacher-dashboard-nav__item is-active">总览首页</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/assets')">素材库</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/preps')">备课单管理</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
-      </nav>
     </aside>
 
     <section class="teacher-dashboard-main">
       <header class="teacher-dashboard-head">
         <div>
           <div class="teacher-dashboard-head__eyebrow">TEACHER DASHBOARD</div>
-          <h2>教师工作台</h2>
+          <h2>{{ teacherName }}，欢迎回来</h2>
           <p>{{ welcomeText }}</p>
         </div>
+
         <div class="teacher-dashboard-head__actions">
-          <span class="course-chip course-chip--soft">本周概览</span>
           <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回首页</button>
           <button type="button" class="auth-btn" @click="handleLogout">退出登录</button>
         </div>
@@ -42,33 +34,30 @@
       </section>
 
       <section class="teacher-dashboard-grid teacher-dashboard-grid--middle">
-        <article class="teacher-dashboard-panel teacher-dashboard-panel--uploads">
+        <article class="teacher-dashboard-panel">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">RECENT UPLOADS</div>
-              <h3>最近上传资源</h3>
+              <div class="teacher-dashboard-panel__eyebrow">RECENT ASSETS</div>
+              <h3>最近素材</h3>
             </div>
-            <button type="button" class="course-chip course-chip--soft" @click="router.push('/teacher/resources')">查看全部</button>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/teacher/assets')">查看全部</button>
           </div>
 
-          <div v-if="dashboard?.recentUploads.length" class="teacher-dashboard-upload-list">
-            <article v-for="item in dashboard.recentUploads" :key="`${item.type}-${item.id}`" class="teacher-dashboard-upload-item">
+          <div v-if="dashboard?.recentAssets.length" class="teacher-dashboard-upload-list">
+            <article v-for="item in dashboard.recentAssets" :key="item.id" class="teacher-dashboard-upload-item">
               <div class="teacher-dashboard-upload-item__main">
                 <strong>{{ item.title }}</strong>
-                <p>{{ item.courseName }}</p>
+                <p>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开素材' : '私密素材' }}</p>
               </div>
               <div class="teacher-dashboard-upload-item__meta">
-                <span :class="['teacher-dashboard-tag', item.type === 'video' ? 'is-video' : 'is-material']">
-                  {{ item.type === 'video' ? '视频' : '资料' }}
-                </span>
                 <span>{{ item.uploadDate }}</span>
               </div>
             </article>
           </div>
-          <div v-else class="course-detail-empty">当前还没有上传资料或视频，后续可以从这里统一查看最近内容。</div>
+          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有素材记录，可以先去上传第一份素材。</div>
         </article>
 
-        <article class="teacher-dashboard-panel teacher-dashboard-panel--actions">
+        <article class="teacher-dashboard-panel">
           <div class="teacher-dashboard-panel__head">
             <div>
               <div class="teacher-dashboard-panel__eyebrow">QUICK ACTIONS</div>
@@ -77,15 +66,14 @@
           </div>
 
           <div class="teacher-dashboard-action-list">
-            <button type="button" class="auth-btn" @click="router.push('/teacher/materials')">上传课程资源</button>
-            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/assets')">管理素材库</button>
+            <button type="button" class="auth-btn" @click="router.push('/teacher/assets')">管理我的素材</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/preps')">整理备课单</button>
-            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/resources')">查看我的资源</button>
+            <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/coursewares')">打开在线课件</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/profile')">维护个人资料</button>
           </div>
 
           <div class="teacher-dashboard-note">
-            <strong>待处理事项</strong>
+            <strong>当前建议</strong>
             <p>{{ pendingText }}</p>
           </div>
         </article>
@@ -95,33 +83,47 @@
         <article class="teacher-dashboard-panel">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">HOT COURSES</div>
-              <h3>课程热度</h3>
+              <div class="teacher-dashboard-panel__eyebrow">RECENT PREPS</div>
+              <h3>最近备课单</h3>
             </div>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/teacher/preps')">查看全部</button>
           </div>
 
-          <div v-if="dashboard?.hotCourses.length" class="teacher-dashboard-hot-list">
-            <article v-for="course in dashboard.hotCourses" :key="course.id" class="teacher-dashboard-hot-item">
-              <strong>{{ course.name }}</strong>
-              <span>资料 {{ course.materialCount }} · 视频 {{ course.videoCount }}</span>
+          <div v-if="dashboard?.recentPreps.length" class="teacher-dashboard-hot-list">
+            <article v-for="item in dashboard.recentPreps" :key="item.id" class="teacher-dashboard-hot-item">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.courseName }} · {{ item.statusLabel }}</span>
+              </div>
+              <span>{{ item.updateDate }}</span>
             </article>
           </div>
-          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有课程热度数据，后续上传资源后会在这里展示。</div>
+          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有备课单，可以先创建一条教学内容记录。</div>
         </article>
 
         <article class="teacher-dashboard-panel">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">WEEKLY ACTIVITY</div>
-              <h3>本周动态</h3>
+              <div class="teacher-dashboard-panel__eyebrow">COURSE COVERAGE</div>
+              <h3>课程覆盖</h3>
             </div>
           </div>
 
+          <div v-if="dashboard?.courseCoverage.length" class="teacher-dashboard-hot-list">
+            <article v-for="item in dashboard.courseCoverage" :key="item.id" class="teacher-dashboard-hot-item">
+              <div>
+                <strong>{{ item.name }}</strong>
+                <span>素材 {{ item.assetCount }} · 备课单 {{ item.prepCount }}</span>
+              </div>
+            </article>
+          </div>
+          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有课程覆盖数据，后续会在这里汇总展示。</div>
+
           <div class="teacher-dashboard-weekly">
-            <p>近 7 天新增资料 {{ dashboard?.weeklyActivity.materialCount ?? 0 }} 份。</p>
-            <p>近 7 天新增视频 {{ dashboard?.weeklyActivity.videoCount ?? 0 }} 个。</p>
-            <p>近 7 天新增交流主题 {{ dashboard?.weeklyActivity.topicCount ?? 0 }} 条。</p>
-            <div class="teacher-dashboard-status">教师工作台状态正常</div>
+            <p>近 7 天新增素材 {{ dashboard?.weeklyActivity.assetCount ?? 0 }} 份。</p>
+            <p>近 7 天新增备课单 {{ dashboard?.weeklyActivity.prepCount ?? 0 }} 条。</p>
+            <p>近 7 天公开素材 {{ dashboard?.weeklyActivity.publicAssetCount ?? 0 }} 份。</p>
+            <div class="teacher-dashboard-status">教师中心状态正常</div>
           </div>
         </article>
       </section>
@@ -141,50 +143,52 @@ const authStore = useAuthStore()
 const dashboard = ref<TeacherDashboardData | null>(null)
 const errorMessage = ref('')
 
-const teacherName = computed(() => dashboard.value?.profile.name || authStore.profile?.name || authStore.profile?.username || '教师用户')
+const teacherName = computed(() => dashboard.value?.profile.name || authStore.profile?.name || authStore.profile?.username || '老师')
 
-const welcomeText = computed(() => `${teacherName.value}，这里用于查看课程与资源上传情况，并管理个人教学资料。`)
+const welcomeText = computed(() => `${teacherName.value}，这里统一查看素材、备课单和个人资料等常用入口。`)
 
 const metricCards = computed(() => {
   const stats = dashboard.value?.stats || {
     courseCount: 0,
-    materialCount: 0,
-    videoCount: 0,
-    topicCount: 0,
+    assetCount: 0,
+    publicAssetCount: 0,
+    prepCount: 0,
+    publishedPrepCount: 0,
   }
 
   return [
-    { label: '我的课程数', value: stats.courseCount, tip: '教师名下课程总览' },
-    { label: '我的资料数', value: stats.materialCount, tip: '已上传文档资料资源数量' },
-    { label: '我的视频数', value: stats.videoCount, tip: '已上传视频资源数量' },
-    { label: '交流主题数', value: stats.topicCount, tip: '参与中的教学交流主题数量' },
+    { label: '课程数量', value: stats.courseCount, tip: '当前教师名下课程' },
+    { label: '我的素材', value: stats.assetCount, tip: '已上传素材总数' },
+    { label: '公开素材', value: stats.publicAssetCount, tip: '前台可见的公开素材' },
+    { label: '备课单', value: stats.prepCount, tip: `其中已发布 ${stats.publishedPrepCount} 条` },
   ]
 })
 
 const pendingText = computed(() => {
   const stats = dashboard.value?.stats
-  if (!stats) {
-    return '正在整理教师工作台数据。'
-  }
-
-  if (!stats.courseCount) {
-    return '当前还没有课程数据，后续可在课程与资源模块中继续完善。'
-  }
-
-  if (!stats.materialCount && !stats.videoCount) {
-    return '已有课程，但还没有上传资料或视频，可先从资源上传开始补充。'
-  }
-
-  if (!stats.topicCount) {
-    return '课程资源已经在持续补充，接下来可以进入教学交流区沉淀经验与问题。'
-  }
-
-  return '可以继续补充课程资料和视频资源，并同步维护个人资料信息。'
+  if (!stats) return '正在整理教师中心数据。'
+  if (!stats.courseCount) return '当前还没有课程数据，可以先联系管理员补充课程。'
+  if (!stats.assetCount) return '建议先上传几份常用素材，后续备课会更方便。'
+  if (!stats.prepCount) return '已有素材后，可以继续整理备课单，形成完整教学内容。'
+  return '可以继续补充公开素材，并完善备课单与个人资料。'
 })
+
+function assetTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    image: '图片',
+    audio: '音频',
+    video: '视频',
+    text: '文本',
+    question: '题目',
+    template: '模板',
+  }
+
+  return labels[type] || type
+}
 
 function handleLogout() {
   authStore.logout()
-  router.push('/login')
+  void router.push({ path: '/login', query: { role: 'teacher' } })
 }
 
 async function loadDashboard() {
@@ -194,7 +198,7 @@ async function loadDashboard() {
     dashboard.value = await getTeacherDashboard()
   } catch (error: any) {
     dashboard.value = null
-    errorMessage.value = error?.response?.data?.message || '教师工作台加载失败'
+    errorMessage.value = error?.response?.data?.message || '教师中心数据加载失败'
   }
 }
 

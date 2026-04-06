@@ -10,6 +10,7 @@ const backendRoot = path.resolve(currentDir, '../../')
 const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
+const PUBLIC_ASSET_TYPES = new Set(['image', 'audio', 'video', 'text', 'question', 'template'])
 
 const DEFAULT_PROFILE = {
   heroTitle: '让课程、资料与视频在一个入口里协同',
@@ -72,6 +73,19 @@ function normalizeCourseId(value, label = '课程') {
 
 function normalizeSort(value) {
   return value === 'video-rich' ? 'video-rich' : 'latest'
+}
+
+function normalizePublicAssetType(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  const type = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (PUBLIC_ASSET_TYPES.has(type)) {
+    return type
+  }
+
+  throw badRequest('公共素材类型不合法')
 }
 
 async function getSystemHeroTitleSchemaSupport() {
@@ -149,6 +163,23 @@ async function ensureAssetLibraryReady() {
 
   if (!rows.length) {
     throw notFound('素材库尚未初始化')
+  }
+}
+
+async function ensureAssetLibraryVisibilityReady() {
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'asset_library'
+       AND COLUMN_NAME = 'visibility'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw notFound('公共素材功能尚未初始化，请先执行教师中心简化升级 SQL')
   }
 }
 
@@ -337,6 +368,113 @@ export async function getPortalCourseListData(query) {
   }
 }
 
+export async function getPortalPublicAssetListData(query) {
+  await ensureAssetLibraryVisibilityReady()
+
+  const keyword = normalizeKeyword(query.keyword)
+  const type = normalizePublicAssetType(query.type)
+  const requestedPage = normalizePageNumber(query.page)
+  const pageSize = normalizePageSize(query.pageSize)
+  const params = []
+  let whereSql = `a.status = 1 AND COALESCE(a.visibility, 'private') = 'public'`
+
+  if (type !== 'all') {
+    whereSql += ' AND a.asset_type = ?'
+    params.push(type)
+  }
+
+  if (keyword) {
+    const keywordPattern = `%${keyword}%`
+    whereSql += ` AND (
+      a.asset_title LIKE ?
+      OR COALESCE(a.asset_description, '') LIKE ?
+      OR COALESCE(a.asset_content, '') LIKE ?
+      OR COALESCE(t.teacher_name, '') LIKE ?
+      OR COALESCE(t.username, '') LIKE ?
+    )`
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+  }
+
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM asset_library a
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     WHERE ${whereSql}`,
+    params,
+  )
+
+  const total = Number(countRows[0]?.total || 0)
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize)
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages)
+  const offset = (page - 1) * pageSize
+
+  const [listRows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.asset_type AS type,
+            COALESCE(a.visibility, 'public') AS visibility,
+            a.asset_title AS title,
+            COALESCE(a.asset_description, '') AS description,
+            COALESCE(a.asset_content, '') AS content,
+            COALESCE(a.file_name, '') AS fileName,
+            COALESCE(a.file_size, 0) AS fileSize,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d') AS uploadTime,
+            COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName
+     FROM asset_library a
+     LEFT JOIN teacher_user t ON t.teacher_id = a.teacher_id
+     WHERE ${whereSql}
+     ORDER BY a.update_time DESC, a.asset_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset],
+  )
+
+  const [statsRows] = await pool.query(
+    `SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN asset_type = 'image' THEN 1 ELSE 0 END) AS imageCount,
+        SUM(CASE WHEN asset_type IN ('audio', 'video') THEN 1 ELSE 0 END) AS mediaCount,
+        SUM(CASE WHEN asset_type IN ('text', 'question', 'template') THEN 1 ELSE 0 END) AS contentCount
+     FROM asset_library
+     WHERE status = 1 AND COALESCE(visibility, 'private') = 'public'`,
+  )
+
+  logger.info('portal_public_asset_list_loaded', {
+    keyword,
+    type,
+    page,
+    pageSize,
+    total,
+    resultCount: listRows.length,
+  })
+
+  return {
+    stats: {
+      total: Number(statsRows[0]?.total || 0),
+      imageCount: Number(statsRows[0]?.imageCount || 0),
+      mediaCount: Number(statsRows[0]?.mediaCount || 0),
+      contentCount: Number(statsRows[0]?.contentCount || 0),
+    },
+    list: listRows.map((item) => ({
+      id: Number(item.id),
+      type: item.type,
+      visibility: item.visibility,
+      title: item.title,
+      description: item.description || '',
+      content: item.content || '',
+      fileName: item.fileName || '',
+      fileSize: Number(item.fileSize || 0),
+      uploadTime: item.uploadTime,
+      teacherName: item.teacherName,
+      previewUrl: item.fileName ? `/portal/assets/${Number(item.id)}/file` : '',
+    })),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+    },
+  }
+}
+
 export async function getPortalCourseDetailData(courseIdValue) {
   const courseId = normalizeCourseId(courseIdValue)
 
@@ -502,7 +640,7 @@ export async function getPortalMaterialDownloadData(materialIdValue) {
 
 export async function getPortalAssetFileData(assetIdValue) {
   const assetId = normalizeCourseId(assetIdValue, '素材')
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   const [rows] = await pool.query(
     `SELECT a.asset_id AS id,
@@ -511,8 +649,9 @@ export async function getPortalAssetFileData(assetIdValue) {
             COALESCE(a.file_name, a.asset_title) AS fileName,
             a.file_path AS storedPath
      FROM asset_library a
-     INNER JOIN course_intro c ON c.course_id = a.course_id AND c.status = 1
-     WHERE a.asset_id = ? AND a.status = 1
+     WHERE a.asset_id = ?
+       AND a.status = 1
+       AND COALESCE(a.visibility, 'private') = 'public'
      LIMIT 1`,
     [assetId],
   )

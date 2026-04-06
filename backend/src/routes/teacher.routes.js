@@ -1,18 +1,26 @@
 import { Router } from 'express'
 import {
   deleteAsset,
+  deletePrepAttachment,
+  getCoursewareDetail,
+  getCoursewares,
   deleteMessage,
   deleteMessageReply,
+  publishCourseware,
   getAssetDetail,
   getAssets,
   getCourseOptions,
   getDashboard,
   getMessageDetail,
   getMessages,
+  getPrepAttachmentFile,
   getPreps,
   getProfile,
   getResourceDetail,
   getResources,
+  postPrepAssetAttachments,
+  postPrepUploadAttachments,
+  postCourseware,
   postAsset,
   postMaterial,
   postPrep,
@@ -20,15 +28,17 @@ import {
   postMessage,
   postMessageReply,
   postVideo,
+  putCourseware,
   putPrep,
   removePrep,
+  removeCourseware,
   removeResource,
   updateAsset,
   updateProfile,
   updateResource,
 } from '../controllers/teacher.controller.js'
 import { authenticate, requireRole } from '../middleware/auth.js'
-import { uploadAssetFile, uploadMaterialFile, uploadResourceFiles, uploadVideoFiles } from '../middleware/upload.js'
+import { uploadAssetFile, uploadMaterialFile, uploadPrepAttachments, uploadResourceFiles, uploadVideoFiles } from '../middleware/upload.js'
 
 const router = Router()
 
@@ -39,6 +49,16 @@ router.get('/preps', getPreps)
 router.post('/preps', postPrep)
 router.put('/preps/:prepId', putPrep)
 router.delete('/preps/:prepId', removePrep)
+router.post('/preps/:prepId/attachments/assets', postPrepAssetAttachments)
+router.post('/preps/:prepId/attachments/upload', uploadPrepAttachments.array('files', 10), postPrepUploadAttachments)
+router.delete('/preps/:prepId/attachments/:attachmentId', deletePrepAttachment)
+router.get('/preps/attachments/:attachmentId/file', getPrepAttachmentFile)
+router.get('/coursewares', getCoursewares)
+router.post('/coursewares', postCourseware)
+router.get('/coursewares/:coursewareId', getCoursewareDetail)
+router.put('/coursewares/:coursewareId', putCourseware)
+router.delete('/coursewares/:coursewareId', removeCourseware)
+router.post('/coursewares/:coursewareId/publish', publishCourseware)
 router.get('/assets', getAssets)
 router.post('/assets', uploadAssetFile.single('file'), postAsset)
 router.get('/assets/:assetId', getAssetDetail)

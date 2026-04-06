@@ -12,7 +12,7 @@ const courseSectionRef = ref(null);
 const resourceSectionRef = ref(null);
 const home = reactive({
     profile: {
-        heroTitle: '让课程、资料与视频在一个入口里协同',
+        heroTitle: DEFAULT_HERO_TITLE,
         systemName: '在线教师备课系统',
         systemIntro: '围绕课程、资料与视频的统一备课平台，帮助教师快速进入课程浏览与资源查看主链路。',
     },
@@ -108,11 +108,13 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function scrollToSection(section) {
+    if (section === 'resources') {
+        void router.push('/assets');
+        return;
+    }
     const target = section === 'notices'
         ? noticeSectionRef.value
-        : section === 'courses'
-            ? courseSectionRef.value
-            : resourceSectionRef.value;
+        : courseSectionRef.value;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function goCourseListWithKeyword() {

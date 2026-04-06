@@ -1,5 +1,5 @@
 <template>
-  <main class="admin-manage-page prep-page">
+  <main class="admin-manage-page admin-prep-page">
     <aside class="admin-dashboard-sidebar">
       <div>
         <div class="admin-dashboard-sidebar__eyebrow">ADMIN CONSOLE</div>
@@ -7,82 +7,55 @@
       </div>
 
       <AdminSidebarNav active="preps" />
-      <nav v-if="false" class="admin-dashboard-nav">
-        <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin')">总览首页</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/students')">学生用户</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item is-active">备课单管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">教学交流</button>
-      </nav>
     </aside>
 
-    <section class="admin-manage-main">
-      <header class="admin-manage-head">
+    <section class="admin-manage-main admin-prep-main">
+      <header class="admin-prep-header">
         <div>
-          <div class="admin-manage-head__eyebrow">PREP MANAGEMENT</div>
-          <h2>管理员备课单管理</h2>
-          <p>{{ headerText }}</p>
+          <div class="admin-prep-header__eyebrow">PREP MANAGEMENT</div>
+          <h2>备课单管理</h2>
+          <p>管理员侧只查看教学内容主字段和附件挂载情况，避免旧版教学扩展字段继续占用页面空间。</p>
         </div>
       </header>
 
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="feedback-text feedback-text--success admin-manage-feedback">{{ successMessage }}</p>
+      <p v-if="successMessage" class="feedback-text feedback-text--success">{{ successMessage }}</p>
 
-      <section class="admin-manage-stats">
-        <article class="admin-manage-stat-card">
+      <section class="admin-prep-stats">
+        <article class="admin-prep-stat-card">
           <span>备课单总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>平台当前全部备课单</em>
         </article>
-        <article class="admin-manage-stat-card">
-          <span>草稿数量</span>
+        <article class="admin-prep-stat-card">
+          <span>草稿</span>
           <strong>{{ stats.draftCount }}</strong>
-          <em>尚未完成整理的备课单</em>
         </article>
-        <article class="admin-manage-stat-card">
-          <span>已发布数量</span>
+        <article class="admin-prep-stat-card">
+          <span>已发布</span>
           <strong>{{ stats.publishedCount }}</strong>
-          <em>可直接查看的备课单</em>
         </article>
-        <article class="admin-manage-stat-card is-highlight">
+        <article class="admin-prep-stat-card">
           <span>涉及教师</span>
           <strong>{{ stats.teacherCount }}</strong>
-          <em>已有备课记录的教师人数</em>
         </article>
       </section>
 
-      <section class="admin-manage-filter-panel">
-        <div class="admin-manage-filter-panel__head">
-          <div>
-            <div class="admin-manage-panel__eyebrow">PREP FILTER</div>
-            <h3>筛选备课单</h3>
-          </div>
-          <div class="admin-manage-panel__meta">共 {{ pagination.total }} 条备课单</div>
-        </div>
-
-        <form class="admin-manage-filter-form admin-manage-filter-form--resource" @submit.prevent="applySearch">
-          <label class="admin-manage-field">
+      <section class="admin-prep-card">
+        <form class="admin-prep-filter" @submit.prevent="applySearch">
+          <label>
             <span>关键词</span>
             <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、教师名、课程名或教学内容" />
           </label>
 
-          <label class="admin-manage-field">
-            <span>所属课程</span>
+          <label>
+            <span>课程</span>
             <select v-model="filters.courseId">
               <option value="">全部课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
-                {{ course.name }}
-              </option>
+              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">{{ course.name }}</option>
             </select>
           </label>
 
-          <label class="admin-manage-field">
+          <label>
             <span>状态</span>
             <select v-model="filters.status">
               <option value="all">全部状态</option>
@@ -92,56 +65,44 @@
             </select>
           </label>
 
-          <div class="admin-manage-filter-actions">
+          <div class="admin-prep-filter__actions">
             <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
-            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '搜索备课单' }}</button>
+            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '应用筛选' }}</button>
           </div>
         </form>
       </section>
 
-      <section class="admin-manage-panel">
-        <div class="admin-manage-panel__head">
+      <section class="admin-prep-card">
+        <div class="admin-prep-card__head">
           <div>
-            <div class="admin-manage-panel__eyebrow">PREP LIST</div>
+            <div class="admin-prep-card__eyebrow">LIST</div>
             <h3>备课单列表</h3>
           </div>
-          <div class="admin-manage-panel__meta">支持查看摘要并删除异常或无效备课单</div>
+          <div class="admin-prep-card__meta">共 {{ pagination.total }} 条备课单</div>
         </div>
 
-        <div v-if="prepList.length" class="prep-manage-list prep-manage-list--admin">
-          <article v-for="item in prepList" :key="item.id" class="prep-manage-item prep-manage-item--admin">
-            <div class="prep-manage-item__header">
+        <div v-if="prepList.length" class="admin-prep-list">
+          <article v-for="item in prepList" :key="item.id" class="admin-prep-item">
+            <div class="admin-prep-item__head">
               <div>
                 <strong>{{ item.title }}</strong>
-                <div class="prep-manage-item__meta">
-                  <span class="teacher-dashboard-tag">{{ item.statusLabel }}</span>
-                  <span>{{ item.teacherName }}</span>
-                  <span>{{ item.courseName }}</span>
-                </div>
+                <p>{{ item.teacherName }} · {{ item.courseName }} · {{ item.statusLabel }}</p>
               </div>
-              <span class="prep-manage-item__time">更新于 {{ item.updateTime }}</span>
+              <span>{{ item.updateTime }}</span>
             </div>
 
-            <div class="prep-manage-item__summary">
-              <p>{{ buildSummary(item) }}</p>
+            <p class="admin-prep-item__content">{{ renderExcerpt(item.teachingContent, '暂无教学内容') }}</p>
+
+            <div class="admin-prep-item__attachments">
+              <strong>附件 {{ item.attachmentCount }}</strong>
+              <div v-if="item.attachments.length" class="admin-prep-item__attachment-tags">
+                <span v-for="attachment in item.attachments" :key="attachment.id">
+                  {{ attachment.title }}
+                </span>
+              </div>
             </div>
 
-            <div class="prep-manage-item__sections">
-              <article class="prep-manage-item__section">
-                <span>教学目标</span>
-                <p>{{ renderExcerpt(item.teachingObjective) }}</p>
-              </article>
-              <article class="prep-manage-item__section">
-                <span>学情分析</span>
-                <p>{{ renderExcerpt(item.studentAnalysis) }}</p>
-              </article>
-              <article class="prep-manage-item__section">
-                <span>教学过程</span>
-                <p>{{ renderExcerpt(item.teachingProcess) }}</p>
-              </article>
-            </div>
-
-            <div class="prep-manage-item__actions">
+            <div class="admin-prep-item__actions">
               <button type="button" class="course-chip admin-manage-delete-btn" :disabled="deletingId === item.id" @click="removePrep(item)">
                 {{ deletingId === item.id ? '删除中...' : '删除' }}
               </button>
@@ -151,7 +112,7 @@
         <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的备课单记录。</div>
 
         <section class="admin-manage-pagination">
-          <div class="admin-manage-pagination__desc">共 {{ pagination.total }} 条备课单，当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
+          <div class="admin-manage-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="admin-manage-pagination__actions">
             <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
             <button
@@ -176,11 +137,9 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue'
 import { deleteAdminPrep, getAdminPrepList, type AdminCourseOption, type AdminPrepItem, type AdminPrepStats } from '@/services/admin'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const loading = ref(false)
 const deletingId = ref<number | null>(null)
 const errorMessage = ref('')
@@ -208,14 +167,9 @@ const pagination = reactive({
   totalPages: 0,
 })
 
-const headerText = computed(() => {
-  const name = authStore.profile?.name || authStore.profile?.username || '系统管理员'
-  return `${name}，这里统一查看教师提交的备课单，便于按课程和状态进行管理。`
-})
-
 const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
+  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
 })
 
 function normalizePage(value: unknown) {
@@ -228,24 +182,10 @@ function clearMessages() {
   successMessage.value = ''
 }
 
-function renderExcerpt(content: string, fallback = '暂未填写') {
+function renderExcerpt(content: string, fallback = '暂无内容') {
   const text = (content || '').trim()
-  if (!text) {
-    return fallback
-  }
-
-  return text.length > 100 ? `${text.slice(0, 100)}...` : text
-}
-
-function buildSummary(item: AdminPrepItem) {
-  const parts = [
-    item.keyPoints?.trim() ? `重点：${renderExcerpt(item.keyPoints, '')}` : '',
-    item.difficultyPoints?.trim() ? `难点：${renderExcerpt(item.difficultyPoints, '')}` : '',
-    item.teachingContent?.trim() ? `内容：${renderExcerpt(item.teachingContent, '')}` : '',
-    item.reflectionNotes?.trim() ? `反思：${renderExcerpt(item.reflectionNotes, '')}` : '',
-  ].filter(Boolean)
-
-  return parts.join(' ｜ ') || '这份备课单还没有填写完整摘要。'
+  if (!text) return fallback
+  return text.length > 160 ? `${text.slice(0, 160)}...` : text
 }
 
 function syncFiltersWithRoute() {
@@ -258,7 +198,7 @@ function syncFiltersWithRoute() {
 }
 
 function updateRoute(page = 1) {
-  router.push({
+  void router.push({
     path: '/admin/preps',
     query: {
       page: String(page),
@@ -295,8 +235,8 @@ async function removePrep(item: AdminPrepItem) {
 
   try {
     await deleteAdminPrep(item.id)
-    successMessage.value = `备课单“${item.title}”已删除`
     await loadPreps()
+    successMessage.value = `备课单“${item.title}”已删除`
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '备课单删除失败'
   } finally {
@@ -353,3 +293,168 @@ watch(
   { immediate: true },
 )
 </script>
+
+<style scoped lang="scss">
+.admin-prep-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-prep-header__eyebrow,
+.admin-prep-card__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #6b6f97;
+}
+
+.admin-prep-header h2,
+.admin-prep-card h3 {
+  margin: 8px 0 0;
+  color: #1e2350;
+}
+
+.admin-prep-header p {
+  margin-top: 10px;
+  color: #69709a;
+  line-height: 1.7;
+}
+
+.admin-prep-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-prep-stat-card,
+.admin-prep-card {
+  padding: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(34, 42, 92, 0.08);
+  box-shadow: 0 14px 30px rgba(28, 38, 86, 0.08);
+}
+
+.admin-prep-stat-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 30px;
+  color: #1e2350;
+}
+
+.admin-prep-filter {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 14px;
+}
+
+.admin-prep-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-prep-filter input,
+.admin-prep-filter select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 42, 92, 0.12);
+  background: #f7f8fd;
+}
+
+.admin-prep-filter__actions {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.admin-prep-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.admin-prep-card__meta {
+  color: #7780a5;
+  font-size: 13px;
+}
+
+.admin-prep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-prep-item {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #f7f8fd;
+}
+
+.admin-prep-item__head,
+.admin-prep-item__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-prep-item__content {
+  margin-top: 12px;
+  color: #677097;
+  line-height: 1.7;
+}
+
+.admin-prep-item__attachments {
+  margin-top: 14px;
+}
+
+.admin-prep-item__attachment-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.admin-prep-item__attachment-tags span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(34, 42, 92, 0.08);
+  color: #4b557c;
+  font-size: 12px;
+}
+
+.admin-prep-item__actions {
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1100px) {
+  .admin-prep-stats,
+  .admin-prep-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-prep-filter__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-prep-stats,
+  .admin-prep-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-prep-item__head,
+  .admin-prep-item__actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>

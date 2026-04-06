@@ -7,11 +7,12 @@ import { logger } from '../utils/logger.js'
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
-const MAX_PAGE_SIZE = 12
+const MAX_PAGE_SIZE = 50
 const MAX_DESCRIPTION_LENGTH = 2000
 const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
 const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
+const ASSET_VISIBILITIES = new Set(['private', 'public'])
 const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
 
 function badRequest(message) {
@@ -188,6 +189,35 @@ function normalizeAssetFilterType(value) {
   return normalizeAssetType(value)
 }
 
+function normalizeAssetVisibility(value, fallback = 'private') {
+  if (value === undefined || value === null || value === '') {
+    return fallback
+  }
+
+  const visibility = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (ASSET_VISIBILITIES.has(visibility)) {
+    return visibility
+  }
+
+  throw badRequest('素材公开范围不合法')
+}
+
+function normalizeAssetFilterVisibility(value) {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return 'all'
+  }
+
+  return normalizeAssetVisibility(value)
+}
+
+function normalizeOptionalCourseId(value) {
+  if (value === undefined || value === null || value === '') {
+    return null
+  }
+
+  return normalizeCourseId(value)
+}
+
 function normalizeAssetTitle(value) {
   const assetTitle = typeof value === 'string' ? value.trim() : ''
   if (!assetTitle) {
@@ -274,13 +304,7 @@ function normalizePrepPayload(payload, { allowArchived = false } = {}) {
     courseId: normalizeCourseId(body.courseId),
     title: normalizePrepTitle(body.title),
     status: normalizePrepStatus(body.status || 'draft', { allowArchived }),
-    teachingObjective: normalizePrepText(body.teachingObjective, '教学目标'),
-    keyPoints: normalizePrepText(body.keyPoints, '教学重点'),
-    difficultyPoints: normalizePrepText(body.difficultyPoints, '教学难点'),
-    studentAnalysis: normalizePrepText(body.studentAnalysis, '学情分析'),
     teachingContent: normalizePrepText(body.teachingContent, '教学内容'),
-    teachingProcess: normalizePrepText(body.teachingProcess, '教学过程'),
-    reflectionNotes: normalizePrepText(body.reflectionNotes, '教学反思'),
   }
 }
 
@@ -289,12 +313,45 @@ function extractFileFormat(fileName, fallback = '') {
   return extension || fallback
 }
 
+function normalizeAttachmentId(value) {
+  const attachmentId = Number(value)
+  if (!Number.isInteger(attachmentId) || attachmentId <= 0) {
+    throw badRequest('附件 ID 不合法')
+  }
+
+  return attachmentId
+}
+
+function normalizeAssetIdList(value) {
+  const source = Array.isArray(value) ? value : [value]
+  const ids = source
+    .flatMap((item) => {
+      if (Array.isArray(item)) {
+        return item
+      }
+
+      if (typeof item === 'string' && item.includes(',')) {
+        return item.split(',')
+      }
+
+      return [item]
+    })
+    .filter((item) => item !== undefined && item !== null && item !== '')
+    .map((item) => normalizeAssetId(item))
+
+  return [...new Set(ids)]
+}
+
 function buildResourcePreviewUrl(type, resourceId) {
   return type === 'material' ? `/portal/materials/${resourceId}/download` : `/portal/videos/${resourceId}/play`
 }
 
 function buildAssetPreviewUrl(assetId) {
   return `/portal/assets/${assetId}/file`
+}
+
+function buildPrepAttachmentDownloadUrl(attachmentId) {
+  return `/teacher/preps/attachments/${attachmentId}/file`
 }
 
 function getPrepStatusLabel(status) {
@@ -316,17 +373,13 @@ function mapTeacherPrepItem(item) {
     courseId: Number(item.courseId || 0),
     courseName: item.courseName,
     title: item.title,
-    teachingObjective: item.teachingObjective || '',
-    keyPoints: item.keyPoints || '',
-    difficultyPoints: item.difficultyPoints || '',
-    studentAnalysis: item.studentAnalysis || '',
     teachingContent: item.teachingContent || '',
-    teachingProcess: item.teachingProcess || '',
-    reflectionNotes: item.reflectionNotes || '',
     status: item.status,
     statusLabel: getPrepStatusLabel(item.status),
     createTime: item.createTime,
     updateTime: item.updateTime,
+    attachmentCount: Array.isArray(item.attachments) ? item.attachments.length : Number(item.attachmentCount || 0),
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
   }
 }
 
@@ -430,6 +483,36 @@ async function cleanupUploadedFile(filePath) {
   }
 }
 
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function resolveStoredFilePath(storedPath) {
+  const rawPath = String(storedPath || '').trim()
+  if (!rawPath) {
+    return null
+  }
+
+  const normalizedPath = rawPath.replace(/\\/g, path.sep)
+  const relativePath = normalizedPath.replace(/^[/\\]+/, '')
+  const candidates = path.isAbsolute(normalizedPath)
+    ? [path.normalize(normalizedPath)]
+    : [path.resolve(projectRoot, relativePath), path.resolve(process.cwd(), relativePath)]
+
+  for (const candidate of [...new Set(candidates)]) {
+    if (await fileExists(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
 async function ensureAssetLibraryReady() {
   const [rows] = await pool.query(
     `SELECT 1
@@ -444,6 +527,23 @@ async function ensureAssetLibraryReady() {
   }
 }
 
+async function ensureAssetLibraryVisibilityReady() {
+  await ensureAssetLibraryReady()
+
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'asset_library'
+       AND COLUMN_NAME = 'visibility'
+     LIMIT 1`,
+  )
+
+  if (!rows.length) {
+    throw badRequest('当前数据库缺少素材公开范围字段，请先执行教师中心简化升级 SQL')
+  }
+}
+
 async function ensureTeachingPrepReady() {
   const [rows] = await pool.query(
     `SELECT 1
@@ -455,6 +555,24 @@ async function ensureTeachingPrepReady() {
 
   if (!rows.length) {
     throw badRequest('当前数据库尚未初始化备课单表，请先执行备课单升级 SQL')
+  }
+}
+
+async function hasTeachingPrepAttachmentReady() {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'teaching_prep_attachment'
+     LIMIT 1`,
+  )
+
+  return rows.length > 0
+}
+
+async function ensureTeachingPrepAttachmentReady() {
+  if (!(await hasTeachingPrepAttachmentReady())) {
+    throw badRequest('当前备课单附件表尚未初始化，请先执行教师中心简化升级 SQL')
   }
 }
 
@@ -705,13 +823,14 @@ async function getOwnedCourseRow(courseId, teacherId) {
 }
 
 async function getOwnedAssetRow(assetId, teacherId) {
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   const [rows] = await pool.query(
     `SELECT a.asset_id AS id,
             a.asset_type AS type,
             a.teacher_id AS teacherId,
             a.course_id AS courseId,
+            COALESCE(a.visibility, 'private') AS visibility,
             a.asset_title AS title,
             COALESCE(a.asset_description, '') AS description,
             COALESCE(a.asset_content, '') AS content,
@@ -743,13 +862,7 @@ async function getOwnedPrepRow(prepId, teacherId) {
             p.teacher_id AS teacherId,
             p.course_id AS courseId,
             p.prep_title AS title,
-            COALESCE(p.teaching_objective, '') AS teachingObjective,
-            COALESCE(p.key_points, '') AS keyPoints,
-            COALESCE(p.difficulty_points, '') AS difficultyPoints,
-            COALESCE(p.student_analysis, '') AS studentAnalysis,
             COALESCE(p.teaching_content, '') AS teachingContent,
-            COALESCE(p.teaching_process, '') AS teachingProcess,
-            COALESCE(p.reflection_notes, '') AS reflectionNotes,
             p.status AS status,
             DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
             DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
@@ -765,7 +878,122 @@ async function getOwnedPrepRow(prepId, teacherId) {
     throw notFound('备课单不存在或无权操作')
   }
 
-  return rows[0]
+  const prep = rows[0]
+  const attachmentMap = await getPrepAttachmentMap([prepId], teacherId)
+  const attachments = attachmentMap.get(Number(prepId)) || []
+
+  return {
+    ...prep,
+    attachments,
+    attachmentCount: attachments.length,
+  }
+}
+
+function inferAttachmentTypeFromMimeType(mimeType, fileName) {
+  const rawMimeType = String(mimeType || '').toLowerCase()
+  const extension = path.extname(String(fileName || '')).toLowerCase()
+
+  if (rawMimeType.startsWith('image/')) {
+    return 'image'
+  }
+
+  if (rawMimeType.startsWith('audio/')) {
+    return 'audio'
+  }
+
+  if (rawMimeType.startsWith('video/')) {
+    return 'video'
+  }
+
+  if (extension === '.txt' || extension === '.md') {
+    return 'text'
+  }
+
+  return 'file'
+}
+
+function mapPrepAttachmentItem(item) {
+  const sourceType = item.sourceType
+  const assetId = item.assetId ? Number(item.assetId) : null
+  const attachmentId = Number(item.id)
+  const fileName = item.fileName || ''
+  const mimeType = item.mimeType || ''
+  const type = sourceType === 'asset' ? item.assetType || inferAttachmentTypeFromMimeType(mimeType, fileName) : inferAttachmentTypeFromMimeType(mimeType, fileName)
+
+  return {
+    id: attachmentId,
+    sourceType,
+    sourceLabel: sourceType === 'asset' ? '个人素材' : '本地上传',
+    assetId,
+    type,
+    title: item.title || fileName || '未命名附件',
+    description: item.description || '',
+    content: item.content || '',
+    fileName,
+    fileSize: Number(item.fileSize || 0),
+    mimeType,
+    visibility: item.visibility || 'private',
+    downloadUrl: sourceType === 'asset' && assetId ? buildAssetPreviewUrl(assetId) : buildPrepAttachmentDownloadUrl(attachmentId),
+    uploadTime: item.createTime,
+  }
+}
+
+async function getPrepAttachmentMap(prepIds, teacherId = null) {
+  if (!prepIds.length) {
+    return new Map()
+  }
+
+  if (!(await hasTeachingPrepAttachmentReady())) {
+    return new Map()
+  }
+
+  const placeholders = prepIds.map(() => '?').join(', ')
+  const params = [...prepIds]
+  let ownerSql = ''
+
+  if (teacherId !== null) {
+    ownerSql = ' AND p.teacher_id = ?'
+    params.push(teacherId)
+  }
+
+  const [rows] = await pool.query(
+    `SELECT pa.attachment_id AS id,
+            pa.prep_id AS prepId,
+            pa.source_type AS sourceType,
+            pa.asset_id AS assetId,
+            COALESCE(a.asset_type, '') AS assetType,
+            COALESCE(a.asset_title, pa.file_name, '') AS title,
+            COALESCE(a.asset_description, '') AS description,
+            COALESCE(a.asset_content, '') AS content,
+            COALESCE(a.visibility, 'private') AS visibility,
+            COALESCE(a.file_name, pa.file_name, '') AS fileName,
+            COALESCE(a.file_size, pa.file_size, 0) AS fileSize,
+            COALESCE(pa.mime_type, '') AS mimeType,
+            DATE_FORMAT(pa.create_time, '%Y-%m-%d') AS createTime
+     FROM teaching_prep_attachment pa
+     INNER JOIN teaching_prep p ON p.prep_id = pa.prep_id
+     LEFT JOIN asset_library a ON a.asset_id = pa.asset_id
+     WHERE pa.status = 1 AND pa.prep_id IN (${placeholders})${ownerSql}
+     ORDER BY pa.sort_order ASC, pa.attachment_id ASC`,
+    params,
+  )
+
+  const attachmentMap = new Map()
+
+  for (const prepId of prepIds) {
+    attachmentMap.set(Number(prepId), [])
+  }
+
+  for (const row of rows) {
+    const prepId = Number(row.prepId || 0)
+    if (!attachmentMap.has(prepId)) {
+      attachmentMap.set(prepId, [])
+    }
+
+    attachmentMap.get(prepId)?.push(mapPrepAttachmentItem(row))
+  }
+
+  return attachmentMap
 }
 
 async function getOwnedMessageRow(messageId, teacherId) {
@@ -786,71 +1014,66 @@ async function getOwnedMessageRow(messageId, teacherId) {
 
 export async function getTeacherDashboardData(teacherId) {
   const teacher = await getTeacherProfile(teacherId)
+  await ensureAssetLibraryVisibilityReady()
+  await ensureTeachingPrepReady()
 
   const [statRows] = await pool.query(
     `SELECT
         (SELECT COUNT(*) FROM course_intro WHERE teacher_id = ? AND status = 1) AS courseCount,
-        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1) AS materialCount,
-        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1) AS videoCount,
-        (SELECT COUNT(*) FROM message_topic WHERE teacher_id = ?) AS topicCount`,
-    [teacherId, teacherId, teacherId, teacherId],
+        (SELECT COUNT(*) FROM asset_library WHERE teacher_id = ? AND status = 1) AS assetCount,
+        (SELECT COUNT(*) FROM asset_library WHERE teacher_id = ? AND status = 1 AND COALESCE(visibility, 'private') = 'public') AS publicAssetCount,
+        (SELECT COUNT(*) FROM teaching_prep WHERE teacher_id = ?) AS prepCount,
+        (SELECT COUNT(*) FROM teaching_prep WHERE teacher_id = ? AND status = 'published') AS publishedPrepCount`,
+    [teacherId, teacherId, teacherId, teacherId, teacherId],
   )
 
-  const [recentMaterials] = await pool.query(
-    `SELECT m.material_id AS id,
-            'material' AS type,
-            m.material_name AS title,
-            COALESCE(c.course_name, '未关联课程') AS courseName,
-            DATE_FORMAT(m.upload_time, '%Y-%m-%d') AS uploadDate,
-            m.upload_time AS sortTime
-     FROM material m
-     LEFT JOIN course_intro c ON c.course_id = m.course_id
-     WHERE m.teacher_id = ? AND m.status = 1
-     ORDER BY m.upload_time DESC, m.material_id DESC
+  const [recentAssets] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.asset_type AS type,
+            a.asset_title AS title,
+            COALESCE(a.visibility, 'private') AS visibility,
+            DATE_FORMAT(a.create_time, '%Y-%m-%d') AS uploadDate
+     FROM asset_library a
+     WHERE a.teacher_id = ? AND a.status = 1
+     ORDER BY a.update_time DESC, a.asset_id DESC
      LIMIT 5`,
     [teacherId],
   )
 
-  const [recentVideos] = await pool.query(
-    `SELECT v.video_id AS id,
-            'video' AS type,
-            v.video_title AS title,
+  const [recentPreps] = await pool.query(
+    `SELECT p.prep_id AS id,
+            p.prep_title AS title,
+            p.status AS status,
             COALESCE(c.course_name, '未关联课程') AS courseName,
-            DATE_FORMAT(v.upload_time, '%Y-%m-%d') AS uploadDate,
-            v.upload_time AS sortTime
-     FROM course_video v
-     LEFT JOIN course_intro c ON c.course_id = v.course_id
-     WHERE v.teacher_id = ? AND v.status = 1
-     ORDER BY v.upload_time DESC, v.video_id DESC
+            DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateDate
+     FROM teaching_prep p
+     LEFT JOIN course_intro c ON c.course_id = p.course_id
+     WHERE p.teacher_id = ?
+     ORDER BY p.update_time DESC, p.prep_id DESC
      LIMIT 5`,
     [teacherId],
   )
 
-  const recentUploads = [...recentMaterials, ...recentVideos]
-    .sort((left, right) => new Date(right.sortTime).getTime() - new Date(left.sortTime).getTime())
-    .slice(0, 5)
-    .map(({ sortTime, ...item }) => item)
-
-  const [hotCourses] = await pool.query(
+  const [courseCoverage] = await pool.query(
     `SELECT c.course_id AS id,
             c.course_name AS name,
-            COALESCE(material_stats.materialCount, 0) AS materialCount,
-            COALESCE(video_stats.videoCount, 0) AS videoCount
+            COALESCE(asset_stats.assetCount, 0) AS assetCount,
+            COALESCE(prep_stats.prepCount, 0) AS prepCount
      FROM course_intro c
      LEFT JOIN (
-       SELECT course_id, COUNT(*) AS materialCount
-       FROM material
+       SELECT course_id, COUNT(*) AS assetCount
+       FROM asset_library
        WHERE teacher_id = ? AND status = 1
        GROUP BY course_id
-     ) material_stats ON material_stats.course_id = c.course_id
+     ) asset_stats ON asset_stats.course_id = c.course_id
      LEFT JOIN (
-       SELECT course_id, COUNT(*) AS videoCount
-       FROM course_video
-       WHERE teacher_id = ? AND status = 1
+       SELECT course_id, COUNT(*) AS prepCount
+       FROM teaching_prep
+       WHERE teacher_id = ?
        GROUP BY course_id
-     ) video_stats ON video_stats.course_id = c.course_id
+     ) prep_stats ON prep_stats.course_id = c.course_id
      WHERE c.teacher_id = ? AND c.status = 1
-     ORDER BY (COALESCE(material_stats.materialCount, 0) + COALESCE(video_stats.videoCount, 0) * 2) DESC,
+     ORDER BY (COALESCE(asset_stats.assetCount, 0) + COALESCE(prep_stats.prepCount, 0) * 2) DESC,
               c.update_time DESC,
               c.course_id DESC
      LIMIT 3`,
@@ -859,32 +1082,33 @@ export async function getTeacherDashboardData(teacherId) {
 
   const [weeklyRows] = await pool.query(
     `SELECT
-        (SELECT COUNT(*) FROM material WHERE teacher_id = ? AND status = 1 AND upload_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS materialCount,
-        (SELECT COUNT(*) FROM course_video WHERE teacher_id = ? AND status = 1 AND upload_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS videoCount,
-        (SELECT COUNT(*) FROM message_topic WHERE teacher_id = ? AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS topicCount`,
+        (SELECT COUNT(*) FROM asset_library WHERE teacher_id = ? AND status = 1 AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS assetCount,
+        (SELECT COUNT(*) FROM teaching_prep WHERE teacher_id = ? AND update_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS prepCount,
+        (SELECT COUNT(*) FROM asset_library WHERE teacher_id = ? AND status = 1 AND COALESCE(visibility, 'private') = 'public' AND update_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS publicAssetCount`,
     [teacherId, teacherId, teacherId],
   )
 
   const statsRow = statRows[0] || {
     courseCount: 0,
-    materialCount: 0,
-    videoCount: 0,
-    topicCount: 0,
+    assetCount: 0,
+    publicAssetCount: 0,
+    prepCount: 0,
+    publishedPrepCount: 0,
   }
   const weeklyRow = weeklyRows[0] || {
-    materialCount: 0,
-    videoCount: 0,
-    topicCount: 0,
+    assetCount: 0,
+    prepCount: 0,
+    publicAssetCount: 0,
   }
 
   logger.info('teacher_dashboard_loaded', {
     teacherId,
     courseCount: Number(statsRow.courseCount || 0),
-    materialCount: Number(statsRow.materialCount || 0),
-    videoCount: Number(statsRow.videoCount || 0),
-    topicCount: Number(statsRow.topicCount || 0),
-    recentUploadCount: recentUploads.length,
-    hotCourseCount: hotCourses.length,
+    assetCount: Number(statsRow.assetCount || 0),
+    publicAssetCount: Number(statsRow.publicAssetCount || 0),
+    prepCount: Number(statsRow.prepCount || 0),
+    recentAssetCount: recentAssets.length,
+    recentPrepCount: recentPreps.length,
   })
 
   return {
@@ -895,20 +1119,35 @@ export async function getTeacherDashboardData(teacherId) {
     },
     stats: {
       courseCount: Number(statsRow.courseCount || 0),
-      materialCount: Number(statsRow.materialCount || 0),
-      videoCount: Number(statsRow.videoCount || 0),
-      topicCount: Number(statsRow.topicCount || 0),
+      assetCount: Number(statsRow.assetCount || 0),
+      publicAssetCount: Number(statsRow.publicAssetCount || 0),
+      prepCount: Number(statsRow.prepCount || 0),
+      publishedPrepCount: Number(statsRow.publishedPrepCount || 0),
     },
-    recentUploads,
-    hotCourses: hotCourses.map((item) => ({
+    recentAssets: recentAssets.map((item) => ({
+      id: Number(item.id),
+      type: item.type,
+      title: item.title,
+      visibility: item.visibility,
+      uploadDate: item.uploadDate,
+    })),
+    recentPreps: recentPreps.map((item) => ({
+      id: Number(item.id),
+      title: item.title,
+      status: item.status,
+      statusLabel: getPrepStatusLabel(item.status),
+      courseName: item.courseName,
+      updateDate: item.updateDate,
+    })),
+    courseCoverage: courseCoverage.map((item) => ({
       ...item,
-      materialCount: Number(item.materialCount || 0),
-      videoCount: Number(item.videoCount || 0),
+      assetCount: Number(item.assetCount || 0),
+      prepCount: Number(item.prepCount || 0),
     })),
     weeklyActivity: {
-      materialCount: Number(weeklyRow.materialCount || 0),
-      videoCount: Number(weeklyRow.videoCount || 0),
-      topicCount: Number(weeklyRow.topicCount || 0),
+      assetCount: Number(weeklyRow.assetCount || 0),
+      prepCount: Number(weeklyRow.prepCount || 0),
+      publicAssetCount: Number(weeklyRow.publicAssetCount || 0),
     },
   }
 }
@@ -949,25 +1188,9 @@ export async function getTeacherPrepList({ teacherId, query }) {
     whereSql += ` AND (
       p.prep_title LIKE ?
       OR COALESCE(c.course_name, '') LIKE ?
-      OR COALESCE(p.teaching_objective, '') LIKE ?
-      OR COALESCE(p.key_points, '') LIKE ?
-      OR COALESCE(p.difficulty_points, '') LIKE ?
-      OR COALESCE(p.student_analysis, '') LIKE ?
       OR COALESCE(p.teaching_content, '') LIKE ?
-      OR COALESCE(p.teaching_process, '') LIKE ?
-      OR COALESCE(p.reflection_notes, '') LIKE ?
     )`
-    params.push(
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-      keywordPattern,
-    )
+    params.push(keywordPattern, keywordPattern, keywordPattern)
   }
 
   if (courseId) {
@@ -998,13 +1221,7 @@ export async function getTeacherPrepList({ teacherId, query }) {
             p.teacher_id AS teacherId,
             p.course_id AS courseId,
             p.prep_title AS title,
-            COALESCE(p.teaching_objective, '') AS teachingObjective,
-            COALESCE(p.key_points, '') AS keyPoints,
-            COALESCE(p.difficulty_points, '') AS difficultyPoints,
-            COALESCE(p.student_analysis, '') AS studentAnalysis,
             COALESCE(p.teaching_content, '') AS teachingContent,
-            COALESCE(p.teaching_process, '') AS teachingProcess,
-            COALESCE(p.reflection_notes, '') AS reflectionNotes,
             p.status AS status,
             DATE_FORMAT(p.create_time, '%Y-%m-%d') AS createTime,
             DATE_FORMAT(p.update_time, '%Y-%m-%d') AS updateTime,
@@ -1033,6 +1250,10 @@ export async function getTeacherPrepList({ teacherId, query }) {
     publishedCount: 0,
     courseCount: 0,
   }
+  const attachmentMap = await getPrepAttachmentMap(
+    listRows.map((item) => Number(item.id)),
+    teacherId,
+  )
 
   logger.info('teacher_prep_list_loaded', {
     teacherId,
@@ -1052,7 +1273,12 @@ export async function getTeacherPrepList({ teacherId, query }) {
       publishedCount: Number(statsRow.publishedCount || 0),
       courseCount: Number(statsRow.courseCount || 0),
     },
-    list: listRows.map(mapTeacherPrepItem),
+    list: listRows.map((item) =>
+      mapTeacherPrepItem({
+        ...item,
+        attachments: attachmentMap.get(Number(item.id)) || [],
+      }),
+    ),
     pagination: {
       page,
       pageSize,
@@ -1077,26 +1303,14 @@ export async function createTeacherPrep({ teacherId, payload }) {
        teacher_id,
        course_id,
        prep_title,
-       teaching_objective,
-       key_points,
-       difficulty_points,
-       student_analysis,
        teaching_content,
-       teaching_process,
-       reflection_notes,
        status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?)`,
     [
       teacherId,
       prep.courseId,
       prep.title,
-      prep.teachingObjective || null,
-      prep.keyPoints || null,
-      prep.difficultyPoints || null,
-      prep.studentAnalysis || null,
       prep.teachingContent || null,
-      prep.teachingProcess || null,
-      prep.reflectionNotes || null,
       prep.status,
     ],
   )
@@ -1127,26 +1341,14 @@ export async function updateTeacherPrep({ teacherId, prepId, payload }) {
     `UPDATE teaching_prep
      SET course_id = ?,
          prep_title = ?,
-         teaching_objective = ?,
-         key_points = ?,
-         difficulty_points = ?,
-         student_analysis = ?,
          teaching_content = ?,
-         teaching_process = ?,
-         reflection_notes = ?,
          status = ?,
          update_time = CURRENT_TIMESTAMP
      WHERE prep_id = ? AND teacher_id = ?`,
     [
       prep.courseId,
       prep.title,
-      prep.teachingObjective || null,
-      prep.keyPoints || null,
-      prep.difficultyPoints || null,
-      prep.studentAnalysis || null,
       prep.teachingContent || null,
-      prep.teachingProcess || null,
-      prep.reflectionNotes || null,
       prep.status,
       normalizedPrepId,
       teacherId,
@@ -1189,24 +1391,24 @@ export async function deleteTeacherPrep({ teacherId, prepId }) {
 
 export async function getTeacherAssetList({ teacherId, query }) {
   await getTeacherProfile(teacherId)
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   const keyword = normalizeKeyword(query.keyword)
   const requestedPage = normalizePageNumber(query.page)
   const pageSize = normalizePageSize(query.pageSize)
-  const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
   const type = normalizeAssetFilterType(query.type)
+  const visibility = normalizeAssetFilterVisibility(query.visibility)
   const params = [teacherId]
   let whereSql = 'a.teacher_id = ? AND a.status = 1'
-
-  if (courseId) {
-    whereSql += ' AND a.course_id = ?'
-    params.push(courseId)
-  }
 
   if (type !== 'all') {
     whereSql += ' AND a.asset_type = ?'
     params.push(type)
+  }
+
+  if (visibility !== 'all') {
+    whereSql += ' AND COALESCE(a.visibility, \'private\') = ?'
+    params.push(visibility)
   }
 
   if (keyword) {
@@ -1236,6 +1438,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
     `SELECT a.asset_id AS id,
             a.asset_type AS type,
             a.course_id AS courseId,
+            COALESCE(a.visibility, 'private') AS visibility,
             a.asset_title AS title,
             COALESCE(a.asset_description, '') AS description,
             COALESCE(a.asset_content, '') AS content,
@@ -1254,6 +1457,8 @@ export async function getTeacherAssetList({ teacherId, query }) {
   const [statsRows] = await pool.query(
     `SELECT
         COUNT(*) AS total,
+        SUM(CASE WHEN COALESCE(visibility, 'private') = 'public' THEN 1 ELSE 0 END) AS publicCount,
+        SUM(CASE WHEN COALESCE(visibility, 'private') = 'private' THEN 1 ELSE 0 END) AS privateCount,
         SUM(CASE WHEN asset_type = 'image' THEN 1 ELSE 0 END) AS imageCount,
         SUM(CASE WHEN asset_type = 'audio' THEN 1 ELSE 0 END) AS audioCount,
         SUM(CASE WHEN asset_type = 'video' THEN 1 ELSE 0 END) AS videoCount,
@@ -1263,9 +1468,10 @@ export async function getTeacherAssetList({ teacherId, query }) {
     [teacherId],
   )
 
-  const courseOptions = await getTeacherCourseOptions(teacherId)
   const statsRow = statsRows[0] || {
     total: 0,
+    publicCount: 0,
+    privateCount: 0,
     imageCount: 0,
     audioCount: 0,
     videoCount: 0,
@@ -1275,8 +1481,8 @@ export async function getTeacherAssetList({ teacherId, query }) {
   logger.info('teacher_asset_list_loaded', {
     teacherId,
     keyword,
-    courseId,
     type,
+    visibility,
     page,
     pageSize,
     total,
@@ -1286,6 +1492,8 @@ export async function getTeacherAssetList({ teacherId, query }) {
   return {
     stats: {
       total: Number(statsRow.total || 0),
+      publicCount: Number(statsRow.publicCount || 0),
+      privateCount: Number(statsRow.privateCount || 0),
       imageCount: Number(statsRow.imageCount || 0),
       audioCount: Number(statsRow.audioCount || 0),
       videoCount: Number(statsRow.videoCount || 0),
@@ -1296,6 +1504,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
       type: item.type,
       courseId: Number(item.courseId || 0),
       courseName: item.courseName,
+      visibility: item.visibility,
       title: item.title,
       description: item.description || '',
       content: item.content || '',
@@ -1310,23 +1519,22 @@ export async function getTeacherAssetList({ teacherId, query }) {
       total,
       totalPages,
     },
-    filters: {
-      courses: courseOptions,
-    },
+    filters: {},
   }
 }
 
 export async function createTeacherAsset({ teacherId, payload, file }) {
   await getTeacherProfile(teacherId)
-  await ensureAssetLibraryReady()
+  await ensureAssetLibraryVisibilityReady()
 
   try {
     const type = normalizeAssetType(payload.type)
-    const courseId = normalizeCourseId(payload.courseId)
+    const courseId = normalizeOptionalCourseId(payload.courseId)
+    const visibility = normalizeAssetVisibility(payload.visibility)
     const title = normalizeAssetTitle(payload.title)
     const description = normalizeDescription(payload.description, '素材说明')
     const content = normalizeAssetContent(payload.content, ASSET_CONTENT_TYPES.has(type))
-    const course = await getOwnedCourseRow(courseId, teacherId)
+    const course = courseId ? await getOwnedCourseRow(courseId, teacherId) : null
 
     if (ASSET_FILE_TYPES.has(type) && !file) {
       if (type === 'image') {
@@ -1350,6 +1558,7 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
         asset_type,
         teacher_id,
         course_id,
+        visibility,
         asset_title,
         asset_description,
         asset_content,
@@ -1357,8 +1566,8 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
         file_name,
         file_size,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [type, teacherId, courseId, title, description || null, content || null, storedPath, file?.originalname || null, Number(file?.size || 0)],
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [type, teacherId, courseId, visibility, title, description || null, content || null, storedPath, file?.originalname || null, Number(file?.size || 0)],
     )
 
     logger.info('teacher_asset_created', {
@@ -1366,6 +1575,7 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
       assetId: Number(result.insertId || 0),
       type,
       courseId,
+      visibility,
     })
 
     return {
@@ -1373,7 +1583,8 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
       type,
       title,
       courseId,
-      courseName: course.name,
+      courseName: course?.name || '',
+      visibility,
       description,
       content,
       fileName: file?.originalname || '',
@@ -1405,6 +1616,7 @@ export async function getTeacherAssetDetail({ teacherId, assetId }) {
     type: asset.type,
     courseId: Number(asset.courseId || 0),
     courseName: asset.courseName,
+    visibility: asset.visibility || 'private',
     title: asset.title,
     description: asset.description || '',
     content: asset.content || '',
@@ -1421,26 +1633,29 @@ export async function updateTeacherAsset({ teacherId, assetId, payload }) {
   const normalizedAssetId = normalizeAssetId(assetId)
   const asset = await getOwnedAssetRow(normalizedAssetId, teacherId)
   const title = normalizeAssetTitle(payload.title)
-  const courseId = normalizeCourseId(payload.courseId)
+  const courseId = normalizeOptionalCourseId(payload.courseId)
+  const visibility = normalizeAssetVisibility(payload.visibility, asset.visibility || 'private')
   const description = normalizeDescription(payload.description, '素材说明')
   const content = normalizeAssetContent(payload.content, ASSET_CONTENT_TYPES.has(asset.type))
-  const course = await getOwnedCourseRow(courseId, teacherId)
+  const course = courseId ? await getOwnedCourseRow(courseId, teacherId) : null
 
   await pool.query(
-    `UPDATE asset_library
+     `UPDATE asset_library
      SET course_id = ?,
+         visibility = ?,
          asset_title = ?,
          asset_description = ?,
          asset_content = ?,
          update_time = CURRENT_TIMESTAMP
      WHERE asset_id = ? AND teacher_id = ? AND status = 1`,
-    [courseId, title, description || null, ASSET_CONTENT_TYPES.has(asset.type) ? content || null : asset.content || null, normalizedAssetId, teacherId],
+    [courseId, visibility, title, description || null, ASSET_CONTENT_TYPES.has(asset.type) ? content || null : asset.content || null, normalizedAssetId, teacherId],
   )
 
   logger.info('teacher_asset_updated', {
     teacherId,
     assetId: normalizedAssetId,
     courseId,
+    visibility,
   })
 
   return {
@@ -1448,7 +1663,8 @@ export async function updateTeacherAsset({ teacherId, assetId, payload }) {
     type: asset.type,
     title,
     courseId,
-    courseName: course.name,
+    courseName: course?.name || '',
+    visibility,
     description,
     content: ASSET_CONTENT_TYPES.has(asset.type) ? content : asset.content || '',
   }
@@ -1477,6 +1693,231 @@ export async function deleteTeacherAsset({ teacherId, assetId }) {
     id: normalizedAssetId,
     type: asset.type,
     title: asset.title,
+  }
+}
+
+async function getOwnedPrepAttachmentRow(attachmentId, teacherId) {
+  await ensureTeachingPrepAttachmentReady()
+
+  const [rows] = await pool.query(
+    `SELECT pa.attachment_id AS id,
+            pa.prep_id AS prepId,
+            pa.source_type AS sourceType,
+            pa.asset_id AS assetId,
+            COALESCE(pa.file_path, '') AS filePath,
+            COALESCE(pa.file_name, '') AS fileName,
+            COALESCE(pa.mime_type, '') AS mimeType
+     FROM teaching_prep_attachment pa
+     INNER JOIN teaching_prep p ON p.prep_id = pa.prep_id
+     WHERE pa.attachment_id = ? AND pa.status = 1 AND p.teacher_id = ?
+     LIMIT 1`,
+    [attachmentId, teacherId],
+  )
+
+  if (!rows.length) {
+    throw notFound('备课附件不存在或无权操作')
+  }
+
+  return rows[0]
+}
+
+export async function addTeacherPrepAssetAttachments({ teacherId, prepId, payload }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepAttachmentReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+  const assetIds = normalizeAssetIdList(payload.assetIds)
+  if (!assetIds.length) {
+    throw badRequest('请先选择要关联的个人素材')
+  }
+
+  const placeholders = assetIds.map(() => '?').join(', ')
+  const [assetRows] = await pool.query(
+    `SELECT asset_id AS id
+     FROM asset_library
+     WHERE teacher_id = ? AND status = 1 AND asset_id IN (${placeholders})`,
+    [teacherId, ...assetIds],
+  )
+
+  if (assetRows.length !== assetIds.length) {
+    throw notFound('部分个人素材不存在或无权操作')
+  }
+
+  const [existingRows] = await pool.query(
+    `SELECT asset_id AS assetId
+     FROM teaching_prep_attachment
+     WHERE prep_id = ? AND source_type = 'asset' AND status = 1 AND asset_id IN (${placeholders})`,
+    [normalizedPrepId, ...assetIds],
+  )
+  const existingAssetIds = new Set(existingRows.map((item) => Number(item.assetId || 0)))
+  const pendingAssetIds = assetIds.filter((assetId) => !existingAssetIds.has(assetId))
+
+  if (pendingAssetIds.length) {
+    const [sortRows] = await pool.query(
+      `SELECT COALESCE(MAX(sort_order), 0) AS maxSortOrder
+       FROM teaching_prep_attachment
+       WHERE prep_id = ?`,
+      [normalizedPrepId],
+    )
+    let nextSortOrder = Number(sortRows[0]?.maxSortOrder || 0) + 1
+
+    for (const assetId of pendingAssetIds) {
+      await pool.query(
+        `INSERT INTO teaching_prep_attachment (
+          prep_id,
+          source_type,
+          asset_id,
+          sort_order,
+          status
+        ) VALUES (?, 'asset', ?, ?, 1)`,
+        [normalizedPrepId, assetId, nextSortOrder],
+      )
+      nextSortOrder += 1
+    }
+  }
+
+  const prep = await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+  logger.info('teacher_prep_asset_attachments_added', {
+    teacherId,
+    prepId: normalizedPrepId,
+    assetCount: pendingAssetIds.length,
+  })
+
+  return {
+    prepId: normalizedPrepId,
+    attachmentCount: prep.attachments.length,
+    attachments: prep.attachments,
+  }
+}
+
+export async function addTeacherPrepUploadAttachments({ teacherId, prepId, files }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepAttachmentReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+  const uploadFiles = Array.isArray(files) ? files : []
+  if (!uploadFiles.length) {
+    throw badRequest('请先选择要上传的备课附件')
+  }
+
+  try {
+    const [sortRows] = await pool.query(
+      `SELECT COALESCE(MAX(sort_order), 0) AS maxSortOrder
+       FROM teaching_prep_attachment
+       WHERE prep_id = ?`,
+      [normalizedPrepId],
+    )
+    let nextSortOrder = Number(sortRows[0]?.maxSortOrder || 0) + 1
+
+    for (const file of uploadFiles) {
+      await pool.query(
+        `INSERT INTO teaching_prep_attachment (
+          prep_id,
+          source_type,
+          file_path,
+          file_name,
+          file_size,
+          mime_type,
+          sort_order,
+          status
+        ) VALUES (?, 'upload', ?, ?, ?, ?, ?, 1)`,
+        [normalizedPrepId, buildStoredFilePath(file.path), file.originalname, Number(file.size || 0), file.mimetype || null, nextSortOrder],
+      )
+      nextSortOrder += 1
+    }
+
+    const prep = await getOwnedPrepRow(normalizedPrepId, teacherId)
+
+    logger.info('teacher_prep_upload_attachments_added', {
+      teacherId,
+      prepId: normalizedPrepId,
+      fileCount: uploadFiles.length,
+    })
+
+    return {
+      prepId: normalizedPrepId,
+      attachmentCount: prep.attachments.length,
+      attachments: prep.attachments,
+    }
+  } catch (error) {
+    await cleanupUploadedFiles(uploadFiles.map((file) => file.path))
+    throw error
+  }
+}
+
+export async function deleteTeacherPrepAttachment({ teacherId, prepId, attachmentId }) {
+  await getTeacherProfile(teacherId)
+  await ensureTeachingPrepAttachmentReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  const normalizedAttachmentId = normalizeAttachmentId(attachmentId)
+  const attachment = await getOwnedPrepAttachmentRow(normalizedAttachmentId, teacherId)
+
+  if (Number(attachment.prepId || 0) !== normalizedPrepId) {
+    throw notFound('备课附件不存在或无权操作')
+  }
+
+  await pool.query(
+    `UPDATE teaching_prep_attachment
+     SET status = 0, update_time = CURRENT_TIMESTAMP
+     WHERE attachment_id = ?`,
+    [normalizedAttachmentId],
+  )
+
+  if (attachment.sourceType === 'upload' && attachment.filePath) {
+    const resolvedPath = await resolveStoredFilePath(attachment.filePath)
+    if (resolvedPath) {
+      await cleanupUploadedFile(resolvedPath)
+    }
+  }
+
+  logger.info('teacher_prep_attachment_deleted', {
+    teacherId,
+    prepId: normalizedPrepId,
+    attachmentId: normalizedAttachmentId,
+    sourceType: attachment.sourceType,
+  })
+
+  return {
+    id: normalizedAttachmentId,
+    prepId: normalizedPrepId,
+    sourceType: attachment.sourceType,
+  }
+}
+
+export async function getTeacherPrepAttachmentFileData({ teacherId, attachmentId }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedAttachmentId = normalizeAttachmentId(attachmentId)
+  const attachment = await getOwnedPrepAttachmentRow(normalizedAttachmentId, teacherId)
+
+  if (attachment.sourceType === 'asset' && attachment.assetId) {
+    const asset = await getOwnedAssetRow(Number(attachment.assetId), teacherId)
+    const resolvedPath = await resolveStoredFilePath(asset.filePath)
+
+    if (!resolvedPath) {
+      throw notFound('附件文件不存在')
+    }
+
+    return {
+      filePath: resolvedPath,
+      fileName: asset.fileName || path.basename(resolvedPath),
+    }
+  }
+
+  const resolvedPath = await resolveStoredFilePath(attachment.filePath)
+  if (!resolvedPath) {
+    throw notFound('附件文件不存在')
+  }
+
+  return {
+    filePath: resolvedPath,
+    fileName: attachment.fileName || path.basename(resolvedPath),
   }
 }
 

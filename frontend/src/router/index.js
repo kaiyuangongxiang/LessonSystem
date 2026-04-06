@@ -21,6 +21,11 @@ const router = createRouter({
             component: () => import('@/views/portal/HomePage.vue'),
         },
         {
+            path: '/assets',
+            name: 'portal-assets',
+            component: () => import('@/views/portal/PublicAssetPage.vue'),
+        },
+        {
             path: '/courses',
             name: 'course-list',
             component: () => import('@/views/portal/CourseListPage.vue'),
@@ -61,21 +66,30 @@ const router = createRouter({
             meta: { requiresAuth: true, role: 'teacher' },
         },
         {
+            path: '/teacher/coursewares',
+            name: 'teacher-coursewares',
+            component: () => import('@/views/teacher/TeacherCoursewareToolPage.vue'),
+            meta: { requiresAuth: true, role: 'teacher' },
+        },
+        {
+            path: '/teacher/coursewares/:coursewareId/editor',
+            name: 'teacher-courseware-editor',
+            redirect: { name: 'teacher-coursewares' },
+        },
+        {
             path: '/teacher/materials',
             name: 'teacher-material-upload',
-            component: () => import('@/views/teacher/MaterialUploadPage.vue'),
-            meta: { requiresAuth: true, role: 'teacher' },
+            redirect: { name: 'teacher-assets' },
         },
         {
             path: '/teacher/videos',
             name: 'teacher-video-upload',
-            redirect: { name: 'teacher-material-upload' },
+            redirect: { name: 'teacher-assets' },
         },
         {
             path: '/teacher/resources',
             name: 'teacher-resources',
-            component: () => import('@/views/teacher/MyResourcesPage.vue'),
-            meta: { requiresAuth: true, role: 'teacher' },
+            redirect: { name: 'teacher-assets' },
         },
         {
             path: '/teacher/profile',

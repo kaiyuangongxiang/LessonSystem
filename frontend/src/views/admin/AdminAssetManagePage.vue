@@ -1,5 +1,5 @@
 <template>
-  <main class="admin-manage-page asset-page">
+  <main class="admin-manage-page admin-asset-page">
     <aside class="admin-dashboard-sidebar">
       <div>
         <div class="admin-dashboard-sidebar__eyebrow">ADMIN CONSOLE</div>
@@ -7,125 +7,109 @@
       </div>
 
       <AdminSidebarNav active="assets" />
-      <nav v-if="false" class="admin-dashboard-nav">
-        <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system" @click="router.push('/admin/system')">系统管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/teachers')">教师用户</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/students')">学生用户</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item is-active">素材库</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">教学交流</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/preps')">备课单管理</button>
-      </nav>
     </aside>
 
-    <section class="admin-manage-main">
-      <header class="admin-manage-head">
+    <section class="admin-manage-main admin-asset-main">
+      <header class="admin-asset-header">
         <div>
-          <div class="admin-manage-head__eyebrow">ASSET MANAGEMENT</div>
-          <h2>素材库管理</h2>
-          <p>{{ headerText }}</p>
+          <div class="admin-asset-header__eyebrow">ASSET MANAGEMENT</div>
+          <h2>素材管理</h2>
+          <p>统一查看教师上传素材，并按公开状态进行筛选、审核和清理。</p>
         </div>
       </header>
 
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="feedback-text feedback-text--success admin-manage-feedback">{{ successMessage }}</p>
+      <p v-if="successMessage" class="feedback-text feedback-text--success">{{ successMessage }}</p>
 
-      <section class="admin-manage-stats">
-        <article class="admin-manage-stat-card">
+      <section class="admin-asset-stats">
+        <article class="admin-asset-stat-card">
           <span>素材总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>平台当前全部素材</em>
         </article>
-        <article class="admin-manage-stat-card">
-          <span>关联课程</span>
-          <strong>{{ stats.courseCount }}</strong>
-          <em>已绑定课程的素材范围</em>
+        <article class="admin-asset-stat-card">
+          <span>公开素材</span>
+          <strong>{{ stats.publicCount }}</strong>
         </article>
-        <article class="admin-manage-stat-card">
+        <article class="admin-asset-stat-card">
+          <span>私密素材</span>
+          <strong>{{ stats.privateCount }}</strong>
+        </article>
+        <article class="admin-asset-stat-card">
           <span>上传教师</span>
           <strong>{{ stats.teacherCount }}</strong>
-          <em>已参与素材沉淀的教师数量</em>
-        </article>
-        <article class="admin-manage-stat-card is-highlight">
-          <span>多媒体素材</span>
-          <strong>{{ stats.fileCount }}</strong>
-          <em>图片、音频与视频类素材数量</em>
         </article>
       </section>
 
-      <section class="admin-manage-filter-panel">
-        <div class="admin-manage-filter-panel__head">
-          <div>
-            <div class="admin-manage-panel__eyebrow">ASSET FILTER</div>
-            <h3>筛选素材</h3>
-          </div>
-          <div class="admin-manage-panel__meta">共 {{ pagination.total }} 条素材</div>
-        </div>
-
-        <form class="admin-manage-filter-form admin-manage-filter-form--resource" @submit.prevent="applySearch">
-          <label class="admin-manage-field">
+      <section class="admin-asset-card">
+        <form class="admin-asset-filter" @submit.prevent="applySearch">
+          <label>
             <span>关键词</span>
-            <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、说明、内容、文件名或教师姓名" />
+            <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、说明、教师或文件名" />
           </label>
 
-          <label class="admin-manage-field">
-            <span>所属课程</span>
+          <label>
+            <span>课程</span>
             <select v-model="filters.courseId">
               <option value="">全部课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
-                {{ course.name }}
-              </option>
+              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">{{ course.name }}</option>
             </select>
           </label>
 
-          <label class="admin-manage-field">
-            <span>素材类型</span>
+          <label>
+            <span>类型</span>
             <select v-model="filters.type">
-              <option value="all">全部素材</option>
-              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
+              <option value="all">全部类型</option>
+              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </label>
 
-          <div class="admin-manage-filter-actions">
+          <label>
+            <span>公开范围</span>
+            <select v-model="filters.visibility">
+              <option value="all">全部范围</option>
+              <option value="public">公开</option>
+              <option value="private">私密</option>
+            </select>
+          </label>
+
+          <div class="admin-asset-filter__actions">
             <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
-            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '搜索素材' }}</button>
+            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '应用筛选' }}</button>
           </div>
         </form>
       </section>
 
-      <section class="admin-manage-panel">
-        <div class="admin-manage-panel__head">
+      <section class="admin-asset-card">
+        <div class="admin-asset-card__head">
           <div>
-            <div class="admin-manage-panel__eyebrow">ASSET LIST</div>
+            <div class="admin-asset-card__eyebrow">LIST</div>
             <h3>素材列表</h3>
           </div>
-          <div class="admin-manage-panel__meta">支持预览文件类素材，并删除不合规内容</div>
+          <div class="admin-asset-card__meta">共 {{ pagination.total }} 条素材</div>
         </div>
 
-        <div v-if="assetList.length" class="asset-manage-list">
-          <article v-for="item in assetList" :key="item.id" class="asset-manage-item asset-manage-item--admin">
-            <div class="asset-manage-item__head">
+        <div v-if="assetList.length" class="admin-asset-list">
+          <article v-for="item in assetList" :key="item.id" class="admin-asset-item">
+            <div class="admin-asset-item__head">
               <div>
                 <strong>{{ item.title }}</strong>
-                <span class="teacher-dashboard-tag">{{ assetTypeLabel(item.type) }}</span>
+                <p>{{ item.teacherName }} · {{ item.courseName || '未关联课程' }}</p>
               </div>
-              <span class="asset-manage-item__time">{{ item.uploadTime }}</span>
+              <div class="admin-asset-item__tags">
+                <span class="teacher-dashboard-tag">{{ assetTypeLabel(item.type) }}</span>
+                <span :class="['admin-asset-badge', item.visibility === 'public' ? 'is-public' : 'is-private']">
+                  {{ item.visibility === 'public' ? '公开' : '私密' }}
+                </span>
+              </div>
             </div>
 
-            <p class="asset-manage-item__meta">课程：{{ item.courseName }} · 教师：{{ item.teacherName }}</p>
-            <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
-            <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
-            <p v-else class="asset-manage-item__meta">
-              {{ item.fileName || '未记录文件名' }}
+            <p class="admin-asset-item__desc">{{ item.description || item.content || '暂无素材说明' }}</p>
+            <p v-if="item.fileName" class="admin-asset-item__meta">
+              {{ item.fileName }}
               <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
             </p>
 
-            <div class="asset-manage-item__actions">
+            <div class="admin-asset-item__actions">
               <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
               <button type="button" class="course-chip admin-manage-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
                 {{ deletingId === item.id ? '删除中...' : '删除' }}
@@ -136,7 +120,7 @@
         <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材记录。</div>
 
         <section class="admin-manage-pagination">
-          <div class="admin-manage-pagination__desc">共 {{ pagination.total }} 条素材 · 当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
+          <div class="admin-manage-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="admin-manage-pagination__actions">
             <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
             <button
@@ -161,11 +145,9 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue'
 import { deleteAdminAsset, getAdminAssetList, type AdminAssetItem, type AdminAssetStats, type AdminAssetType, type AdminCourseOption } from '@/services/admin'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const loading = ref(false)
 const deletingId = ref<number | null>(null)
 const errorMessage = ref('')
@@ -175,7 +157,8 @@ const assetList = ref<AdminAssetItem[]>([])
 
 const stats = reactive<AdminAssetStats>({
   total: 0,
-  courseCount: 0,
+  publicCount: 0,
+  privateCount: 0,
   teacherCount: 0,
   fileCount: 0,
 })
@@ -184,6 +167,7 @@ const filters = reactive({
   keyword: '',
   courseId: '',
   type: 'all' as AdminAssetType | 'all',
+  visibility: 'all' as 'all' | 'public' | 'private',
 })
 
 const pagination = reactive({
@@ -194,60 +178,22 @@ const pagination = reactive({
 })
 
 const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
-  { value: 'image', label: '图片素材' },
-  { value: 'audio', label: '音频素材' },
-  { value: 'video', label: '视频素材' },
-  { value: 'text', label: '文本片段' },
-  { value: 'question', label: '题目卡片' },
-  { value: 'template', label: '页面模板' },
+  { value: 'image', label: '图片' },
+  { value: 'audio', label: '音频' },
+  { value: 'video', label: '视频' },
+  { value: 'text', label: '文本' },
+  { value: 'question', label: '题目' },
+  { value: 'template', label: '模板' },
 ]
-
-const headerText = computed(() => {
-  const name = authStore.profile?.name || authStore.profile?.username || '系统管理员'
-  return `${name}，这里统一查看教师上传的图片、音频、视频和文本类教学素材。`
-})
 
 const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
+  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
 })
 
 function normalizePage(value: unknown) {
   const page = Number(value)
   return Number.isInteger(page) && page > 0 ? page : 1
-}
-
-function syncFiltersWithRoute() {
-  filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
-  filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : ''
-  filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? (route.query.type as AdminAssetType | 'all') : 'all'
-}
-
-function updateRoute(page = 1) {
-  router.push({
-    path: '/admin/assets',
-    query: {
-      page: String(page),
-      ...(filters.keyword ? { keyword: filters.keyword } : {}),
-      ...(filters.courseId ? { courseId: filters.courseId } : {}),
-      ...(filters.type !== 'all' ? { type: filters.type } : {}),
-    },
-  })
-}
-
-function applySearch() {
-  updateRoute(1)
-}
-
-function resetFilters() {
-  filters.keyword = ''
-  filters.courseId = ''
-  filters.type = 'all'
-  updateRoute(1)
-}
-
-function changePage(page: number) {
-  updateRoute(page)
 }
 
 function clearMessages() {
@@ -260,30 +206,65 @@ function assetTypeLabel(type: AdminAssetType) {
 }
 
 function formatFileSize(size: number) {
-  if (size >= 1024 * 1024) {
-    return `${(size / 1024 / 1024).toFixed(2)} MB`
-  }
-
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(2)} MB`
   return `${(size / 1024).toFixed(2)} KB`
 }
 
 function previewAsset(path: string) {
-  if (!path) return
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
   window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
 }
 
+function syncFiltersWithRoute() {
+  filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
+  filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : ''
+  filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? (route.query.type as AdminAssetType | 'all') : 'all'
+  filters.visibility =
+    route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all'
+}
+
+function updateRoute(page = 1) {
+  void router.push({
+    path: '/admin/assets',
+    query: {
+      page: String(page),
+      ...(filters.keyword ? { keyword: filters.keyword } : {}),
+      ...(filters.courseId ? { courseId: filters.courseId } : {}),
+      ...(filters.type !== 'all' ? { type: filters.type } : {}),
+      ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
+    },
+  })
+}
+
+function applySearch() {
+  updateRoute(1)
+}
+
+function resetFilters() {
+  filters.keyword = ''
+  filters.courseId = ''
+  filters.type = 'all'
+  filters.visibility = 'all'
+  updateRoute(1)
+}
+
+function changePage(page: number) {
+  updateRoute(page)
+}
+
 async function removeAsset(item: AdminAssetItem) {
   clearMessages()
+
   if (!window.confirm(`确认删除素材“${item.title}”吗？`)) {
     return
   }
 
   deletingId.value = item.id
+
   try {
     await deleteAdminAsset(item.id)
-    successMessage.value = `素材“${item.title}”已删除。`
     await loadAssets()
+    successMessage.value = `素材“${item.title}”已删除`
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '素材删除失败'
   } finally {
@@ -303,12 +284,14 @@ async function loadAssets() {
       keyword: filters.keyword,
       courseId: filters.courseId,
       type: filters.type,
+      visibility: filters.visibility,
     })
 
     courseOptions.value = data.filters.courses
     assetList.value = data.list
     stats.total = data.stats.total
-    stats.courseCount = data.stats.courseCount
+    stats.publicCount = data.stats.publicCount
+    stats.privateCount = data.stats.privateCount
     stats.teacherCount = data.stats.teacherCount
     stats.fileCount = data.stats.fileCount
     pagination.page = data.pagination.page
@@ -319,7 +302,8 @@ async function loadAssets() {
     courseOptions.value = []
     assetList.value = []
     stats.total = 0
-    stats.courseCount = 0
+    stats.publicCount = 0
+    stats.privateCount = 0
     stats.teacherCount = 0
     stats.fileCount = 0
     pagination.page = 1
@@ -340,3 +324,171 @@ watch(
   { immediate: true },
 )
 </script>
+
+<style scoped lang="scss">
+.admin-asset-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-asset-header__eyebrow,
+.admin-asset-card__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #6b6f97;
+}
+
+.admin-asset-header h2,
+.admin-asset-card h3 {
+  margin: 8px 0 0;
+  color: #1e2350;
+}
+
+.admin-asset-header p {
+  margin-top: 10px;
+  color: #69709a;
+  line-height: 1.7;
+}
+
+.admin-asset-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-asset-stat-card,
+.admin-asset-card {
+  padding: 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(34, 42, 92, 0.08);
+  box-shadow: 0 14px 30px rgba(28, 38, 86, 0.08);
+}
+
+.admin-asset-stat-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 30px;
+  color: #1e2350;
+}
+
+.admin-asset-filter {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 14px;
+}
+
+.admin-asset-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-asset-filter input,
+.admin-asset-filter select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 42, 92, 0.12);
+  background: #f7f8fd;
+}
+
+.admin-asset-filter__actions {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.admin-asset-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.admin-asset-card__meta {
+  color: #7780a5;
+  font-size: 13px;
+}
+
+.admin-asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-asset-item {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #f7f8fd;
+}
+
+.admin-asset-item__head,
+.admin-asset-item__actions,
+.admin-asset-item__tags {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-asset-item__head {
+  justify-content: space-between;
+}
+
+.admin-asset-item__desc,
+.admin-asset-item__meta {
+  margin-top: 12px;
+  color: #677097;
+  line-height: 1.7;
+}
+
+.admin-asset-item__actions {
+  margin-top: 14px;
+}
+
+.admin-asset-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-asset-badge.is-public {
+  background: rgba(33, 134, 98, 0.14);
+  color: #1f7d5a;
+}
+
+.admin-asset-badge.is-private {
+  background: rgba(145, 109, 34, 0.12);
+  color: #8c651d;
+}
+
+@media (max-width: 1100px) {
+  .admin-asset-stats,
+  .admin-asset-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-asset-filter__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-asset-stats,
+  .admin-asset-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-asset-item__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>

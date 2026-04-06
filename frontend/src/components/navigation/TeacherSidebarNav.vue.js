@@ -2,12 +2,10 @@ import { useRouter } from 'vue-router';
 const __VLS_props = defineProps();
 const router = useRouter();
 const menuItems = [
-    { key: 'home', label: '总览首页', path: '/teacher' },
-    { key: 'materials', label: '资源上传', path: '/teacher/materials' },
-    { key: 'assets', label: '素材库', path: '/teacher/assets' },
-    { key: 'preps', label: '备课单管理', path: '/teacher/preps' },
-    { key: 'resources', label: '我的资源', path: '/teacher/resources' },
-    { key: 'messages', label: '教学交流', path: '/teacher/messages' },
+    { key: 'home', label: '教师首页', path: '/teacher' },
+    { key: 'assets', label: '我的素材', path: '/teacher/assets' },
+    { key: 'preps', label: '备课单', path: '/teacher/preps' },
+    { key: 'coursewares', label: '在线课件', path: '/teacher/coursewares' },
     { key: 'profile', label: '个人资料', path: '/teacher/profile' },
 ];
 function handleNavigate(path) {

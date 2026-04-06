@@ -1,59 +1,97 @@
 <template>
-  <main class="teacher-dashboard-page asset-page">
+  <main class="teacher-dashboard-page">
     <aside class="teacher-dashboard-sidebar">
       <div>
-        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER WORKSPACE</div>
+        <div class="teacher-dashboard-sidebar__eyebrow">TEACHER CENTER</div>
         <h1>教师中心</h1>
       </div>
 
       <TeacherSidebarNav active="assets" />
-      <nav v-if="false" class="teacher-dashboard-nav">
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher')">总览首页</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/materials')">资源上传</button>
-        <button type="button" class="teacher-dashboard-nav__item is-active">素材库</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/resources')">我的资源</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/profile')">个人资料</button>
-        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/teacher/preps')">备课单管理</button>
-      </nav>
     </aside>
 
     <section class="teacher-dashboard-main asset-manage-main">
-      <header class="my-resources-head">
+      <header class="teacher-dashboard-head">
         <div>
-          <div class="my-resources-head__eyebrow">ASSET LIBRARY</div>
-          <h2>教师素材库</h2>
-          <p>{{ headerText }}</p>
+          <div class="teacher-dashboard-head__eyebrow">MY ASSETS</div>
+          <h2>我的素材</h2>
+          <p>素材上传不再强制关联课程，可选择公开或私密；公开素材会展示到前台素材库页面。</p>
+        </div>
+
+        <div class="teacher-dashboard-head__actions">
+          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/assets')">查看前台素材库</button>
         </div>
       </header>
 
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success my-resources-feedback">{{ successMessage }}</p>
 
-      <section class="my-resources-stats">
-        <article class="my-resources-stat-card">
+      <section class="teacher-dashboard-metrics">
+        <article class="teacher-dashboard-metric">
           <span>素材总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前可管理的全部素材</em>
+          <em>当前教师名下全部素材</em>
         </article>
-        <article class="my-resources-stat-card">
-          <span>图片素材</span>
-          <strong>{{ stats.imageCount }}</strong>
-          <em>插图、封面与课堂配图</em>
+        <article class="teacher-dashboard-metric">
+          <span>公开素材</span>
+          <strong>{{ stats.publicCount }}</strong>
+          <em>可在前台素材库中展示</em>
         </article>
-        <article class="my-resources-stat-card">
-          <span>音视频素材</span>
-          <strong>{{ stats.audioCount + stats.videoCount }}</strong>
-          <em>音频讲解、演示视频与课堂视频</em>
+        <article class="teacher-dashboard-metric">
+          <span>私密素材</span>
+          <strong>{{ stats.privateCount }}</strong>
+          <em>仅教师本人和管理员可见</em>
         </article>
-        <article class="my-resources-stat-card is-highlight">
-          <span>文本类素材</span>
-          <strong>{{ stats.contentCount }}</strong>
-          <em>文本片段、题目卡片、页面模板</em>
+        <article class="teacher-dashboard-metric">
+          <span>图片 / 音视频 / 文本</span>
+          <strong>{{ `${stats.imageCount} / ${stats.audioCount + stats.videoCount} / ${stats.contentCount}` }}</strong>
+          <em>覆盖常用教学素材类型</em>
         </article>
       </section>
 
-      <section class="asset-manage-card">
-        <div class="asset-manage-card__head">
+      <article class="my-resources-filter-panel">
+        <div class="my-resources-filter-panel__head">
+          <div>
+            <div class="my-resources-filter-panel__eyebrow">FILTER</div>
+            <h3>筛选素材</h3>
+          </div>
+          <div class="my-resources-panel__meta">共 {{ pagination.total }} 条素材</div>
+        </div>
+
+        <form class="my-resources-filter-form" @submit.prevent="applySearch">
+          <label class="my-resources-field">
+            <span>关键词</span>
+            <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、说明、内容或文件名" />
+          </label>
+
+          <label class="my-resources-field">
+            <span>素材类型</span>
+            <select v-model="filters.type">
+              <option value="all">全部类型</option>
+              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="my-resources-field">
+            <span>公开范围</span>
+            <select v-model="filters.visibility">
+              <option value="all">全部范围</option>
+              <option v-for="option in visibilityOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <div class="my-resources-filter-actions">
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
+            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '应用筛选' }}</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="my-resources-panel">
+        <div class="my-resources-panel__head">
           <div>
             <div class="my-resources-panel__eyebrow">ASSET EDITOR</div>
             <h3>{{ editingId ? '编辑素材' : '新增素材' }}</h3>
@@ -72,11 +110,10 @@
           </label>
 
           <label class="my-resources-field">
-            <span>所属课程</span>
-            <select v-model="editorForm.courseId">
-              <option value="">请选择所属课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
-                {{ course.name }}
+            <span>公开范围</span>
+            <select v-model="editorForm.visibility">
+              <option v-for="option in visibilityOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
               </option>
             </select>
           </label>
@@ -88,17 +125,12 @@
 
           <label class="my-resources-field asset-manage-form__full">
             <span>素材说明</span>
-            <textarea v-model.trim="editorForm.description" rows="3" maxlength="2000" placeholder="补充素材用途、适用章节或课堂使用说明"></textarea>
+            <textarea v-model.trim="editorForm.description" rows="3" maxlength="2000" placeholder="补充素材用途、使用场景或备注说明"></textarea>
           </label>
 
           <label v-if="isContentType" class="my-resources-field asset-manage-form__full">
             <span>素材内容</span>
-            <textarea
-              v-model.trim="editorForm.content"
-              rows="6"
-              maxlength="5000"
-              :placeholder="contentPlaceholder"
-            ></textarea>
+            <textarea v-model.trim="editorForm.content" rows="7" maxlength="5000" :placeholder="contentPlaceholder"></textarea>
           </label>
 
           <label v-else class="my-resources-field asset-manage-form__full">
@@ -119,60 +151,18 @@
               <span class="asset-upload-picker__name">{{ fileNameText }}</span>
             </div>
             <small class="asset-manage-field-tip">
-              {{ editingId ? '编辑素材时暂不支持替换文件，可保留原文件继续修改标题和说明。' : uploadTip }}
+              {{ editingId ? '编辑文件类素材时会保留原文件，仅修改标题、说明和公开范围。' : uploadTip }}
             </small>
           </label>
 
           <div class="my-resources-filter-actions">
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="resetEditor">重置</button>
             <button type="submit" class="auth-btn" :disabled="saving">
               {{ saving ? '提交中...' : editingId ? '保存素材' : '创建素材' }}
             </button>
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="resetEditor">重置</button>
           </div>
         </form>
-      </section>
-
-      <section class="my-resources-filter-panel">
-        <div class="my-resources-filter-panel__head">
-          <div>
-            <div class="my-resources-filter-panel__eyebrow">ASSET FILTER</div>
-            <h3>筛选素材</h3>
-          </div>
-          <div class="my-resources-panel__meta">共 {{ pagination.total }} 条素材</div>
-        </div>
-
-        <form class="my-resources-filter-form" @submit.prevent="applySearch">
-          <label class="my-resources-field">
-            <span>关键词</span>
-            <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、说明、内容或文件名" />
-          </label>
-
-          <label class="my-resources-field">
-            <span>所属课程</span>
-            <select v-model="filters.courseId">
-              <option value="">全部课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
-                {{ course.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="my-resources-field">
-            <span>素材类型</span>
-            <select v-model="filters.type">
-              <option value="all">全部素材</option>
-              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
-
-          <div class="my-resources-filter-actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
-            <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '搜索素材' }}</button>
-          </div>
-        </form>
-      </section>
+      </article>
 
       <section class="my-resources-panel">
         <div class="my-resources-panel__head">
@@ -188,12 +178,14 @@
             <div class="asset-manage-item__head">
               <div>
                 <strong>{{ item.title }}</strong>
-                <span class="teacher-dashboard-tag">{{ assetTypeLabel(item.type) }}</span>
+                <span :class="['teacher-dashboard-tag', item.visibility === 'public' ? 'is-video' : 'is-material']">
+                  {{ item.visibility === 'public' ? '公开' : '私密' }}
+                </span>
               </div>
               <span class="asset-manage-item__time">{{ item.uploadTime }}</span>
             </div>
 
-            <p class="asset-manage-item__meta">课程：{{ item.courseName }}</p>
+            <p class="asset-manage-item__meta">{{ assetTypeLabel(item.type) }}</p>
             <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
             <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
             <p v-else class="asset-manage-item__meta">
@@ -210,10 +202,10 @@
             </div>
           </article>
         </div>
-        <div v-else-if="!loading" class="course-detail-empty">当前还没有素材记录，可以先新增一条素材。</div>
+        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材，可以先新增一条。</div>
 
         <section class="course-pagination my-resources-pagination">
-          <div class="course-pagination__desc">共 {{ pagination.total }} 条素材记录 · 当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
+          <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="course-pagination__actions">
             <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
             <button
@@ -245,14 +237,12 @@ import {
   type TeacherAssetItem,
   type TeacherAssetStats,
   type TeacherAssetType,
-  type TeacherCourseOption,
+  type TeacherAssetVisibility,
   updateTeacherAssetDetail,
 } from '@/services/teacher'
-import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
 const deletingId = ref<number | null>(null)
@@ -262,11 +252,12 @@ const successMessage = ref('')
 const selectedFile = ref<File | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const fileInputKey = ref(0)
-const courseOptions = ref<TeacherCourseOption[]>([])
 const assetList = ref<TeacherAssetItem[]>([])
 
 const stats = reactive<TeacherAssetStats>({
   total: 0,
+  publicCount: 0,
+  privateCount: 0,
   imageCount: 0,
   audioCount: 0,
   videoCount: 0,
@@ -275,13 +266,13 @@ const stats = reactive<TeacherAssetStats>({
 
 const filters = reactive({
   keyword: '',
-  courseId: '',
   type: 'all' as TeacherAssetType | 'all',
+  visibility: 'all' as TeacherAssetVisibility | 'all',
 })
 
 const editorForm = reactive({
   type: 'image' as TeacherAssetType,
-  courseId: '',
+  visibility: 'private' as TeacherAssetVisibility,
   title: '',
   description: '',
   content: '',
@@ -300,79 +291,49 @@ const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
   { value: 'video', label: '视频素材' },
   { value: 'text', label: '文本片段' },
   { value: 'question', label: '题目卡片' },
-  { value: 'template', label: '页面模板' },
+  { value: 'template', label: '模板素材' },
+]
+
+const visibilityOptions: Array<{ value: TeacherAssetVisibility; label: string }> = [
+  { value: 'private', label: '私密' },
+  { value: 'public', label: '公开' },
 ]
 
 const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type))
 
 const fileAccept = computed(() => {
-  if (editorForm.type === 'audio') {
-    return '.mp3,.wav,.ogg,.m4a'
-  }
-
-  if (editorForm.type === 'video') {
-    return '.mp4,.mov'
-  }
-
-  return '.jpg,.jpeg,.png,.webp,.gif'
+  if (editorForm.type === 'audio') return '.mp3,.wav,.ogg,.m4a'
+  if (editorForm.type === 'video') return '.mp4,.mov,.avi,.webm'
+  return '.jpg,.jpeg,.png,.gif,.webp'
 })
 
 const uploadLabel = computed(() => {
-  if (editorForm.type === 'audio') {
-    return '上传音频'
-  }
-
-  if (editorForm.type === 'video') {
-    return '上传视频'
-  }
-
-  return '上传图片'
+  if (editorForm.type === 'audio') return '上传音频文件'
+  if (editorForm.type === 'video') return '上传视频文件'
+  return '上传图片文件'
 })
 
 const uploadTip = computed(() => {
-  if (editorForm.type === 'audio') {
-    return '支持 MP3、WAV、OGG、M4A 格式，单文件不超过 500MB。'
-  }
-
-  if (editorForm.type === 'video') {
-    return '支持 MP4、MOV 格式，单文件不超过 500MB。'
-  }
-
-  return '支持 JPG、JPEG、PNG、WEBP、GIF 格式，单文件不超过 500MB。'
+  if (editorForm.type === 'audio') return '支持 MP3、WAV、OGG、M4A 格式。'
+  if (editorForm.type === 'video') return '支持 MP4、MOV、AVI、WEBM 格式。'
+  return '支持 JPG、PNG、GIF、WEBP 格式。'
 })
 
 const fileNameText = computed(() => {
-  if (selectedFile.value) {
-    return selectedFile.value.name
-  }
-
-  if (editingId.value) {
-    return '编辑状态下保留原文件'
-  }
-
-  return '未选择任何文件'
+  if (selectedFile.value) return selectedFile.value.name
+  if (editingId.value) return '编辑状态下保留原文件'
+  return '未选择文件'
 })
 
 const contentPlaceholder = computed(() => {
-  if (editorForm.type === 'question') {
-    return '请输入题干、选项、答案要点或讲解内容'
-  }
-
-  if (editorForm.type === 'template') {
-    return '请输入页面模板结构、布局说明或使用建议'
-  }
-
-  return '请输入可直接复用的文本片段内容'
-})
-
-const headerText = computed(() => {
-  const name = authStore.profile?.name || authStore.profile?.username || '教师用户'
-  return `${name}，这里统一管理图片、音频、视频和文本类教学素材，方便后续课程资源与课件复用。`
+  if (editorForm.type === 'question') return '请输入题干、答案要点或解析'
+  if (editorForm.type === 'template') return '请输入模板结构或使用说明'
+  return '请输入可复用的文本内容'
 })
 
 const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
+  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
 })
 
 function normalizePage(value: unknown) {
@@ -385,16 +346,13 @@ function clearMessages() {
   successMessage.value = ''
 }
 
-function formatFileSize(size: number) {
-  if (size >= 1024 * 1024) {
-    return `${(size / 1024 / 1024).toFixed(2)} MB`
-  }
-
-  return `${(size / 1024).toFixed(2)} KB`
-}
-
 function assetTypeLabel(type: TeacherAssetType) {
   return assetTypeOptions.find((item) => item.value === type)?.label || type
+}
+
+function formatFileSize(size: number) {
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(2)} MB`
+  return `${(size / 1024).toFixed(2)} KB`
 }
 
 function openFilePicker() {
@@ -403,10 +361,20 @@ function openFilePicker() {
   }
 }
 
+function handleFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  selectedFile.value = target.files?.[0] || null
+}
+
+function previewAsset(path: string) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+  window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
+}
+
 function resetEditor() {
   editingId.value = null
   editorForm.type = 'image'
-  editorForm.courseId = ''
+  editorForm.visibility = 'private'
   editorForm.title = ''
   editorForm.description = ''
   editorForm.content = ''
@@ -416,18 +384,19 @@ function resetEditor() {
 
 function syncFiltersWithRoute() {
   filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
-  filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : ''
   filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? (route.query.type as TeacherAssetType | 'all') : 'all'
+  filters.visibility =
+    route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all'
 }
 
 function updateRoute(page = 1) {
-  router.push({
+  void router.push({
     path: '/teacher/assets',
     query: {
       page: String(page),
       ...(filters.keyword ? { keyword: filters.keyword } : {}),
-      ...(filters.courseId ? { courseId: filters.courseId } : {}),
       ...(filters.type !== 'all' ? { type: filters.type } : {}),
+      ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
     },
   })
 }
@@ -438,8 +407,8 @@ function applySearch() {
 
 function resetFilters() {
   filters.keyword = ''
-  filters.courseId = ''
   filters.type = 'all'
+  filters.visibility = 'all'
   updateRoute(1)
 }
 
@@ -447,24 +416,14 @@ function changePage(page: number) {
   updateRoute(page)
 }
 
-function handleFileChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  selectedFile.value = target.files?.[0] || null
-}
-
-function previewAsset(path: string) {
-  if (!path) return
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-  window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
-}
-
 async function startEdit(assetId: number) {
   clearMessages()
+
   try {
     const detail = await getTeacherAssetDetail(assetId)
     editingId.value = assetId
     editorForm.type = detail.type
-    editorForm.courseId = String(detail.courseId)
+    editorForm.visibility = detail.visibility
     editorForm.title = detail.title
     editorForm.description = detail.description
     editorForm.content = detail.content
@@ -478,18 +437,18 @@ async function startEdit(assetId: number) {
 async function submitAsset() {
   clearMessages()
 
-  if (!editorForm.courseId || !editorForm.title) {
-    errorMessage.value = '请完整填写素材类型、所属课程和素材标题'
+  if (!editorForm.title) {
+    errorMessage.value = '请先填写素材标题'
     return
   }
 
   if (isContentType.value && !editorForm.content) {
-    errorMessage.value = '当前素材类型必须填写素材内容'
+    errorMessage.value = '当前素材类型需要填写素材内容'
     return
   }
 
   if (!isContentType.value && !editingId.value && !selectedFile.value) {
-    errorMessage.value = '当前素材类型必须上传文件'
+    errorMessage.value = '请先选择要上传的文件'
     return
   }
 
@@ -498,26 +457,27 @@ async function submitAsset() {
   try {
     if (editingId.value) {
       const result = await updateTeacherAssetDetail(editingId.value, {
-        courseId: editorForm.courseId,
+        visibility: editorForm.visibility,
         title: editorForm.title,
         description: editorForm.description,
         content: editorForm.content,
       })
-      successMessage.value = `素材“${result.title}”已更新。`
+      resetEditor()
+      await loadAssets()
+      successMessage.value = `素材“${result.title}”已更新`
     } else {
       const result = await createTeacherAsset({
         type: editorForm.type,
-        courseId: editorForm.courseId,
+        visibility: editorForm.visibility,
         title: editorForm.title,
         description: editorForm.description,
         content: editorForm.content,
         file: selectedFile.value,
       })
-      successMessage.value = `素材“${result.title}”已创建。`
+      resetEditor()
+      await loadAssets()
+      successMessage.value = `素材“${result.title}”已创建`
     }
-
-    resetEditor()
-    await loadAssets()
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '素材保存失败'
   } finally {
@@ -527,18 +487,18 @@ async function submitAsset() {
 
 async function removeAsset(item: TeacherAssetItem) {
   clearMessages()
+
   if (!window.confirm(`确认删除素材“${item.title}”吗？`)) {
     return
   }
 
   deletingId.value = item.id
+
   try {
     await deleteTeacherAssetDetail(item.id)
-    successMessage.value = `素材“${item.title}”已删除。`
-    if (editingId.value === item.id) {
-      resetEditor()
-    }
+    if (editingId.value === item.id) resetEditor()
     await loadAssets()
+    successMessage.value = `素材“${item.title}”已删除`
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '素材删除失败'
   } finally {
@@ -556,13 +516,14 @@ async function loadAssets() {
       page: normalizePage(route.query.page),
       pageSize: 6,
       keyword: filters.keyword,
-      courseId: filters.courseId,
       type: filters.type,
+      visibility: filters.visibility,
     })
 
-    courseOptions.value = data.filters.courses
     assetList.value = data.list
     stats.total = data.stats.total
+    stats.publicCount = data.stats.publicCount
+    stats.privateCount = data.stats.privateCount
     stats.imageCount = data.stats.imageCount
     stats.audioCount = data.stats.audioCount
     stats.videoCount = data.stats.videoCount
@@ -572,9 +533,10 @@ async function loadAssets() {
     pagination.total = data.pagination.total
     pagination.totalPages = data.pagination.totalPages
   } catch (error: any) {
-    courseOptions.value = []
     assetList.value = []
     stats.total = 0
+    stats.publicCount = 0
+    stats.privateCount = 0
     stats.imageCount = 0
     stats.audioCount = 0
     stats.videoCount = 0
@@ -583,7 +545,7 @@ async function loadAssets() {
     pagination.pageSize = 6
     pagination.total = 0
     pagination.totalPages = 0
-    errorMessage.value = error?.response?.data?.message || '素材库加载失败'
+    errorMessage.value = error?.response?.data?.message || '素材列表加载失败'
   } finally {
     loading.value = false
   }

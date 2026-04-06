@@ -2,10 +2,8 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
 import { createTeacherAsset, deleteTeacherAssetDetail, getTeacherAssetDetail, getTeacherAssets, updateTeacherAssetDetail, } from '@/services/teacher';
-import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
-const authStore = useAuthStore();
 const loading = ref(false);
 const saving = ref(false);
 const deletingId = ref(null);
@@ -15,10 +13,11 @@ const successMessage = ref('');
 const selectedFile = ref(null);
 const fileInputRef = ref(null);
 const fileInputKey = ref(0);
-const courseOptions = ref([]);
 const assetList = ref([]);
 const stats = reactive({
     total: 0,
+    publicCount: 0,
+    privateCount: 0,
     imageCount: 0,
     audioCount: 0,
     videoCount: 0,
@@ -26,12 +25,12 @@ const stats = reactive({
 });
 const filters = reactive({
     keyword: '',
-    courseId: '',
     type: 'all',
+    visibility: 'all',
 });
 const editorForm = reactive({
     type: 'image',
-    courseId: '',
+    visibility: 'private',
     title: '',
     description: '',
     content: '',
@@ -48,61 +47,51 @@ const assetTypeOptions = [
     { value: 'video', label: '视频素材' },
     { value: 'text', label: '文本片段' },
     { value: 'question', label: '题目卡片' },
-    { value: 'template', label: '页面模板' },
+    { value: 'template', label: '模板素材' },
+];
+const visibilityOptions = [
+    { value: 'private', label: '私密' },
+    { value: 'public', label: '公开' },
 ];
 const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type));
 const fileAccept = computed(() => {
-    if (editorForm.type === 'audio') {
+    if (editorForm.type === 'audio')
         return '.mp3,.wav,.ogg,.m4a';
-    }
-    if (editorForm.type === 'video') {
-        return '.mp4,.mov';
-    }
-    return '.jpg,.jpeg,.png,.webp,.gif';
+    if (editorForm.type === 'video')
+        return '.mp4,.mov,.avi,.webm';
+    return '.jpg,.jpeg,.png,.gif,.webp';
 });
 const uploadLabel = computed(() => {
-    if (editorForm.type === 'audio') {
-        return '上传音频';
-    }
-    if (editorForm.type === 'video') {
-        return '上传视频';
-    }
-    return '上传图片';
+    if (editorForm.type === 'audio')
+        return '上传音频文件';
+    if (editorForm.type === 'video')
+        return '上传视频文件';
+    return '上传图片文件';
 });
 const uploadTip = computed(() => {
-    if (editorForm.type === 'audio') {
-        return '支持 MP3、WAV、OGG、M4A 格式，单文件不超过 500MB。';
-    }
-    if (editorForm.type === 'video') {
-        return '支持 MP4、MOV 格式，单文件不超过 500MB。';
-    }
-    return '支持 JPG、JPEG、PNG、WEBP、GIF 格式，单文件不超过 500MB。';
+    if (editorForm.type === 'audio')
+        return '支持 MP3、WAV、OGG、M4A 格式。';
+    if (editorForm.type === 'video')
+        return '支持 MP4、MOV、AVI、WEBM 格式。';
+    return '支持 JPG、PNG、GIF、WEBP 格式。';
 });
 const fileNameText = computed(() => {
-    if (selectedFile.value) {
+    if (selectedFile.value)
         return selectedFile.value.name;
-    }
-    if (editingId.value) {
+    if (editingId.value)
         return '编辑状态下保留原文件';
-    }
-    return '未选择任何文件';
+    return '未选择文件';
 });
 const contentPlaceholder = computed(() => {
-    if (editorForm.type === 'question') {
-        return '请输入题干、选项、答案要点或讲解内容';
-    }
-    if (editorForm.type === 'template') {
-        return '请输入页面模板结构、布局说明或使用建议';
-    }
-    return '请输入可直接复用的文本片段内容';
-});
-const headerText = computed(() => {
-    const name = authStore.profile?.name || authStore.profile?.username || '教师用户';
-    return `${name}，这里统一管理图片、音频、视频和文本类教学素材，方便后续课程资源与课件复用。`;
+    if (editorForm.type === 'question')
+        return '请输入题干、答案要点或解析';
+    if (editorForm.type === 'template')
+        return '请输入模板结构或使用说明';
+    return '请输入可复用的文本内容';
 });
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
+    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
 });
 function normalizePage(value) {
     const page = Number(value);
@@ -112,24 +101,31 @@ function clearMessages() {
     errorMessage.value = '';
     successMessage.value = '';
 }
-function formatFileSize(size) {
-    if (size >= 1024 * 1024) {
-        return `${(size / 1024 / 1024).toFixed(2)} MB`;
-    }
-    return `${(size / 1024).toFixed(2)} KB`;
-}
 function assetTypeLabel(type) {
     return assetTypeOptions.find((item) => item.value === type)?.label || type;
+}
+function formatFileSize(size) {
+    if (size >= 1024 * 1024)
+        return `${(size / 1024 / 1024).toFixed(2)} MB`;
+    return `${(size / 1024).toFixed(2)} KB`;
 }
 function openFilePicker() {
     if (!editingId.value) {
         fileInputRef.value?.click();
     }
 }
+function handleFileChange(event) {
+    const target = event.target;
+    selectedFile.value = target.files?.[0] || null;
+}
+function previewAsset(path) {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
+}
 function resetEditor() {
     editingId.value = null;
     editorForm.type = 'image';
-    editorForm.courseId = '';
+    editorForm.visibility = 'private';
     editorForm.title = '';
     editorForm.description = '';
     editorForm.content = '';
@@ -138,17 +134,18 @@ function resetEditor() {
 }
 function syncFiltersWithRoute() {
     filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
-    filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : '';
     filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? route.query.type : 'all';
+    filters.visibility =
+        route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all';
 }
 function updateRoute(page = 1) {
-    router.push({
+    void router.push({
         path: '/teacher/assets',
         query: {
             page: String(page),
             ...(filters.keyword ? { keyword: filters.keyword } : {}),
-            ...(filters.courseId ? { courseId: filters.courseId } : {}),
             ...(filters.type !== 'all' ? { type: filters.type } : {}),
+            ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
         },
     });
 }
@@ -157,22 +154,12 @@ function applySearch() {
 }
 function resetFilters() {
     filters.keyword = '';
-    filters.courseId = '';
     filters.type = 'all';
+    filters.visibility = 'all';
     updateRoute(1);
 }
 function changePage(page) {
     updateRoute(page);
-}
-function handleFileChange(event) {
-    const target = event.target;
-    selectedFile.value = target.files?.[0] || null;
-}
-function previewAsset(path) {
-    if (!path)
-        return;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-    window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
 }
 async function startEdit(assetId) {
     clearMessages();
@@ -180,7 +167,7 @@ async function startEdit(assetId) {
         const detail = await getTeacherAssetDetail(assetId);
         editingId.value = assetId;
         editorForm.type = detail.type;
-        editorForm.courseId = String(detail.courseId);
+        editorForm.visibility = detail.visibility;
         editorForm.title = detail.title;
         editorForm.description = detail.description;
         editorForm.content = detail.content;
@@ -193,42 +180,44 @@ async function startEdit(assetId) {
 }
 async function submitAsset() {
     clearMessages();
-    if (!editorForm.courseId || !editorForm.title) {
-        errorMessage.value = '请完整填写素材类型、所属课程和素材标题';
+    if (!editorForm.title) {
+        errorMessage.value = '请先填写素材标题';
         return;
     }
     if (isContentType.value && !editorForm.content) {
-        errorMessage.value = '当前素材类型必须填写素材内容';
+        errorMessage.value = '当前素材类型需要填写素材内容';
         return;
     }
     if (!isContentType.value && !editingId.value && !selectedFile.value) {
-        errorMessage.value = '当前素材类型必须上传文件';
+        errorMessage.value = '请先选择要上传的文件';
         return;
     }
     saving.value = true;
     try {
         if (editingId.value) {
             const result = await updateTeacherAssetDetail(editingId.value, {
-                courseId: editorForm.courseId,
+                visibility: editorForm.visibility,
                 title: editorForm.title,
                 description: editorForm.description,
                 content: editorForm.content,
             });
-            successMessage.value = `素材“${result.title}”已更新。`;
+            resetEditor();
+            await loadAssets();
+            successMessage.value = `素材“${result.title}”已更新`;
         }
         else {
             const result = await createTeacherAsset({
                 type: editorForm.type,
-                courseId: editorForm.courseId,
+                visibility: editorForm.visibility,
                 title: editorForm.title,
                 description: editorForm.description,
                 content: editorForm.content,
                 file: selectedFile.value,
             });
-            successMessage.value = `素材“${result.title}”已创建。`;
+            resetEditor();
+            await loadAssets();
+            successMessage.value = `素材“${result.title}”已创建`;
         }
-        resetEditor();
-        await loadAssets();
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '素材保存失败';
@@ -245,11 +234,10 @@ async function removeAsset(item) {
     deletingId.value = item.id;
     try {
         await deleteTeacherAssetDetail(item.id);
-        successMessage.value = `素材“${item.title}”已删除。`;
-        if (editingId.value === item.id) {
+        if (editingId.value === item.id)
             resetEditor();
-        }
         await loadAssets();
+        successMessage.value = `素材“${item.title}”已删除`;
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '素材删除失败';
@@ -267,12 +255,13 @@ async function loadAssets() {
             page: normalizePage(route.query.page),
             pageSize: 6,
             keyword: filters.keyword,
-            courseId: filters.courseId,
             type: filters.type,
+            visibility: filters.visibility,
         });
-        courseOptions.value = data.filters.courses;
         assetList.value = data.list;
         stats.total = data.stats.total;
+        stats.publicCount = data.stats.publicCount;
+        stats.privateCount = data.stats.privateCount;
         stats.imageCount = data.stats.imageCount;
         stats.audioCount = data.stats.audioCount;
         stats.videoCount = data.stats.videoCount;
@@ -283,9 +272,10 @@ async function loadAssets() {
         pagination.totalPages = data.pagination.totalPages;
     }
     catch (error) {
-        courseOptions.value = [];
         assetList.value = [];
         stats.total = 0;
+        stats.publicCount = 0;
+        stats.privateCount = 0;
         stats.imageCount = 0;
         stats.audioCount = 0;
         stats.videoCount = 0;
@@ -294,7 +284,7 @@ async function loadAssets() {
         pagination.pageSize = 6;
         pagination.total = 0;
         pagination.totalPages = 0;
-        errorMessage.value = error?.response?.data?.message || '素材库加载失败';
+        errorMessage.value = error?.response?.data?.message || '素材列表加载失败';
     }
     finally {
         loading.value = false;
@@ -308,7 +298,7 @@ const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "teacher-dashboard-page asset-page" },
+    ...{ class: "teacher-dashboard-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
     ...{ class: "teacher-dashboard-sidebar" },
@@ -326,73 +316,28 @@ const __VLS_0 = __VLS_asFunctionalComponent(TeacherSidebarNav, new TeacherSideba
 const __VLS_1 = __VLS_0({
     active: "assets",
 }, ...__VLS_functionalComponentArgsRest(__VLS_0));
-if (false) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-        ...{ class: "teacher-dashboard-nav" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/materials');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item is-active" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/resources');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/profile');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(false))
-                    return;
-                __VLS_ctx.router.push('/teacher/preps');
-            } },
-        type: "button",
-        ...{ class: "teacher-dashboard-nav__item" },
-    });
-}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-main asset-manage-main" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
-    ...{ class: "my-resources-head" },
+    ...{ class: "teacher-dashboard-head" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-head__eyebrow" },
+    ...{ class: "teacher-dashboard-head__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-(__VLS_ctx.headerText);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-dashboard-head__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/assets');
+        } },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+});
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
@@ -406,41 +351,44 @@ if (__VLS_ctx.successMessage) {
     (__VLS_ctx.successMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "my-resources-stats" },
+    ...{ class: "teacher-dashboard-metrics" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "my-resources-stat-card" },
+    ...{ class: "teacher-dashboard-metric" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.stats.total);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "my-resources-stat-card" },
+    ...{ class: "teacher-dashboard-metric" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.imageCount);
+(__VLS_ctx.stats.publicCount);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "my-resources-stat-card" },
+    ...{ class: "teacher-dashboard-metric" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.audioCount + __VLS_ctx.stats.videoCount);
+(__VLS_ctx.stats.privateCount);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "my-resources-stat-card is-highlight" },
+    ...{ class: "teacher-dashboard-metric" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.contentCount);
+(`${__VLS_ctx.stats.imageCount} / ${__VLS_ctx.stats.audioCount + __VLS_ctx.stats.videoCount} / ${__VLS_ctx.stats.contentCount}`);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "asset-manage-card" },
+    ...{ class: "teacher-dashboard-grid teacher-dashboard-grid--middle" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "my-resources-panel" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "asset-manage-card__head" },
+    ...{ class: "my-resources-panel__head" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -479,17 +427,14 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.editorForm.courseId),
+    value: (__VLS_ctx.editorForm.visibility),
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-    value: "",
-});
-for (const [course] of __VLS_getVForSourceType((__VLS_ctx.courseOptions))) {
+for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (course.id),
-        value: (String(course.id)),
+        key: (option.value),
+        value: (option.value),
     });
-    (course.name);
+    (option.label);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "my-resources-field asset-manage-form__full" },
@@ -509,7 +454,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicEleme
     value: (__VLS_ctx.editorForm.description),
     rows: "3",
     maxlength: "2000",
-    placeholder: "补充素材用途、适用章节或课堂使用说明",
+    placeholder: "补充素材用途、使用场景或备注说明",
 });
 if (__VLS_ctx.isContentType) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
@@ -518,7 +463,7 @@ if (__VLS_ctx.isContentType) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
         value: (__VLS_ctx.editorForm.content),
-        rows: "6",
+        rows: "7",
         maxlength: "5000",
         placeholder: (__VLS_ctx.contentPlaceholder),
     });
@@ -556,10 +501,16 @@ else {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.small, __VLS_intrinsicElements.small)({
         ...{ class: "asset-manage-field-tip" },
     });
-    (__VLS_ctx.editingId ? '编辑素材时暂不支持替换文件，可保留原文件继续修改标题和说明。' : __VLS_ctx.uploadTip);
+    (__VLS_ctx.editingId ? '编辑文件类素材时会保留原文件，仅修改标题、说明和公开范围。' : __VLS_ctx.uploadTip);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "my-resources-filter-actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.resetEditor) },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+    disabled: (__VLS_ctx.saving),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "submit",
@@ -567,13 +518,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     disabled: (__VLS_ctx.saving),
 });
 (__VLS_ctx.saving ? '提交中...' : __VLS_ctx.editingId ? '保存素材' : '创建素材');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.resetEditor) },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: (__VLS_ctx.saving),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ...{ class: "my-resources-filter-panel" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -607,29 +552,29 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.filters.courseId),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-    value: "",
-});
-for (const [course] of __VLS_getVForSourceType((__VLS_ctx.courseOptions))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (course.id),
-        value: (String(course.id)),
-    });
-    (course.name);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-    ...{ class: "my-resources-field" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
     value: (__VLS_ctx.filters.type),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
     value: "all",
 });
 for (const [option] of __VLS_getVForSourceType((__VLS_ctx.assetTypeOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (option.value),
+        value: (option.value),
+    });
+    (option.label);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "my-resources-field" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.filters.visibility),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "all",
+});
+for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
         key: (option.value),
         value: (option.value),
@@ -681,9 +626,9 @@ if (__VLS_ctx.assetList.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (item.title);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: "teacher-dashboard-tag" },
+            ...{ class: (['teacher-dashboard-tag', item.visibility === 'public' ? 'is-video' : 'is-material']) },
         });
-        (__VLS_ctx.assetTypeLabel(item.type));
+        (item.visibility === 'public' ? '公开' : '私密');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
             ...{ class: "asset-manage-item__time" },
         });
@@ -691,7 +636,7 @@ if (__VLS_ctx.assetList.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
             ...{ class: "asset-manage-item__meta" },
         });
-        (item.courseName);
+        (__VLS_ctx.assetTypeLabel(item.type));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
             ...{ class: "asset-manage-item__meta" },
         });
@@ -761,7 +706,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElemen
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "course-pagination__desc" },
 });
-(__VLS_ctx.pagination.total);
 (__VLS_ctx.pagination.page);
 (Math.max(__VLS_ctx.pagination.totalPages, 1));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -788,33 +732,28 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
     (pageNumber);
 }
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
-/** @type {__VLS_StyleScopedClasses['asset-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-main']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-head__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-feedback']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
-/** @type {__VLS_StyleScopedClasses['asset-manage-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['asset-manage-card__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-metrics']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-metric']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-grid--middle']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
@@ -836,8 +775,8 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['asset-manage-field-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-panel__eyebrow']} */ ;
@@ -857,7 +796,6 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['asset-manage-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-dashboard-tag']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item__time']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item__meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item__meta']} */ ;
@@ -889,30 +827,29 @@ const __VLS_self = (await import('vue')).defineComponent({
             successMessage: successMessage,
             fileInputRef: fileInputRef,
             fileInputKey: fileInputKey,
-            courseOptions: courseOptions,
             assetList: assetList,
             stats: stats,
             filters: filters,
             editorForm: editorForm,
             pagination: pagination,
             assetTypeOptions: assetTypeOptions,
+            visibilityOptions: visibilityOptions,
             isContentType: isContentType,
             fileAccept: fileAccept,
             uploadLabel: uploadLabel,
             uploadTip: uploadTip,
             fileNameText: fileNameText,
             contentPlaceholder: contentPlaceholder,
-            headerText: headerText,
             pageNumbers: pageNumbers,
-            formatFileSize: formatFileSize,
             assetTypeLabel: assetTypeLabel,
+            formatFileSize: formatFileSize,
             openFilePicker: openFilePicker,
+            handleFileChange: handleFileChange,
+            previewAsset: previewAsset,
             resetEditor: resetEditor,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,
-            handleFileChange: handleFileChange,
-            previewAsset: previewAsset,
             startEdit: startEdit,
             submitAsset: submitAsset,
             removeAsset: removeAsset,

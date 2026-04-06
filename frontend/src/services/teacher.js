@@ -25,6 +25,52 @@ export async function deleteTeacherPrep(prepId) {
     const response = await http.delete(`/teacher/preps/${prepId}`);
     return response.data.data;
 }
+export async function addTeacherPrepAssetAttachments(prepId, assetIds) {
+    const response = await http.post(`/teacher/preps/${prepId}/attachments/assets`, { assetIds });
+    return response.data.data;
+}
+export async function uploadTeacherPrepAttachments(prepId, files) {
+    const formData = new FormData();
+    files.forEach((file) => {
+        formData.append('files', file);
+    });
+    const response = await http.post(`/teacher/preps/${prepId}/attachments/upload`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data.data;
+}
+export async function deleteTeacherPrepAttachment(prepId, attachmentId) {
+    const response = await http.delete(`/teacher/preps/${prepId}/attachments/${attachmentId}`);
+    return response.data.data;
+}
+export async function getTeacherCoursewares(params) {
+    const response = await http.get('/teacher/coursewares', {
+        params,
+    });
+    return response.data.data;
+}
+export async function createTeacherCourseware(payload) {
+    const response = await http.post('/teacher/coursewares', payload);
+    return response.data.data;
+}
+export async function getTeacherCoursewareDetail(coursewareId) {
+    const response = await http.get(`/teacher/coursewares/${coursewareId}`);
+    return response.data.data;
+}
+export async function updateTeacherCourseware(coursewareId, payload) {
+    const response = await http.put(`/teacher/coursewares/${coursewareId}`, payload);
+    return response.data.data;
+}
+export async function deleteTeacherCourseware(coursewareId) {
+    const response = await http.delete(`/teacher/coursewares/${coursewareId}`);
+    return response.data.data;
+}
+export async function publishTeacherCourseware(coursewareId) {
+    const response = await http.post(`/teacher/coursewares/${coursewareId}/publish`);
+    return response.data.data;
+}
 export async function getTeacherAssets(params) {
     const response = await http.get('/teacher/assets', {
         params,
@@ -34,7 +80,10 @@ export async function getTeacherAssets(params) {
 export async function createTeacherAsset(payload) {
     const formData = new FormData();
     formData.append('type', payload.type);
-    formData.append('courseId', payload.courseId);
+    formData.append('visibility', payload.visibility);
+    if (payload.courseId) {
+        formData.append('courseId', payload.courseId);
+    }
     formData.append('title', payload.title);
     formData.append('description', payload.description);
     formData.append('content', payload.content);

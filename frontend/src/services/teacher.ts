@@ -2,24 +2,34 @@ import http, { type ApiSuccess } from './http'
 
 export interface TeacherDashboardStats {
   courseCount: number
-  materialCount: number
-  videoCount: number
-  topicCount: number
+  assetCount: number
+  publicAssetCount: number
+  prepCount: number
+  publishedPrepCount: number
 }
 
-export interface TeacherDashboardUploadItem {
+export interface TeacherDashboardAssetItem {
   id: number
-  type: 'material' | 'video'
+  type: 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
   title: string
-  courseName: string
+  visibility: 'public' | 'private'
   uploadDate: string
+}
+
+export interface TeacherDashboardPrepItem {
+  id: number
+  title: string
+  status: 'draft' | 'published' | 'archived'
+  statusLabel: string
+  courseName: string
+  updateDate: string
 }
 
 export interface TeacherDashboardCourseItem {
   id: number
   name: string
-  materialCount: number
-  videoCount: number
+  assetCount: number
+  prepCount: number
 }
 
 export interface TeacherDashboardData {
@@ -29,12 +39,13 @@ export interface TeacherDashboardData {
     username: string
   }
   stats: TeacherDashboardStats
-  recentUploads: TeacherDashboardUploadItem[]
-  hotCourses: TeacherDashboardCourseItem[]
+  recentAssets: TeacherDashboardAssetItem[]
+  recentPreps: TeacherDashboardPrepItem[]
+  courseCoverage: TeacherDashboardCourseItem[]
   weeklyActivity: {
-    materialCount: number
-    videoCount: number
-    topicCount: number
+    assetCount: number
+    prepCount: number
+    publicAssetCount: number
   }
 }
 
@@ -142,17 +153,22 @@ export interface TeacherPrepItem {
   courseId: number
   courseName: string
   title: string
-  teachingObjective: string
-  keyPoints: string
-  difficultyPoints: string
-  studentAnalysis: string
   teachingContent: string
-  teachingProcess: string
-  reflectionNotes: string
   status: 'draft' | 'published' | 'archived'
   statusLabel: string
   createTime: string
   updateTime: string
+  attachmentCount: number
+  attachments: TeacherPrepAttachmentItem[]
+}
+
+export interface TeacherPrepOption {
+  id: number
+  courseId: number
+  title: string
+  courseName: string
+  status: 'draft' | 'published' | 'archived'
+  statusLabel: string
 }
 
 export interface TeacherPrepListData {
@@ -181,13 +197,153 @@ export interface TeacherPrepPayload {
   courseId: string
   title: string
   status: 'draft' | 'published'
-  teachingObjective: string
-  keyPoints: string
-  difficultyPoints: string
-  studentAnalysis: string
   teachingContent: string
-  teachingProcess: string
-  reflectionNotes: string
+}
+
+export type TeacherCoursewareStatus = 'draft' | 'published'
+export type TeacherCoursewareTemplate = 'cover' | 'agenda' | 'content' | 'two-column' | 'summary'
+export type TeacherCoursewareTextStyle = 'title' | 'subtitle' | 'body' | 'caption' | 'quote'
+export type TeacherCoursewareTextAlign = 'left' | 'center' | 'right'
+
+export interface TeacherCoursewareTextBlock {
+  id: string
+  type: 'text'
+  text: string
+  style: TeacherCoursewareTextStyle
+  align: TeacherCoursewareTextAlign
+}
+
+export interface TeacherCoursewareImageBlock {
+  id: string
+  type: 'image'
+  assetId: number
+  title: string
+  description: string
+  courseName: string
+  previewUrl: string
+  caption: string
+}
+
+export interface TeacherCoursewareResourceBlock {
+  id: string
+  type: 'resource'
+  resourceId: number
+  title: string
+  description: string
+  courseName: string
+  fileName: string
+  previewUrl: string
+  caption: string
+}
+
+export interface TeacherCoursewareVideoBlock {
+  id: string
+  type: 'video'
+  resourceId: number
+  title: string
+  description: string
+  courseName: string
+  duration: number | null
+  previewUrl: string
+  caption: string
+}
+
+export type TeacherCoursewareBlock =
+  | TeacherCoursewareTextBlock
+  | TeacherCoursewareImageBlock
+  | TeacherCoursewareResourceBlock
+  | TeacherCoursewareVideoBlock
+
+export interface TeacherCoursewareSlide {
+  id: string
+  title: string
+  template: TeacherCoursewareTemplate
+  note: string
+  blocks: TeacherCoursewareBlock[]
+}
+
+export interface TeacherCoursewareContent {
+  version: number
+  slides: TeacherCoursewareSlide[]
+}
+
+export interface TeacherCoursewareStats {
+  total: number
+  draftCount: number
+  publishedCount: number
+  courseCount: number
+}
+
+export interface TeacherCoursewareItem {
+  id: number
+  teacherId: number
+  courseId: number
+  prepId: number
+  title: string
+  summary: string
+  status: TeacherCoursewareStatus
+  statusLabel: string
+  courseName: string
+  prepTitle: string
+  slideCount: number
+  blockCount: number
+  coverPreviewUrl: string
+  createTime: string
+  updateTime: string
+  publishedTime: string
+}
+
+export interface TeacherCoursewareDetail extends TeacherCoursewareItem {
+  content: TeacherCoursewareContent
+}
+
+export interface TeacherCoursewareListData {
+  stats: TeacherCoursewareStats
+  list: TeacherCoursewareItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+  filters: {
+    courses: TeacherCourseOption[]
+    preps: TeacherPrepOption[]
+  }
+}
+
+export interface TeacherCoursewareDetailData {
+  courseware: TeacherCoursewareDetail
+  options: {
+    courses: TeacherCourseOption[]
+    preps: TeacherPrepOption[]
+  }
+}
+
+export interface TeacherCoursewareQuery {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  courseId?: string
+  prepId?: string
+  status?: 'all' | TeacherCoursewareStatus
+}
+
+export interface TeacherCoursewareCreatePayload {
+  courseId: string
+  prepId: string
+  title: string
+  summary: string
+  initialTemplate?: TeacherCoursewareTemplate
+}
+
+export interface TeacherCoursewareUpdatePayload {
+  courseId: string
+  prepId: string
+  title: string
+  summary: string
+  status?: TeacherCoursewareStatus
+  content: TeacherCoursewareContent
 }
 
 export async function getTeacherPreps(params: TeacherPrepQuery) {
@@ -212,13 +368,97 @@ export async function deleteTeacherPrep(prepId: number) {
   return response.data.data
 }
 
+export async function addTeacherPrepAssetAttachments(prepId: number, assetIds: number[]) {
+  const response = await http.post<ApiSuccess<{ prepId: number; attachmentCount: number; attachments: TeacherPrepAttachmentItem[] }>>(
+    `/teacher/preps/${prepId}/attachments/assets`,
+    { assetIds },
+  )
+  return response.data.data
+}
+
+export async function uploadTeacherPrepAttachments(prepId: number, files: File[]) {
+  const formData = new FormData()
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+
+  const response = await http.post<ApiSuccess<{ prepId: number; attachmentCount: number; attachments: TeacherPrepAttachmentItem[] }>>(
+    `/teacher/preps/${prepId}/attachments/upload`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  )
+  return response.data.data
+}
+
+export async function deleteTeacherPrepAttachment(prepId: number, attachmentId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; prepId: number; sourceType: 'upload' | 'asset' }>>(
+    `/teacher/preps/${prepId}/attachments/${attachmentId}`,
+  )
+  return response.data.data
+}
+
+export async function getTeacherCoursewares(params: TeacherCoursewareQuery) {
+  const response = await http.get<ApiSuccess<TeacherCoursewareListData>>('/teacher/coursewares', {
+    params,
+  })
+  return response.data.data
+}
+
+export async function createTeacherCourseware(payload: TeacherCoursewareCreatePayload) {
+  const response = await http.post<ApiSuccess<TeacherCoursewareDetail>>('/teacher/coursewares', payload)
+  return response.data.data
+}
+
+export async function getTeacherCoursewareDetail(coursewareId: number) {
+  const response = await http.get<ApiSuccess<TeacherCoursewareDetailData>>(`/teacher/coursewares/${coursewareId}`)
+  return response.data.data
+}
+
+export async function updateTeacherCourseware(coursewareId: number, payload: TeacherCoursewareUpdatePayload) {
+  const response = await http.put<ApiSuccess<TeacherCoursewareDetail>>(`/teacher/coursewares/${coursewareId}`, payload)
+  return response.data.data
+}
+
+export async function deleteTeacherCourseware(coursewareId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/teacher/coursewares/${coursewareId}`)
+  return response.data.data
+}
+
+export async function publishTeacherCourseware(coursewareId: number) {
+  const response = await http.post<ApiSuccess<TeacherCoursewareDetail>>(`/teacher/coursewares/${coursewareId}/publish`)
+  return response.data.data
+}
+
 export type TeacherAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
+export type TeacherAssetVisibility = 'private' | 'public'
+
+export interface TeacherPrepAttachmentItem {
+  id: number
+  sourceType: 'upload' | 'asset'
+  sourceLabel: string
+  assetId: number | null
+  type: string
+  title: string
+  description?: string
+  content?: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  visibility: TeacherAssetVisibility
+  downloadUrl: string
+  uploadTime: string
+}
 
 export interface TeacherAssetItem {
   id: number
   type: TeacherAssetType
   courseId: number
   courseName: string
+  visibility: TeacherAssetVisibility
   title: string
   description: string
   content: string
@@ -230,6 +470,8 @@ export interface TeacherAssetItem {
 
 export interface TeacherAssetStats {
   total: number
+  publicCount: number
+  privateCount: number
   imageCount: number
   audioCount: number
   videoCount: number
@@ -246,7 +488,8 @@ export interface TeacherAssetListData {
     totalPages: number
   }
   filters: {
-    courses: TeacherCourseOption[]
+    courses?: TeacherCourseOption[]
+    visibilityOptions?: Array<{ value: string; label: string }>
   }
 }
 
@@ -256,11 +499,13 @@ export interface TeacherAssetQuery {
   keyword?: string
   courseId?: string
   type?: TeacherAssetType | 'all'
+  visibility?: TeacherAssetVisibility | 'all'
 }
 
 export interface TeacherAssetPayload {
   type: TeacherAssetType
-  courseId: string
+  courseId?: string
+  visibility: TeacherAssetVisibility
   title: string
   description: string
   content: string
@@ -268,7 +513,8 @@ export interface TeacherAssetPayload {
 }
 
 export interface TeacherAssetUpdatePayload {
-  courseId: string
+  courseId?: string
+  visibility: TeacherAssetVisibility
   title: string
   description: string
   content: string
@@ -284,7 +530,10 @@ export async function getTeacherAssets(params: TeacherAssetQuery) {
 export async function createTeacherAsset(payload: TeacherAssetPayload) {
   const formData = new FormData()
   formData.append('type', payload.type)
-  formData.append('courseId', payload.courseId)
+  formData.append('visibility', payload.visibility)
+  if (payload.courseId) {
+    formData.append('courseId', payload.courseId)
+  }
   formData.append('title', payload.title)
   formData.append('description', payload.description)
   formData.append('content', payload.content)
