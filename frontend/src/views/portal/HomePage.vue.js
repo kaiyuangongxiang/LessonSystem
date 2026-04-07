@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import http from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
 const DEFAULT_HERO_TITLE = '让课程、资料与视频在一个入口里协同';
@@ -201,74 +202,14 @@ let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "portal-home" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
-    ...{ class: "portal-nav" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "portal-brand" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "portal-brand__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "portal-brand__title" },
-});
-(__VLS_ctx.home.profile.systemName);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-    ...{ onSubmit: (__VLS_ctx.goCourseListWithKeyword) },
-    ...{ class: "portal-search" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    value: (__VLS_ctx.searchKeyword),
-    type: "text",
-    placeholder: "搜索课程 / 资料 / 视频",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-    ...{ class: "portal-search__icon" },
-    'aria-hidden': "true",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.svg, __VLS_intrinsicElements.svg)({
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
-    d: "M10.5 18a7.5 7.5 0 1 1 5.303-12.803A7.5 7.5 0 0 1 10.5 18Zm0-13.2a5.7 5.7 0 1 0 0 11.4 5.7 5.7 0 0 0 0-11.4Zm10.064 14.791-4.076-4.075",
-    stroke: "currentColor",
-    'stroke-width': "1.8",
-    'stroke-linecap': "round",
-    'stroke-linejoin': "round",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.nav)({
-    ...{ class: "portal-links" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.scrollToTop) },
-    type: "button",
-    ...{ class: "is-active" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/courses');
-        } },
-    type: "button",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.scrollToSection('resources');
-        } },
-    type: "button",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goTeachingMessages) },
-    type: "button",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goPrimaryAction) },
-    ...{ class: "portal-login-btn" },
-    type: "button",
-});
-(__VLS_ctx.primaryActionText);
+/** @type {[typeof PortalTopNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(PortalTopNav, new PortalTopNav({
+    systemName: (__VLS_ctx.home.profile.systemName),
+}));
+const __VLS_1 = __VLS_0({
+    systemName: (__VLS_ctx.home.profile.systemName),
+}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "portal-hero" },
 });
@@ -345,18 +286,18 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "portal-notice-board__window" },
 });
-const __VLS_0 = {}.Transition;
+const __VLS_3 = {}.Transition;
 /** @type {[typeof __VLS_components.Transition, typeof __VLS_components.Transition, ]} */ ;
 // @ts-ignore
-const __VLS_1 = __VLS_asFunctionalComponent(__VLS_0, new __VLS_0({
+const __VLS_4 = __VLS_asFunctionalComponent(__VLS_3, new __VLS_3({
     name: "portal-notice-slide",
     mode: "out-in",
 }));
-const __VLS_2 = __VLS_1({
+const __VLS_5 = __VLS_4({
     name: "portal-notice-slide",
     mode: "out-in",
-}, ...__VLS_functionalComponentArgsRest(__VLS_1));
-__VLS_3.slots.default;
+}, ...__VLS_functionalComponentArgsRest(__VLS_4));
+__VLS_6.slots.default;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     key: (`${__VLS_ctx.activeNotice.id}-${__VLS_ctx.activeNoticeIndex}`),
     ...{ class: "portal-notice-card" },
@@ -376,7 +317,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElement
 (__VLS_ctx.activeNotice.title);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 (__VLS_ctx.activeNotice.content);
-var __VLS_3;
+var __VLS_6;
 if (__VLS_ctx.visibleNotices.length > 1) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "portal-notice-board__dots" },
@@ -534,15 +475,6 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
     (video.teacherName);
 }
 /** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-nav']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-brand']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-brand__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-brand__title']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-search']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-search__icon']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-links']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-login-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__content']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__actions']} */ ;
@@ -597,8 +529,8 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            PortalTopNav: PortalTopNav,
             router: router,
-            searchKeyword: searchKeyword,
             errorMessage: errorMessage,
             noticeSectionRef: noticeSectionRef,
             courseSectionRef: courseSectionRef,
@@ -607,7 +539,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             heroTitleText: heroTitleText,
             activeNoticeIndex: activeNoticeIndex,
             activeNotice: activeNotice,
-            primaryActionText: primaryActionText,
             visibleNotices: visibleNotices,
             pauseNoticeRotation: pauseNoticeRotation,
             resumeNoticeRotation: resumeNoticeRotation,
@@ -615,11 +546,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             visibleCourses: visibleCourses,
             visibleMaterials: visibleMaterials,
             visibleVideos: visibleVideos,
-            scrollToTop: scrollToTop,
-            scrollToSection: scrollToSection,
-            goCourseListWithKeyword: goCourseListWithKeyword,
             goCourseDetail: goCourseDetail,
-            goPrimaryAction: goPrimaryAction,
             goTeachingMessages: goTeachingMessages,
             formatDuration: formatDuration,
         };

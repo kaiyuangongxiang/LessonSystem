@@ -1,14 +1,12 @@
 <template>
-  <main class="teacher-message-page">
+  <main class="portal-home teacher-message-page">
     <div class="teacher-message-page__ambient" aria-hidden="true">
       <span class="teacher-message-page__orb teacher-message-page__orb--one"></span>
       <span class="teacher-message-page__orb teacher-message-page__orb--two"></span>
       <span class="teacher-message-page__mesh"></span>
     </div>
 
-    <section class="teacher-message-page__nav">
-      <TeacherSidebarNav active="messages" />
-    </section>
+    <PortalTopNav />
 
     <header class="teacher-message-hero">
       <section class="teacher-message-hero__intro">
@@ -16,11 +14,6 @@
         <h1>教学交流</h1>
         <p class="teacher-message-hero__lead">{{ headerText }}</p>
         <p class="teacher-message-hero__desc">{{ pageSummary }}</p>
-
-        <div class="teacher-message-hero__actions">
-          <button type="button" class="course-chip" @click="router.push('/teacher')">返回教师中心</button>
-          <button type="button" class="course-chip course-chip--soft" @click="router.push('/')">返回首页</button>
-        </div>
       </section>
 
       <section class="teacher-message-hero__spotlight">
@@ -355,7 +348,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import {
   createTeacherMessage,
   createTeacherMessageReply,

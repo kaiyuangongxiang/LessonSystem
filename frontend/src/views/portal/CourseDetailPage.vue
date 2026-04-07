@@ -1,5 +1,7 @@
 <template>
   <main class="course-detail-page">
+    <PortalTopNav />
+
     <header class="course-detail-nav">
       <div>
         <div class="course-detail-nav__eyebrow">COURSE DETAIL</div>
@@ -105,6 +107,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import http from '@/services/http'
 
 interface MaterialItem {

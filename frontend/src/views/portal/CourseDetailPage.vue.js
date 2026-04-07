@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import http from '@/services/http';
 const route = useRoute();
 const router = useRouter();
@@ -70,6 +71,10 @@ let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "course-detail-page" },
 });
+/** @type {[typeof PortalTopNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(PortalTopNav, new PortalTopNav({}));
+const __VLS_1 = __VLS_0({}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "course-detail-nav" },
 });
@@ -306,6 +311,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
+            PortalTopNav: PortalTopNav,
             router: router,
             errorMessage: errorMessage,
             activeVideoUrl: activeVideoUrl,

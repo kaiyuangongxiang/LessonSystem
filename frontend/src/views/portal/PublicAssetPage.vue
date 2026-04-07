@@ -1,15 +1,12 @@
 <template>
   <main class="portal-home public-asset-page">
+    <PortalTopNav />
+
     <header class="portal-hero public-asset-hero">
       <div class="public-asset-hero__content">
         <div class="portal-hero__eyebrow">PUBLIC ASSET LIBRARY</div>
         <h1>公共素材库</h1>
         <p>集中查看教师公开发布的图片、音频、视频和文本类素材，支持基础筛选、预览和下载。</p>
-      </div>
-
-      <div class="public-asset-hero__actions">
-        <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回首页</button>
-        <button type="button" class="auth-btn" @click="router.push('/courses')">进入课程中心</button>
       </div>
     </header>
 
@@ -122,6 +119,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import { getPortalPublicAssets } from '@/services/portal'
 
 const router = useRouter()

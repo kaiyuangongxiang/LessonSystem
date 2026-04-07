@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import { getPortalPublicAssets } from '@/services/portal';
 const router = useRouter();
 const route = useRoute();
@@ -127,6 +128,10 @@ let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "portal-home public-asset-page" },
 });
+/** @type {[typeof PortalTopNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(PortalTopNav, new PortalTopNav({}));
+const __VLS_1 = __VLS_0({}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "portal-hero public-asset-hero" },
 });
@@ -138,23 +143,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "public-asset-hero__actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/');
-        } },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/courses');
-        } },
-    type: "button",
-    ...{ class: "auth-btn" },
-});
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "portal-feedback" },
@@ -363,10 +351,6 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['public-asset-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['public-asset-hero__content']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['public-asset-hero__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['public-asset-stats']} */ ;
 /** @type {__VLS_StyleScopedClasses['public-asset-stat-card']} */ ;
@@ -406,7 +390,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            router: router,
+            PortalTopNav: PortalTopNav,
             loading: loading,
             errorMessage: errorMessage,
             assetList: assetList,

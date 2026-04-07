@@ -1,37 +1,6 @@
 <template>
   <main class="portal-home">
-    <header class="portal-nav">
-      <div class="portal-brand">
-        <div class="portal-brand__eyebrow">TEACHER PREP PORTAL</div>
-        <div class="portal-brand__title">{{ home.profile.systemName }}</div>
-      </div>
-
-      <form class="portal-search" @submit.prevent="goCourseListWithKeyword">
-        <input v-model.trim="searchKeyword" type="text" placeholder="搜索课程 / 资料 / 视频" />
-        <span class="portal-search__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M10.5 18a7.5 7.5 0 1 1 5.303-12.803A7.5 7.5 0 0 1 10.5 18Zm0-13.2a5.7 5.7 0 1 0 0 11.4 5.7 5.7 0 0 0 0-11.4Zm10.064 14.791-4.076-4.075"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-      </form>
-
-      <nav class="portal-links">
-        <button type="button" class="is-active" @click="scrollToTop">首页</button>
-        <button type="button" @click="router.push('/courses')">课程中心</button>
-        <button type="button" @click="scrollToSection('resources')">素材库</button>
-        <button type="button" @click="goTeachingMessages">教学交流</button>
-      </nav>
-
-      <button class="portal-login-btn" type="button" @click="goPrimaryAction">
-        {{ primaryActionText }}
-      </button>
-    </header>
+    <PortalTopNav :system-name="home.profile.systemName" />
 
     <section class="portal-hero">
       <div class="portal-hero__content">
@@ -182,6 +151,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import http from '@/services/http'
 import { useAuthStore } from '@/stores/auth'
 

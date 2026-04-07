@@ -1,18 +1,12 @@
 <template>
   <main class="course-list-page">
+    <PortalTopNav />
+
     <header class="course-list-nav">
       <div>
         <div class="course-list-nav__eyebrow">COURSE CENTER</div>
         <h1>课程中心</h1>
-      </div>
-
-      <div class="course-list-toolbar">
-        <form class="course-list-search" @submit.prevent="submitSearch">
-          <input v-model.trim="filters.keyword" type="text" placeholder="搜索课程名称、学院、教师" />
-          <button type="submit">搜索</button>
-        </form>
-
-        <button class="course-list-home-btn" type="button" @click="router.push('/')">返回首页</button>
+        <p class="course-list-nav__desc">围绕课程、资料与视频的统一入口，按学院与资源偏好快速定位适合浏览的课程内容。</p>
       </div>
     </header>
 
@@ -109,6 +103,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import http from '@/services/http'
 
 interface CourseItem {
@@ -144,10 +139,6 @@ const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
 const errorMessage = ref('')
-
-const filters = reactive({
-  keyword: '',
-})
 
 const courses = ref<CourseItem[]>([])
 const pagination = reactive({
@@ -246,10 +237,6 @@ function updateRoute(next: { keyword?: string; collegeId?: string | number; sort
   })
 }
 
-function submitSearch() {
-  updateRoute({ keyword: filters.keyword || undefined, page: 1 })
-}
-
 function handleCollegeChange(collegeId: string | number) {
   updateRoute({ collegeId: collegeId === 'all' ? undefined : collegeId, page: 1 })
 }
@@ -259,7 +246,6 @@ function changePage(page: number) {
 }
 
 function resetFilters() {
-  filters.keyword = ''
   updateRoute({ keyword: undefined, collegeId: undefined, sort: 'latest', page: 1 })
 }
 
@@ -274,7 +260,6 @@ function goCourseDetail(courseId: number) {
 async function loadCourses() {
   loading.value = true
   errorMessage.value = ''
-  filters.keyword = routeKeyword.value
 
   try {
     const response = await http.get('/portal/courses', {

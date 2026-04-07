@@ -1,6 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import { createTeacherMessage, createTeacherMessageReply, deleteTeacherMessage, deleteTeacherMessageReply, getTeacherMessageDetail, getTeacherMessageList, } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
@@ -305,7 +305,7 @@ const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
-    ...{ class: "teacher-message-page" },
+    ...{ class: "portal-home teacher-message-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-message-page__ambient" },
@@ -320,17 +320,10 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "teacher-message-page__mesh" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "teacher-message-page__nav" },
-});
-/** @type {[typeof TeacherSidebarNav, ]} */ ;
+/** @type {[typeof PortalTopNav, ]} */ ;
 // @ts-ignore
-const __VLS_0 = __VLS_asFunctionalComponent(TeacherSidebarNav, new TeacherSidebarNav({
-    active: "messages",
-}));
-const __VLS_1 = __VLS_0({
-    active: "messages",
-}, ...__VLS_functionalComponentArgsRest(__VLS_0));
+const __VLS_0 = __VLS_asFunctionalComponent(PortalTopNav, new PortalTopNav({}));
+const __VLS_1 = __VLS_0({}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "teacher-message-hero" },
 });
@@ -349,23 +342,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
     ...{ class: "teacher-message-hero__desc" },
 });
 (__VLS_ctx.pageSummary);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-message-hero__actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/teacher');
-        } },
-    type: "button",
-    ...{ class: "course-chip" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/');
-        } },
-    type: "button",
-    ...{ class: "course-chip course-chip--soft" },
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-message-hero__spotlight" },
 });
@@ -962,6 +938,7 @@ if (__VLS_ctx.showTopicEditor) {
     });
     (__VLS_ctx.submittingTopic ? '发布中...' : '发布主题');
 }
+/** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__ambient']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__orb']} */ ;
@@ -969,16 +946,11 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__orb']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__orb--two']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page__mesh']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-message-page__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero__intro']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-kicker']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero__lead']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero__desc']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-message-hero__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-hero__spotlight']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-kicker']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-kicker--light']} */ ;
@@ -1086,8 +1058,7 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            TeacherSidebarNav: TeacherSidebarNav,
-            router: router,
+            PortalTopNav: PortalTopNav,
             loading: loading,
             submittingTopic: submittingTopic,
             showTopicEditor: showTopicEditor,

@@ -1,13 +1,11 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import http from '@/services/http';
 const router = useRouter();
 const route = useRoute();
 const loading = ref(false);
 const errorMessage = ref('');
-const filters = reactive({
-    keyword: '',
-});
 const courses = ref([]);
 const pagination = reactive({
     page: 1,
@@ -92,9 +90,6 @@ function updateRoute(next) {
         },
     });
 }
-function submitSearch() {
-    updateRoute({ keyword: filters.keyword || undefined, page: 1 });
-}
 function handleCollegeChange(collegeId) {
     updateRoute({ collegeId: collegeId === 'all' ? undefined : collegeId, page: 1 });
 }
@@ -102,7 +97,6 @@ function changePage(page) {
     updateRoute({ page });
 }
 function resetFilters() {
-    filters.keyword = '';
     updateRoute({ keyword: undefined, collegeId: undefined, sort: 'latest', page: 1 });
 }
 function goCourseDetail(courseId) {
@@ -114,7 +108,6 @@ function goCourseDetail(courseId) {
 async function loadCourses() {
     loading.value = true;
     errorMessage.value = '';
-    filters.keyword = routeKeyword.value;
     try {
         const response = await http.get('/portal/courses', {
             params: {
@@ -156,6 +149,10 @@ let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.main, __VLS_intrinsicElements.main)({
     ...{ class: "course-list-page" },
 });
+/** @type {[typeof PortalTopNav, ]} */ ;
+// @ts-ignore
+const __VLS_0 = __VLS_asFunctionalComponent(PortalTopNav, new PortalTopNav({}));
+const __VLS_1 = __VLS_0({}, ...__VLS_functionalComponentArgsRest(__VLS_0));
 __VLS_asFunctionalElement(__VLS_intrinsicElements.header, __VLS_intrinsicElements.header)({
     ...{ class: "course-list-nav" },
 });
@@ -164,27 +161,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "course-list-nav__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "course-list-toolbar" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-    ...{ onSubmit: (__VLS_ctx.submitSearch) },
-    ...{ class: "course-list-search" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    value: (__VLS_ctx.filters.keyword),
-    type: "text",
-    placeholder: "搜索课程名称、学院、教师",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "submit",
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.router.push('/');
-        } },
-    ...{ class: "course-list-home-btn" },
-    type: "button",
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+    ...{ class: "course-list-nav__desc" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "course-list-summary" },
@@ -330,9 +308,7 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['course-list-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-nav__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-list-toolbar']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-list-search']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-list-home-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-list-nav__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-summary']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-summary__intro']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-summary__eyebrow']} */ ;
@@ -360,9 +336,8 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            router: router,
+            PortalTopNav: PortalTopNav,
             errorMessage: errorMessage,
-            filters: filters,
             pagination: pagination,
             routeSort: routeSort,
             selectedCollegeId: selectedCollegeId,
@@ -372,7 +347,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             visibleCourses: visibleCourses,
             pageNumbers: pageNumbers,
             updateRoute: updateRoute,
-            submitSearch: submitSearch,
             handleCollegeChange: handleCollegeChange,
             changePage: changePage,
             resetFilters: resetFilters,
