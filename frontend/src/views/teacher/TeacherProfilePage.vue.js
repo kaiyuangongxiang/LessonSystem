@@ -1,10 +1,12 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
+import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue';
 import { getTeacherProfile, updateTeacherProfile } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore();
 const loading = ref(false);
 const saving = ref(false);
+const showEditorDialog = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const collegeOptions = ref([]);
@@ -21,6 +23,11 @@ const selectedCollegeName = computed(() => {
     const college = collegeOptions.value.find((item) => String(item.id) === form.collegeId);
     return college?.name || '未选择学院';
 });
+const profileStatusText = computed(() => {
+    const fields = [form.username, form.teacherName, form.gender, form.collegeId, form.email, form.profile];
+    const completed = fields.filter((item) => String(item || '').trim()).length;
+    return completed >= 6 ? '资料完整' : completed >= 4 ? '资料待完善' : '资料较少';
+});
 function fillForm(profile) {
     form.username = profile.username || '';
     form.teacherName = profile.teacherName || '';
@@ -28,6 +35,17 @@ function fillForm(profile) {
     form.email = profile.email || '';
     form.collegeId = profile.collegeId ? String(profile.collegeId) : '';
     form.profile = profile.profile || '';
+}
+function openEditorDialog() {
+    errorMessage.value = '';
+    showEditorDialog.value = true;
+}
+function closeEditorDialog() {
+    if (saving.value) {
+        return;
+    }
+    showEditorDialog.value = false;
+    errorMessage.value = '';
 }
 async function loadProfile() {
     loading.value = true;
@@ -71,6 +89,7 @@ async function submitProfile() {
             username: result.username,
             name: result.teacherName,
         });
+        showEditorDialog.value = false;
         successMessage.value = '个人资料已更新';
     }
     catch (error) {
@@ -118,7 +137,16 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-if (__VLS_ctx.errorMessage) {
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-head__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.openEditorDialog) },
+    type: "button",
+    ...{ class: "auth-btn" },
+    disabled: (__VLS_ctx.loading),
+});
+if (__VLS_ctx.errorMessage && !__VLS_ctx.showEditorDialog) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
     });
@@ -131,7 +159,7 @@ if (__VLS_ctx.successMessage) {
     (__VLS_ctx.successMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "teacher-profile-panel" },
+    ...{ class: "teacher-profile-panel teacher-profile-panel--preview" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-profile-panel__head teacher-profile-panel__head--preview" },
@@ -141,10 +169,100 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "teacher-profile-panel__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-head__actions" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "teacher-profile-panel__status" },
 });
 (__VLS_ctx.selectedCollegeName);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.openEditorDialog) },
+    type: "button",
+    ...{ class: "course-chip" },
+    disabled: (__VLS_ctx.loading),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary teacher-profile-summary--wide" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.username || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.teacherName || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.gender || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.email || '未填写');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.selectedCollegeName);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.profileStatusText);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-summary__item teacher-profile-summary__item--full" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.form.profile || '暂未填写个人简介');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-profile-note teacher-profile-note--full" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+/** @type {[typeof TeacherWorkspaceDialog, typeof TeacherWorkspaceDialog, ]} */ ;
+// @ts-ignore
+const __VLS_3 = __VLS_asFunctionalComponent(TeacherWorkspaceDialog, new TeacherWorkspaceDialog({
+    ...{ 'onClose': {} },
+    modelValue: (__VLS_ctx.showEditorDialog),
+    eyebrow: "PROFILE EDITOR",
+    title: "编辑资料",
+    description: "在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。",
+    disabled: (__VLS_ctx.saving),
+}));
+const __VLS_4 = __VLS_3({
+    ...{ 'onClose': {} },
+    modelValue: (__VLS_ctx.showEditorDialog),
+    eyebrow: "PROFILE EDITOR",
+    title: "编辑资料",
+    description: "在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。",
+    disabled: (__VLS_ctx.saving),
+}, ...__VLS_functionalComponentArgsRest(__VLS_3));
+let __VLS_6;
+let __VLS_7;
+let __VLS_8;
+const __VLS_9 = {
+    onClose: (__VLS_ctx.closeEditorDialog)
+};
+__VLS_5.slots.default;
+if (__VLS_ctx.errorMessage) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+        ...{ class: "course-feedback teacher-workspace-dialog__feedback" },
+    });
+    (__VLS_ctx.errorMessage);
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.submitProfile) },
     ...{ class: "teacher-profile-form" },
@@ -245,55 +363,18 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     disabled: (__VLS_ctx.loading || __VLS_ctx.saving),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.closeEditorDialog) },
+    type: "button",
+    ...{ class: "auth-btn auth-btn--secondary" },
+    disabled: (__VLS_ctx.saving),
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "submit",
     ...{ class: "auth-btn" },
     disabled: (__VLS_ctx.loading || __VLS_ctx.saving),
 });
 (__VLS_ctx.saving ? '保存中...' : '保存资料');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "teacher-profile-panel teacher-profile-panel--preview" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-panel__head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-panel__eyebrow" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary teacher-profile-summary--wide" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.form.username || '未填写');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.form.teacherName || '未填写');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.form.gender || '未填写');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary__item" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.form.email || '未填写');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-summary__item teacher-profile-summary__item--full" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.form.profile || '暂未填写个人简介');
+var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
@@ -301,15 +382,34 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['teacher-profile-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-head__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-panel--preview']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head--preview']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-head__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__status']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary--wide']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item--full']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-note']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-profile-note--full']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-form__row']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-field']} */ ;
@@ -327,31 +427,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel--preview']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel__head']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary--wide']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item--full']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
             TeacherSidebarNav: TeacherSidebarNav,
+            TeacherWorkspaceDialog: TeacherWorkspaceDialog,
             loading: loading,
             saving: saving,
+            showEditorDialog: showEditorDialog,
             errorMessage: errorMessage,
             successMessage: successMessage,
             collegeOptions: collegeOptions,
             genderOptions: genderOptions,
             form: form,
             selectedCollegeName: selectedCollegeName,
+            profileStatusText: profileStatusText,
+            openEditorDialog: openEditorDialog,
+            closeEditorDialog: closeEditorDialog,
             loadProfile: loadProfile,
             submitProfile: submitProfile,
         };

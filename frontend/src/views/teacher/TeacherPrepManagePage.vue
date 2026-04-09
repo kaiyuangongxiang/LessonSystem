@@ -16,16 +16,20 @@
           <h2>备课单管理</h2>
           <p>{{ headerText }}</p>
         </div>
+
+        <div class="my-resources-head__actions">
+          <button type="button" class="auth-btn" @click="openCreateDialog">新建备课单</button>
+        </div>
       </header>
 
-      <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="feedback-text feedback-text--success my-resources-feedback">{{ successMessage }}</p>
+      <p v-if="errorMessage && !showEditorDialog" class="course-feedback">{{ errorMessage }}</p>
+      <p v-if="successMessage && !showEditorDialog" class="feedback-text feedback-text--success my-resources-feedback">{{ successMessage }}</p>
 
       <section class="my-resources-stats">
         <article class="my-resources-stat-card">
           <span>备课单总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前教师名下全部备课单</em>
+          <em>当前教师名下的全部备课单</em>
         </article>
         <article class="my-resources-stat-card">
           <span>草稿数量</span>
@@ -40,7 +44,7 @@
         <article class="my-resources-stat-card is-highlight">
           <span>关联课程</span>
           <strong>{{ stats.courseCount }}</strong>
-          <em>已覆盖课程范围</em>
+          <em>已覆盖的课程范围</em>
         </article>
       </section>
 
@@ -85,167 +89,13 @@
         </form>
       </section>
 
-      <section class="my-resources-panel prep-manage-editor">
-        <div class="my-resources-panel__head">
-          <div>
-            <div class="my-resources-panel__eyebrow">PREP EDITOR</div>
-            <h3>{{ editingId ? '编辑备课单' : '新建备课单' }}</h3>
-          </div>
-          <button v-if="editingId" type="button" class="course-chip course-chip--soft" :disabled="saving" @click="resetEditor">取消编辑</button>
-        </div>
-
-        <form class="prep-manage-form" @submit.prevent="submitPrep">
-          <label class="my-resources-field">
-            <span>备课单标题</span>
-            <input v-model.trim="editorForm.title" type="text" maxlength="200" placeholder="请输入备课单标题" />
-          </label>
-
-          <label class="my-resources-field">
-            <span>所属课程</span>
-            <select v-model="editorForm.courseId">
-              <option value="">请选择所属课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
-                {{ course.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="my-resources-field">
-            <span>状态</span>
-            <select v-model="editorForm.status">
-              <option value="draft">草稿</option>
-              <option value="published">已发布</option>
-            </select>
-          </label>
-
-          <div class="prep-manage-form__hint">
-            <strong>填写建议</strong>
-            <p>先保存标题、课程和教学内容，再挂载本地素材或个人素材。</p>
-          </div>
-
-          <label class="my-resources-field my-resources-field--full">
-            <span>教学内容</span>
-            <textarea
-              v-model.trim="editorForm.teachingContent"
-              rows="10"
-              maxlength="5000"
-              placeholder="请输入本次备课的教学内容安排、重点说明和课堂组织内容"
-            ></textarea>
-          </label>
-
-          <div class="my-resources-filter-actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="resetEditor">重置</button>
-            <button type="submit" class="auth-btn" :disabled="saving">
-              {{ saving ? '保存中...' : editingId ? '保存备课单' : '创建备课单' }}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="my-resources-panel">
-        <div class="my-resources-panel__head">
-          <div>
-            <div class="my-resources-panel__eyebrow">PREP ATTACHMENTS</div>
-            <h3>素材挂载</h3>
-          </div>
-          <div class="my-resources-panel__meta">
-            {{ editingId ? `当前附件 ${editorAttachments.length}` : '请先保存备课单后再挂载素材' }}
-          </div>
-        </div>
-
-        <div class="prep-manage-attachment-grid">
-          <article class="prep-manage-attachment-box">
-            <strong>方式一：本地上传</strong>
-            <p>上传后的附件仅挂载到当前备课单，不会进入“我的素材”。</p>
-            <input
-              ref="localFileInputRef"
-              class="prep-manage-attachment-box__input"
-              type="file"
-              multiple
-              :disabled="!editingId || uploadingLocal"
-              @change="handleLocalFilesChange"
-            />
-
-            <div class="prep-manage-attachment-box__actions">
-              <button type="button" class="course-chip" :disabled="!editingId || uploadingLocal" @click="openLocalFilePicker">选择文件</button>
-              <button
-                type="button"
-                class="course-chip course-chip--soft"
-                :disabled="!editingId || !localFiles.length || uploadingLocal"
-                @click="uploadLocalAttachments"
-              >
-                {{ uploadingLocal ? '上传中...' : `上传 ${localFiles.length || 0} 个文件` }}
-              </button>
-            </div>
-          </article>
-
-          <article class="prep-manage-attachment-box">
-            <strong>方式二：选择个人素材</strong>
-            <p>仅可选择当前教师自己的素材进行挂载。</p>
-
-            <div v-if="personalAssetOptions.length" class="prep-manage-asset-select">
-              <label v-for="item in personalAssetOptions" :key="item.id" class="prep-manage-asset-option">
-                <input v-model="selectedAssetIds" type="checkbox" :value="item.id" :disabled="!editingId || attachingAssets" />
-                <div>
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开' : '私密' }}</span>
-                </div>
-              </label>
-            </div>
-            <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有可选择的个人素材。</div>
-
-            <div class="prep-manage-attachment-box__actions">
-              <button
-                type="button"
-                class="course-chip course-chip--soft"
-                :disabled="!editingId || attachingAssets || !selectedAssetIds.length"
-                @click="attachSelectedAssets"
-              >
-                {{ attachingAssets ? '挂载中...' : `挂载 ${selectedAssetIds.length || 0} 个素材` }}
-              </button>
-            </div>
-          </article>
-        </div>
-
-        <div v-if="editorAttachments.length" class="prep-manage-attachment-list">
-          <article v-for="attachment in editorAttachments" :key="attachment.id" class="prep-manage-attachment-item">
-            <div>
-              <strong>{{ attachment.title }}</strong>
-              <p>{{ attachment.sourceLabel }} · {{ assetTypeLabel(attachment.type) }}</p>
-            </div>
-
-            <div class="prep-manage-attachment-item__actions">
-              <button
-                v-if="attachment.downloadUrl"
-                type="button"
-                class="course-chip course-chip--soft"
-                @click="previewAttachment(attachment.downloadUrl)"
-              >
-                查看
-              </button>
-              <button
-                type="button"
-                class="course-chip my-resources-delete-btn"
-                :disabled="deletingAttachmentId === attachment.id"
-                @click="removeAttachment(attachment)"
-              >
-                {{ deletingAttachmentId === attachment.id ? '移除中...' : '移除' }}
-              </button>
-            </div>
-          </article>
-        </div>
-        <div v-else class="course-detail-empty course-detail-empty--compact">
-          {{ editingId ? '当前备课单还没有挂载素材。' : '先保存备课单后，才能上传或选择素材。' }}
-        </div>
-      </section>
-
       <section class="my-resources-panel">
         <div class="my-resources-panel__head">
           <div>
             <div class="my-resources-panel__eyebrow">PREP LIST</div>
             <h3>备课单列表</h3>
           </div>
-          <div class="my-resources-panel__meta">支持继续编辑、切换发布状态和删除</div>
+          <div class="my-resources-panel__meta">新建入口收敛到页头，编辑与附件维护都放入独立弹窗</div>
         </div>
 
         <div v-if="prepList.length" class="prep-manage-list">
@@ -296,6 +146,165 @@
           </div>
         </section>
       </section>
+
+      <TeacherWorkspaceDialog
+        v-model="showEditorDialog"
+        eyebrow="PREP EDITOR"
+        :title="editingId ? '编辑备课单' : '新建备课单'"
+        :description="editingId ? '在弹窗内继续维护教学内容和附件，不再挤占列表区域。' : '先保存基础信息，再继续挂载附件或个人素材。'"
+        size="wide"
+        :disabled="dialogBusy"
+        @close="closeEditorDialog"
+      >
+        <p v-if="errorMessage" class="course-feedback teacher-workspace-dialog__feedback">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="feedback-text feedback-text--success my-resources-feedback teacher-workspace-dialog__feedback">
+          {{ successMessage }}
+        </p>
+
+        <form class="prep-manage-form" @submit.prevent="submitPrep">
+          <label class="my-resources-field">
+            <span>备课单标题</span>
+            <input v-model.trim="editorForm.title" type="text" maxlength="200" placeholder="请输入备课单标题" />
+          </label>
+
+          <label class="my-resources-field">
+            <span>所属课程</span>
+            <select v-model="editorForm.courseId">
+              <option value="">请选择所属课程</option>
+              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
+                {{ course.name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="my-resources-field">
+            <span>状态</span>
+            <select v-model="editorForm.status">
+              <option value="draft">草稿</option>
+              <option value="published">已发布</option>
+            </select>
+          </label>
+
+          <div class="prep-manage-form__hint">
+            <strong>填写建议</strong>
+            <p>先保存标题、课程和教学内容，再挂载本地附件或个人素材，这样后续整理会更顺手。</p>
+          </div>
+
+          <label class="my-resources-field my-resources-field--full">
+            <span>教学内容</span>
+            <textarea
+              v-model.trim="editorForm.teachingContent"
+              rows="10"
+              maxlength="5000"
+              placeholder="请输入本次备课的教学内容安排、重点说明和课堂组织内容"
+            ></textarea>
+          </label>
+
+          <div class="my-resources-filter-actions">
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="dialogBusy" @click="closeEditorDialog">关闭</button>
+            <button type="submit" class="auth-btn" :disabled="saving">
+              {{ saving ? '保存中...' : editingId ? '保存备课单' : '创建备课单' }}
+            </button>
+          </div>
+        </form>
+
+        <section class="my-resources-panel teacher-workspace-dialog__section">
+          <div class="my-resources-panel__head">
+            <div>
+              <div class="my-resources-panel__eyebrow">PREP ATTACHMENTS</div>
+              <h3>素材挂载</h3>
+            </div>
+            <div class="my-resources-panel__meta">
+              {{ editingId ? `当前附件 ${editorAttachments.length}` : '请先保存备课单后再挂载素材' }}
+            </div>
+          </div>
+
+          <div class="prep-manage-attachment-grid">
+            <article class="prep-manage-attachment-box">
+              <strong>方式一：本地上传</strong>
+              <p>上传后的附件仅挂载到当前备课单，不会进入“我的素材”。</p>
+              <input
+                ref="localFileInputRef"
+                class="prep-manage-attachment-box__input"
+                type="file"
+                multiple
+                :disabled="!editingId || uploadingLocal"
+                @change="handleLocalFilesChange"
+              />
+
+              <div class="prep-manage-attachment-box__actions">
+                <button type="button" class="course-chip" :disabled="!editingId || uploadingLocal" @click="openLocalFilePicker">选择文件</button>
+                <button
+                  type="button"
+                  class="course-chip course-chip--soft"
+                  :disabled="!editingId || !localFiles.length || uploadingLocal"
+                  @click="uploadLocalAttachments"
+                >
+                  {{ uploadingLocal ? '上传中...' : `上传 ${localFiles.length || 0} 个文件` }}
+                </button>
+              </div>
+            </article>
+
+            <article class="prep-manage-attachment-box">
+              <strong>方式二：选择个人素材</strong>
+              <p>仅可选择当前教师自己的素材进行挂载。</p>
+
+              <div v-if="personalAssetOptions.length" class="prep-manage-asset-select">
+                <label v-for="item in personalAssetOptions" :key="item.id" class="prep-manage-asset-option">
+                  <input v-model="selectedAssetIds" type="checkbox" :value="item.id" :disabled="!editingId || attachingAssets" />
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开' : '私密' }}</span>
+                  </div>
+                </label>
+              </div>
+              <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有可选择的个人素材。</div>
+
+              <div class="prep-manage-attachment-box__actions">
+                <button
+                  type="button"
+                  class="course-chip course-chip--soft"
+                  :disabled="!editingId || attachingAssets || !selectedAssetIds.length"
+                  @click="attachSelectedAssets"
+                >
+                  {{ attachingAssets ? '挂载中...' : `挂载 ${selectedAssetIds.length || 0} 个素材` }}
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <div v-if="editorAttachments.length" class="prep-manage-attachment-list">
+            <article v-for="attachment in editorAttachments" :key="attachment.id" class="prep-manage-attachment-item">
+              <div>
+                <strong>{{ attachment.title }}</strong>
+                <p>{{ attachment.sourceLabel }} · {{ assetTypeLabel(attachment.type) }}</p>
+              </div>
+
+              <div class="prep-manage-attachment-item__actions">
+                <button
+                  v-if="attachment.downloadUrl"
+                  type="button"
+                  class="course-chip course-chip--soft"
+                  @click="previewAttachment(attachment.downloadUrl)"
+                >
+                  查看
+                </button>
+                <button
+                  type="button"
+                  class="course-chip my-resources-delete-btn"
+                  :disabled="deletingAttachmentId === attachment.id"
+                  @click="removeAttachment(attachment)"
+                >
+                  {{ deletingAttachmentId === attachment.id ? '移除中...' : '移除' }}
+                </button>
+              </div>
+            </article>
+          </div>
+          <div v-else class="course-detail-empty course-detail-empty--compact">
+            {{ editingId ? '当前备课单还没有挂载素材。' : '先保存备课单后，才能上传或选择素材。' }}
+          </div>
+        </section>
+      </TeacherWorkspaceDialog>
     </section>
   </main>
 </template>
@@ -304,6 +313,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
+import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue'
 import {
   addTeacherPrepAssetAttachments,
   createTeacherPrep,
@@ -330,6 +340,7 @@ const attachingAssets = ref(false)
 const deletingPrepId = ref<number | null>(null)
 const deletingAttachmentId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
+const showEditorDialog = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const courseOptions = ref<Array<{ id: number; name: string }>>([])
@@ -376,6 +387,10 @@ const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
   return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
 })
+
+const dialogBusy = computed(
+  () => saving.value || uploadingLocal.value || attachingAssets.value || deletingAttachmentId.value !== null,
+)
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -437,6 +452,22 @@ function resetEditor() {
   }
 }
 
+function openCreateDialog() {
+  clearMessages()
+  resetEditor()
+  showEditorDialog.value = true
+}
+
+function closeEditorDialog() {
+  if (dialogBusy.value) {
+    return
+  }
+
+  showEditorDialog.value = false
+  errorMessage.value = ''
+  resetEditor()
+}
+
 function syncFiltersWithRoute() {
   filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
   filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : ''
@@ -473,6 +504,7 @@ function changePage(page: number) {
 function startEdit(item: TeacherPrepItem) {
   clearMessages()
   fillEditor(item)
+  showEditorDialog.value = true
 }
 
 function openLocalFilePicker() {
@@ -511,6 +543,7 @@ async function submitPrep() {
 
     const result = editingId.value ? await updateTeacherPrep(editingId.value, payload) : await createTeacherPrep(payload)
     fillEditor(result)
+    showEditorDialog.value = true
     await loadPreps()
     successMessage.value = isEditing ? `备课单“${result.title}”已保存` : `备课单“${result.title}”已创建`
   } catch (error: any) {
@@ -633,7 +666,7 @@ async function removePrep(item: TeacherPrepItem) {
     await deleteTeacherPrep(item.id)
 
     if (editingId.value === item.id) {
-      resetEditor()
+      closeEditorDialog()
     }
 
     await loadPreps()

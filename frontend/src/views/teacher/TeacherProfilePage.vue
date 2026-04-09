@@ -14,21 +14,75 @@
         <div>
           <div class="teacher-profile-head__eyebrow">PROFILE SETTINGS</div>
           <h2>个人资料</h2>
-          <p>维护教师账户的基础信息，保存后会立即同步当前登录资料。</p>
+          <p>基础信息不再常驻占用页面区域，统一通过“编辑资料”弹窗进行维护，保存后会同步当前登录资料。</p>
+        </div>
+
+        <div class="teacher-profile-head__actions">
+          <button type="button" class="auth-btn" :disabled="loading" @click="openEditorDialog">编辑资料</button>
         </div>
       </header>
 
-      <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
+      <p v-if="errorMessage && !showEditorDialog" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success teacher-profile-feedback">{{ successMessage }}</p>
 
-      <article class="teacher-profile-panel">
+      <article class="teacher-profile-panel teacher-profile-panel--preview">
         <div class="teacher-profile-panel__head teacher-profile-panel__head--preview">
           <div>
             <div class="teacher-profile-panel__eyebrow">BASIC INFO</div>
             <h3>基础信息</h3>
           </div>
-          <span class="teacher-profile-panel__status">{{ selectedCollegeName }}</span>
+          <div class="teacher-profile-head__actions">
+            <span class="teacher-profile-panel__status">{{ selectedCollegeName }}</span>
+            <button type="button" class="course-chip" :disabled="loading" @click="openEditorDialog">编辑资料</button>
+          </div>
         </div>
+
+        <div class="teacher-profile-summary teacher-profile-summary--wide">
+          <div class="teacher-profile-summary__item">
+            <span>当前用户名</span>
+            <strong>{{ form.username || '未填写' }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item">
+            <span>教师姓名</span>
+            <strong>{{ form.teacherName || '未填写' }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item">
+            <span>性别</span>
+            <strong>{{ form.gender || '未填写' }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item">
+            <span>联系邮箱</span>
+            <strong>{{ form.email || '未填写' }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item">
+            <span>所属学院</span>
+            <strong>{{ selectedCollegeName }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item">
+            <span>资料状态</span>
+            <strong>{{ profileStatusText }}</strong>
+          </div>
+          <div class="teacher-profile-summary__item teacher-profile-summary__item--full">
+            <span>个人简介</span>
+            <strong>{{ form.profile || '暂未填写个人简介' }}</strong>
+          </div>
+        </div>
+
+        <div class="teacher-profile-note teacher-profile-note--full">
+          <strong>当前模式</strong>
+          <p>资料编辑已收敛到独立弹窗，不会再挤占教师中心其它页面的位置；需要修改时直接点击“编辑资料”即可。</p>
+        </div>
+      </article>
+
+      <TeacherWorkspaceDialog
+        v-model="showEditorDialog"
+        eyebrow="PROFILE EDITOR"
+        title="编辑资料"
+        description="在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。"
+        :disabled="saving"
+        @close="closeEditorDialog"
+      >
+        <p v-if="errorMessage" class="course-feedback teacher-workspace-dialog__feedback">{{ errorMessage }}</p>
 
         <form class="teacher-profile-form" @submit.prevent="submitProfile">
           <div class="teacher-profile-form__row">
@@ -81,44 +135,13 @@
 
           <div class="teacher-profile-editor__actions">
             <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading || saving" @click="loadProfile">重新加载</button>
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditorDialog">关闭</button>
             <button type="submit" class="auth-btn" :disabled="loading || saving">
               {{ saving ? '保存中...' : '保存资料' }}
             </button>
           </div>
         </form>
-      </article>
-
-      <article class="teacher-profile-panel teacher-profile-panel--preview">
-        <div class="teacher-profile-panel__head">
-          <div>
-            <div class="teacher-profile-panel__eyebrow">PROFILE SUMMARY</div>
-            <h3>当前预览</h3>
-          </div>
-        </div>
-
-        <div class="teacher-profile-summary teacher-profile-summary--wide">
-          <div class="teacher-profile-summary__item">
-            <span>当前用户名</span>
-            <strong>{{ form.username || '未填写' }}</strong>
-          </div>
-          <div class="teacher-profile-summary__item">
-            <span>教师姓名</span>
-            <strong>{{ form.teacherName || '未填写' }}</strong>
-          </div>
-          <div class="teacher-profile-summary__item">
-            <span>性别</span>
-            <strong>{{ form.gender || '未填写' }}</strong>
-          </div>
-          <div class="teacher-profile-summary__item">
-            <span>联系邮箱</span>
-            <strong>{{ form.email || '未填写' }}</strong>
-          </div>
-          <div class="teacher-profile-summary__item teacher-profile-summary__item--full">
-            <span>个人简介</span>
-            <strong>{{ form.profile || '暂未填写个人简介' }}</strong>
-          </div>
-        </div>
-      </article>
+      </TeacherWorkspaceDialog>
     </section>
   </main>
 </template>
@@ -126,12 +149,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
+import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue'
 import { getTeacherProfile, updateTeacherProfile, type TeacherCourseOption } from '@/services/teacher'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
+const showEditorDialog = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const collegeOptions = ref<TeacherCourseOption[]>([])
@@ -151,6 +176,12 @@ const selectedCollegeName = computed(() => {
   return college?.name || '未选择学院'
 })
 
+const profileStatusText = computed(() => {
+  const fields = [form.username, form.teacherName, form.gender, form.collegeId, form.email, form.profile]
+  const completed = fields.filter((item) => String(item || '').trim()).length
+  return completed >= 6 ? '资料完整' : completed >= 4 ? '资料待完善' : '资料较少'
+})
+
 function fillForm(profile: {
   username?: string
   teacherName?: string
@@ -165,6 +196,20 @@ function fillForm(profile: {
   form.email = profile.email || ''
   form.collegeId = profile.collegeId ? String(profile.collegeId) : ''
   form.profile = profile.profile || ''
+}
+
+function openEditorDialog() {
+  errorMessage.value = ''
+  showEditorDialog.value = true
+}
+
+function closeEditorDialog() {
+  if (saving.value) {
+    return
+  }
+
+  showEditorDialog.value = false
+  errorMessage.value = ''
 }
 
 async function loadProfile() {
@@ -213,6 +258,7 @@ async function submitProfile() {
       username: result.username,
       name: result.teacherName,
     })
+    showEditorDialog.value = false
     successMessage.value = '个人资料已更新'
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '个人资料保存失败'

@@ -14,22 +14,23 @@
         <div>
           <div class="teacher-dashboard-head__eyebrow">MY ASSETS</div>
           <h2>我的素材</h2>
-          <p>素材上传不再强制关联课程，可选择公开或私密；公开素材会展示到前台素材库页面。</p>
+          <p>素材上传不再占用主页面布局，创建和编辑都会在独立弹窗内完成，同时保留公开与私密管理。</p>
         </div>
 
         <div class="teacher-dashboard-head__actions">
+          <button type="button" class="auth-btn" @click="openCreateDialog">新增素材</button>
           <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/assets')">查看前台素材库</button>
         </div>
       </header>
 
-      <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
+      <p v-if="errorMessage && !showEditorDialog" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success my-resources-feedback">{{ successMessage }}</p>
 
       <section class="teacher-dashboard-metrics">
         <article class="teacher-dashboard-metric">
           <span>素材总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前教师名下全部素材</em>
+          <em>当前教师账号下的全部素材</em>
         </article>
         <article class="teacher-dashboard-metric">
           <span>公开素材</span>
@@ -90,14 +91,73 @@
         </form>
       </article>
 
-      <article class="my-resources-panel">
+      <section class="my-resources-panel">
         <div class="my-resources-panel__head">
           <div>
-            <div class="my-resources-panel__eyebrow">ASSET EDITOR</div>
-            <h3>{{ editingId ? '编辑素材' : '新增素材' }}</h3>
+            <div class="my-resources-panel__eyebrow">ASSET LIST</div>
+            <h3>素材列表</h3>
           </div>
-          <button v-if="editingId" type="button" class="course-chip course-chip--soft" @click="resetEditor">取消编辑</button>
+          <div class="my-resources-panel__meta">创建入口已收起到页头按钮，编辑在弹窗中完成</div>
         </div>
+
+        <div v-if="assetList.length" class="asset-manage-list">
+          <article v-for="item in assetList" :key="item.id" class="asset-manage-item">
+            <div class="asset-manage-item__head">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <span :class="['teacher-dashboard-tag', item.visibility === 'public' ? 'is-video' : 'is-material']">
+                  {{ item.visibility === 'public' ? '公开' : '私密' }}
+                </span>
+              </div>
+              <span class="asset-manage-item__time">{{ item.uploadTime }}</span>
+            </div>
+
+            <p class="asset-manage-item__meta">{{ assetTypeLabel(item.type) }}</p>
+            <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
+            <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
+            <p v-else class="asset-manage-item__meta">
+              {{ item.fileName || '未记录文件名' }}
+              <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
+            </p>
+
+            <div class="asset-manage-item__actions">
+              <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
+              <button type="button" class="course-chip" @click="startEdit(item.id)">编辑</button>
+              <button type="button" class="course-chip my-resources-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
+                {{ deletingId === item.id ? '删除中...' : '删除' }}
+              </button>
+            </div>
+          </article>
+        </div>
+        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材，可以先新增一条。</div>
+
+        <section class="course-pagination my-resources-pagination">
+          <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
+          <div class="course-pagination__actions">
+            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
+            <button
+              v-for="pageNumber in pageNumbers"
+              :key="pageNumber"
+              type="button"
+              :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
+              :disabled="loading"
+              @click="changePage(pageNumber)"
+            >
+              {{ pageNumber }}
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <TeacherWorkspaceDialog
+        v-model="showEditorDialog"
+        eyebrow="ASSET EDITOR"
+        :title="editingId ? '编辑素材' : '新增素材'"
+        :description="editingId ? '保存后将返回列表，不再占据页面主区域。' : '通过独立弹窗完成素材创建，列表页保持稳定。'"
+        :disabled="saving"
+        @close="closeEditorDialog"
+      >
+        <p v-if="errorMessage" class="course-feedback teacher-workspace-dialog__feedback">{{ errorMessage }}</p>
 
         <form class="asset-manage-form" @submit.prevent="submitAsset">
           <label class="my-resources-field">
@@ -156,71 +216,13 @@
           </label>
 
           <div class="my-resources-filter-actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="resetEditor">重置</button>
+            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditorDialog">关闭</button>
             <button type="submit" class="auth-btn" :disabled="saving">
               {{ saving ? '提交中...' : editingId ? '保存素材' : '创建素材' }}
             </button>
           </div>
         </form>
-      </article>
-
-      <section class="my-resources-panel">
-        <div class="my-resources-panel__head">
-          <div>
-            <div class="my-resources-panel__eyebrow">ASSET LIST</div>
-            <h3>素材列表</h3>
-          </div>
-          <div class="my-resources-panel__meta">支持预览、编辑和删除</div>
-        </div>
-
-        <div v-if="assetList.length" class="asset-manage-list">
-          <article v-for="item in assetList" :key="item.id" class="asset-manage-item">
-            <div class="asset-manage-item__head">
-              <div>
-                <strong>{{ item.title }}</strong>
-                <span :class="['teacher-dashboard-tag', item.visibility === 'public' ? 'is-video' : 'is-material']">
-                  {{ item.visibility === 'public' ? '公开' : '私密' }}
-                </span>
-              </div>
-              <span class="asset-manage-item__time">{{ item.uploadTime }}</span>
-            </div>
-
-            <p class="asset-manage-item__meta">{{ assetTypeLabel(item.type) }}</p>
-            <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
-            <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
-            <p v-else class="asset-manage-item__meta">
-              {{ item.fileName || '未记录文件名' }}
-              <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
-            </p>
-
-            <div class="asset-manage-item__actions">
-              <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
-              <button type="button" class="course-chip" @click="startEdit(item.id)">编辑</button>
-              <button type="button" class="course-chip my-resources-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
-                {{ deletingId === item.id ? '删除中...' : '删除' }}
-              </button>
-            </div>
-          </article>
-        </div>
-        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材，可以先新增一条。</div>
-
-        <section class="course-pagination my-resources-pagination">
-          <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
-          <div class="course-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
-          </div>
-        </section>
-      </section>
+      </TeacherWorkspaceDialog>
     </section>
   </main>
 </template>
@@ -229,6 +231,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
+import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue'
 import {
   createTeacherAsset,
   deleteTeacherAssetDetail,
@@ -247,6 +250,7 @@ const loading = ref(false)
 const saving = ref(false)
 const deletingId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
+const showEditorDialog = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const selectedFile = ref<File | null>(null)
@@ -346,6 +350,33 @@ function clearMessages() {
   successMessage.value = ''
 }
 
+function resetEditor() {
+  editingId.value = null
+  editorForm.type = 'image'
+  editorForm.visibility = 'private'
+  editorForm.title = ''
+  editorForm.description = ''
+  editorForm.content = ''
+  selectedFile.value = null
+  fileInputKey.value += 1
+}
+
+function openCreateDialog() {
+  clearMessages()
+  resetEditor()
+  showEditorDialog.value = true
+}
+
+function closeEditorDialog() {
+  if (saving.value) {
+    return
+  }
+
+  showEditorDialog.value = false
+  errorMessage.value = ''
+  resetEditor()
+}
+
 function assetTypeLabel(type: TeacherAssetType) {
   return assetTypeOptions.find((item) => item.value === type)?.label || type
 }
@@ -369,17 +400,6 @@ function handleFileChange(event: Event) {
 function previewAsset(path: string) {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
   window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
-}
-
-function resetEditor() {
-  editingId.value = null
-  editorForm.type = 'image'
-  editorForm.visibility = 'private'
-  editorForm.title = ''
-  editorForm.description = ''
-  editorForm.content = ''
-  selectedFile.value = null
-  fileInputKey.value += 1
 }
 
 function syncFiltersWithRoute() {
@@ -429,6 +449,7 @@ async function startEdit(assetId: number) {
     editorForm.content = detail.content
     selectedFile.value = null
     fileInputKey.value += 1
+    showEditorDialog.value = true
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '素材详情加载失败'
   }
@@ -462,6 +483,8 @@ async function submitAsset() {
         description: editorForm.description,
         content: editorForm.content,
       })
+
+      showEditorDialog.value = false
       resetEditor()
       await loadAssets()
       successMessage.value = `素材“${result.title}”已更新`
@@ -474,6 +497,8 @@ async function submitAsset() {
         content: editorForm.content,
         file: selectedFile.value,
       })
+
+      showEditorDialog.value = false
       resetEditor()
       await loadAssets()
       successMessage.value = `素材“${result.title}”已创建`
@@ -496,7 +521,9 @@ async function removeAsset(item: TeacherAssetItem) {
 
   try {
     await deleteTeacherAssetDetail(item.id)
-    if (editingId.value === item.id) resetEditor()
+    if (editingId.value === item.id) {
+      closeEditorDialog()
+    }
     await loadAssets()
     successMessage.value = `素材“${item.title}”已删除`
   } catch (error: any) {

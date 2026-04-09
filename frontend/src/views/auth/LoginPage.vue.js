@@ -218,6 +218,12 @@ if (__VLS_ctx.selectedRole !== 'admin') {
     __VLS_7.slots.default;
     var __VLS_7;
 }
+else {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "auth-inline-link auth-inline-link--placeholder" },
+        'aria-hidden': "true",
+    });
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ref: "tipRef",
     ...{ class: "auth-tip" },
@@ -242,6 +248,8 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['feedback-text--error']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-inline-link']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-inline-link']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-inline-link--placeholder']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-tip__title']} */ ;
 var __VLS_dollars;

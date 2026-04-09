@@ -56,6 +56,7 @@
       <RouterLink v-if="selectedRole !== 'admin'" class="auth-inline-link" :to="`/register?role=${selectedRole}`">
         没有账号，注册账号？
       </RouterLink>
+      <div v-else class="auth-inline-link auth-inline-link--placeholder" aria-hidden="true">placeholder</div>
 
       <div ref="tipRef" class="auth-tip">
         <div class="auth-tip__title">登录提示</div>

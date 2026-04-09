@@ -339,6 +339,11 @@ body.body-teacher-locked #app {
   text-decoration: underline;
 }
 
+.auth-inline-link--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .auth-tip__title {
   font-size: 14px;
   font-weight: 700;
@@ -3093,6 +3098,72 @@ body.body-teacher-locked #app {
   line-height: 1.7;
 }
 
+.teacher-workspace-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 32;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 35, 74, 0.38);
+  backdrop-filter: blur(4px);
+}
+
+.teacher-workspace-dialog__panel {
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 26px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 54px rgba(20, 75, 157, 0.2);
+}
+
+.teacher-workspace-dialog__panel--wide {
+  width: min(1120px, 100%);
+}
+
+.teacher-workspace-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.teacher-workspace-dialog__eyebrow {
+  color: #5b77a1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.teacher-workspace-dialog__head h3 {
+  margin: 10px 0 8px;
+  color: #163b68;
+  font-size: 28px;
+}
+
+.teacher-workspace-dialog__head p {
+  margin: 0;
+  color: #5f7897;
+  line-height: 1.7;
+}
+
+.teacher-workspace-dialog__body {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.teacher-workspace-dialog__feedback {
+  margin: 0;
+}
+
+.teacher-workspace-dialog__section {
+  margin-top: 4px;
+}
+
 @media (max-width: 768px) {
   .teacher-message-page {
     padding-bottom: 32px;
@@ -3119,7 +3190,8 @@ body.body-teacher-locked #app {
   .teacher-message-thread__topic-head,
   .teacher-message-thread__reply-summary,
   .teacher-message-reply-target,
-  .teacher-message-dialog__head {
+  .teacher-message-dialog__head,
+  .teacher-workspace-dialog__head {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -3137,6 +3209,15 @@ body.body-teacher-locked #app {
   .teacher-message-reply-card__actions,
   .teacher-message-actions {
     display: grid;
+  }
+
+  .teacher-workspace-dialog {
+    padding: 16px;
+  }
+
+  .teacher-workspace-dialog__panel {
+    padding: 22px 18px;
+    border-radius: 24px;
   }
 }
 .teacher-dashboard-page {
