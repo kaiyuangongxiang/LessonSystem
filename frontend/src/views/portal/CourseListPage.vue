@@ -83,18 +83,9 @@
     <section class="course-pagination">
       <div class="course-pagination__desc">共 {{ pagination.total }} 门课程 · 支持分页浏览</div>
       <div class="course-pagination__actions">
-        <button type="button" class="course-chip" :disabled="pagination.page <= 1" @click="changePage(pagination.page - 1)">
-          上一页
-        </button>
-        <button
-          v-for="pageNumber in pageNumbers"
-          :key="pageNumber"
-          type="button"
-          :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-          @click="changePage(pageNumber)"
-        >
-          {{ pageNumber }}
-        </button>
+        <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+        <button type="button" class="course-page-btn is-active" aria-current="page">{{ pagination.page }}</button>
+        <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
       </div>
     </section>
   </main>
@@ -143,7 +134,7 @@ const errorMessage = ref('')
 const courses = ref<CourseItem[]>([])
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -215,11 +206,6 @@ const visibleCourses = computed(() => {
   ]
 })
 
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
-})
-
 function normalizePage(value: unknown) {
   const page = Number(value)
   return Number.isInteger(page) && page > 0 ? page : 1
@@ -268,7 +254,7 @@ async function loadCourses() {
         collegeId: selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value,
         sort: routeSort.value,
         page: normalizePage(route.query.page),
-        pageSize: 6,
+        pageSize: 4,
       },
     })
 
@@ -282,7 +268,7 @@ async function loadCourses() {
   } catch (error: any) {
     courses.value = []
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     colleges.value = []

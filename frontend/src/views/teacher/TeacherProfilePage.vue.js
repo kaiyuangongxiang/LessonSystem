@@ -176,12 +176,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.
     ...{ class: "teacher-profile-panel__status" },
 });
 (__VLS_ctx.selectedCollegeName);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.openEditorDialog) },
-    type: "button",
-    ...{ class: "course-chip" },
-    disabled: (__VLS_ctx.loading),
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "teacher-profile-summary teacher-profile-summary--wide" },
 });
@@ -227,11 +221,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.form.profile || '暂未填写个人简介');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-profile-note teacher-profile-note--full" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
 /** @type {[typeof TeacherWorkspaceDialog, typeof TeacherWorkspaceDialog, ]} */ ;
 // @ts-ignore
 const __VLS_3 = __VLS_asFunctionalComponent(TeacherWorkspaceDialog, new TeacherWorkspaceDialog({
@@ -240,6 +229,7 @@ const __VLS_3 = __VLS_asFunctionalComponent(TeacherWorkspaceDialog, new TeacherW
     eyebrow: "PROFILE EDITOR",
     title: "编辑资料",
     description: "在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。",
+    size: "wide",
     disabled: (__VLS_ctx.saving),
 }));
 const __VLS_4 = __VLS_3({
@@ -248,6 +238,7 @@ const __VLS_4 = __VLS_3({
     eyebrow: "PROFILE EDITOR",
     title: "编辑资料",
     description: "在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。",
+    size: "wide",
     disabled: (__VLS_ctx.saving),
 }, ...__VLS_functionalComponentArgsRest(__VLS_3));
 let __VLS_6;
@@ -395,7 +386,6 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-head__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-panel__status']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary--wide']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
@@ -406,8 +396,6 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-summary__item--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-note']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-profile-note--full']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-profile-form']} */ ;

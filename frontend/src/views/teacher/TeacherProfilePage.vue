@@ -33,7 +33,6 @@
           </div>
           <div class="teacher-profile-head__actions">
             <span class="teacher-profile-panel__status">{{ selectedCollegeName }}</span>
-            <button type="button" class="course-chip" :disabled="loading" @click="openEditorDialog">编辑资料</button>
           </div>
         </div>
 
@@ -67,11 +66,6 @@
             <strong>{{ form.profile || '暂未填写个人简介' }}</strong>
           </div>
         </div>
-
-        <div class="teacher-profile-note teacher-profile-note--full">
-          <strong>当前模式</strong>
-          <p>资料编辑已收敛到独立弹窗，不会再挤占教师中心其它页面的位置；需要修改时直接点击“编辑资料”即可。</p>
-        </div>
       </article>
 
       <TeacherWorkspaceDialog
@@ -79,6 +73,7 @@
         eyebrow="PROFILE EDITOR"
         title="编辑资料"
         description="在弹窗中维护教师基础信息，保存后将自动同步当前登录资料。"
+        size="wide"
         :disabled="saving"
         @close="closeEditorDialog"
       >

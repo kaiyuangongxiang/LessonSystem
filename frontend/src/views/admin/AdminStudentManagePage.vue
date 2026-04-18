@@ -118,18 +118,9 @@
         <section v-if="pagination.total > 0" class="admin-manage-pagination">
           <div class="admin-manage-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="admin-manage-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['admin-manage-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
-            <button type="button" class="course-chip" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)">下一页</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+            <button type="button" class="admin-manage-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
           </div>
         </section>
       </section>
@@ -267,7 +258,7 @@ const stats = reactive<AdminStudentStats>({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -284,12 +275,7 @@ const reminderTexts = computed(() => [
     : '当前学生账号资料完善度较好，可继续维护邮箱等联系信息。',
 ])
 
-const pageNumbers = computed(() => {
-  const totalPages = Math.max(pagination.totalPages, 1)
-  const start = Math.max(1, Math.min(pagination.page - 2, totalPages - 4))
-  const end = Math.min(totalPages, start + 4)
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
-})
+
 
 const editorTitle = computed(() => (editingId.value ? '修改学生用户' : '新增学生用户'))
 const editorActionText = computed(() => (editingId.value ? '保存修改' : '确认新增'))
@@ -437,7 +423,7 @@ async function loadStudents() {
   try {
     const data = await getAdminStudentUserList({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
     })
 
     studentList.value = data.list
@@ -460,7 +446,7 @@ async function loadStudents() {
     stats.emailBoundCount = 0
     stats.profileCompletedCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '学生用户列表加载失败'

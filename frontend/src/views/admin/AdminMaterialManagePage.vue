@@ -168,17 +168,9 @@
         <section class="admin-manage-pagination">
           <div class="admin-manage-pagination__desc">共 {{ pagination.total }} 条资源 · 当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="admin-manage-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['admin-manage-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+            <button type="button" class="admin-manage-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
           </div>
         </section>
       </section>
@@ -221,7 +213,7 @@ const stats = reactive<AdminResourceStats>({
 })
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -236,10 +228,7 @@ const reminderTexts = computed(() => [
   stats.interactionCount > 0 ? `累计下载和播放次数为 ${stats.interactionCount} 次。` : '当前资源尚未产生互动记录。',
 ])
 
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
-})
+
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -359,7 +348,7 @@ async function loadResources() {
   try {
     const data = await getAdminMaterialList({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: form.keyword,
       courseId: form.courseId,
     })
@@ -382,7 +371,7 @@ async function loadResources() {
     stats.teacherCount = 0
     stats.interactionCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '资源管理列表加载失败'

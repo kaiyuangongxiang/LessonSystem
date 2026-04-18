@@ -183,18 +183,9 @@
         <section v-if="pagination.total > 0" class="admin-manage-pagination">
           <div class="admin-manage-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="admin-manage-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['admin-manage-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
-            <button type="button" class="course-chip" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)">下一页</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+            <button type="button" class="admin-manage-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
           </div>
         </section>
       </section>
@@ -333,7 +324,7 @@ const stats = reactive<AdminCourseStats>({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -354,12 +345,7 @@ const reminderTexts = computed(() => {
   ]
 })
 
-const pageNumbers = computed(() => {
-  const totalPages = Math.max(pagination.totalPages, 1)
-  const start = Math.max(1, Math.min(pagination.page - 2, totalPages - 4))
-  const end = Math.min(totalPages, start + 4)
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
-})
+
 
 const currentFilterSummary = computed(() => {
   const parts = [form.sort === 'video-rich' ? '视频优先' : '最近更新']
@@ -632,7 +618,7 @@ async function loadCourses() {
   try {
     const data = await getAdminCourseList({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: form.keyword,
       collegeId: form.collegeId || undefined,
       sort: form.sort,
@@ -664,7 +650,7 @@ async function loadCourses() {
     stats.collegeAssignedCount = 0
     stats.contentReadyCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '课程管理列表加载失败'

@@ -132,18 +132,10 @@
         <section class="course-pagination my-resources-pagination">
           <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="course-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
-          </div>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+          <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
+        </div>
         </section>
       </section>
 
@@ -370,7 +362,7 @@ const editorForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -380,10 +372,7 @@ const headerText = computed(() => {
   return `${name}，这里可以维护教学内容，并为备课单挂载个人素材。`
 })
 
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
-})
+
 
 const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
   { value: 'image', label: '图片' },
@@ -719,7 +708,7 @@ async function loadPersonalAssets() {
   try {
     const data = await getTeacherAssets({
       page: 1,
-      pageSize: 60,
+      pageSize: 40,
       type: 'all',
       visibility: 'all',
     })
@@ -738,7 +727,7 @@ async function loadPreps() {
   try {
     const data = await getTeacherPreps({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: filters.keyword,
       courseId: filters.courseId,
       status: filters.status,
@@ -769,7 +758,7 @@ async function loadPreps() {
     stats.publishedCount = 0
     stats.courseCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '备课单列表加载失败'

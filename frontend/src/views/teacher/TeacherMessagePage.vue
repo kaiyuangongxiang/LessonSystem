@@ -284,20 +284,9 @@
         </div>
 
         <div class="course-pagination__actions">
-          <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-          <button
-            v-for="pageNumber in pageNumbers"
-            :key="pageNumber"
-            type="button"
-            :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-            :disabled="loading"
-            @click="changePage(pageNumber)"
-          >
-            {{ pageNumber }}
-          </button>
-          <button type="button" class="course-chip" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)">
-            下一页
-          </button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+          <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
         </div>
       </section>
     </section>
@@ -393,7 +382,7 @@ const topicForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -447,12 +436,7 @@ const boardSummary = computed(() => {
   return '点击任意主题卡片即可展开完整讨论内容，查看主贴、回复与楼中交流。'
 })
 
-const pageNumbers = computed(() => {
-  const totalPages = Math.max(pagination.totalPages || 1, 1)
-  const start = Math.max(1, Math.min(pagination.page - 2, Math.max(totalPages - 4, 1)))
-  const end = Math.min(totalPages, start + 4)
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
-})
+
 
 function getRoleLabel(role: 'teacher' | 'admin') {
   return role === 'admin' ? '管理员' : '教师'
@@ -584,7 +568,7 @@ async function loadMessages() {
   try {
     const data = await getTeacherMessageList({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: form.keyword,
     })
 
@@ -596,7 +580,7 @@ async function loadMessages() {
   } catch (error: any) {
     messageList.value = []
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '教学交流列表加载失败'

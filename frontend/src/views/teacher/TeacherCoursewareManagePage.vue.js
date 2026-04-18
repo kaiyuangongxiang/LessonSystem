@@ -37,7 +37,7 @@ const editorForm = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -56,12 +56,6 @@ const filteredPrepOptions = computed(() => {
         return prepOptions.value;
     }
     return prepOptions.value.filter((item) => String(item.courseId) === filters.courseId);
-});
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    const start = Math.max(1, Math.min(pagination.page - 2, Math.max(totalPages - 4, 1)));
-    const end = Math.min(totalPages, start + 4);
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 });
 function clearMessages() {
     errorMessage.value = '';
@@ -654,21 +648,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
+});
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['courseware-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
@@ -746,6 +745,11 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -767,7 +771,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             headerText: headerText,
             availablePrepOptions: availablePrepOptions,
             filteredPrepOptions: filteredPrepOptions,
-            pageNumbers: pageNumbers,
             resolveAssetUrl: resolveAssetUrl,
             resetEditor: resetEditor,
             applySearch: applySearch,

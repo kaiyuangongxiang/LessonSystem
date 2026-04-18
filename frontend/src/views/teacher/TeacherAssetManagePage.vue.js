@@ -29,7 +29,8 @@ const stats = reactive({
 const filters = reactive({
     keyword: '',
     type: 'all',
-    visibility: 'all',
+    scope: 'all',
+    visibility: 'public',
 });
 const editorForm = reactive({
     type: 'image',
@@ -40,7 +41,7 @@ const editorForm = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -52,8 +53,8 @@ const assetTypeOptions = [
     { value: 'file', label: '文件素材' },
 ];
 const visibilityOptions = [
-    { value: 'private', label: '私密' },
     { value: 'public', label: '公开' },
+    { value: 'private', label: '私密' },
 ];
 const isContentType = computed(() => editorForm.type === 'text');
 const richTextActions = [
@@ -98,10 +99,6 @@ const fileNameText = computed(() => {
     return '未选择文件';
 });
 const contentPlaceholder = computed(() => '请输入可复用的文本内容');
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
-});
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -207,8 +204,11 @@ async function downloadAsset(assetId) {
 function syncFiltersWithRoute() {
     filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
     filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? route.query.type : 'all';
+    filters.scope = route.query.scope === 'personal' ? 'personal' : 'all';
     filters.visibility =
-        route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all';
+        filters.scope === 'personal' && route.query.visibility === 'private'
+            ? 'private'
+            : 'public';
 }
 function updateRoute(page = 1) {
     void router.push({
@@ -217,7 +217,8 @@ function updateRoute(page = 1) {
             page: String(page),
             ...(filters.keyword ? { keyword: filters.keyword } : {}),
             ...(filters.type !== 'all' ? { type: filters.type } : {}),
-            ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
+            ...(filters.scope !== 'all' ? { scope: filters.scope } : {}),
+            ...(filters.scope === 'personal' ? { visibility: filters.visibility } : {}),
         },
     });
 }
@@ -227,7 +228,15 @@ function applySearch() {
 function resetFilters() {
     filters.keyword = '';
     filters.type = 'all';
-    filters.visibility = 'all';
+    filters.scope = 'all';
+    filters.visibility = 'public';
+    updateRoute(1);
+}
+function switchVisibility(visibility) {
+    if (filters.visibility === visibility || loading.value) {
+        return;
+    }
+    filters.visibility = visibility;
     updateRoute(1);
 }
 function changePage(page) {
@@ -332,10 +341,10 @@ async function loadAssets() {
     try {
         const data = await getTeacherAssets({
             page: normalizePage(route.query.page),
-            pageSize: 6,
+            pageSize: 4,
             keyword: filters.keyword,
             type: filters.type,
-            visibility: filters.visibility,
+            visibility: filters.scope === 'personal' ? filters.visibility : 'all',
         });
         assetList.value = data.list;
         stats.total = data.stats.total;
@@ -360,7 +369,7 @@ async function loadAssets() {
         stats.videoCount = 0;
         stats.contentCount = 0;
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '素材列表加载失败';
@@ -530,18 +539,15 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
-    value: (__VLS_ctx.filters.visibility),
+    ...{ onChange: (__VLS_ctx.applySearch) },
+    value: (__VLS_ctx.filters.scope),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
     value: "all",
 });
-for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
-        key: (option.value),
-        value: (option.value),
-    });
-    (option.label);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "personal",
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "my-resources-filter-actions" },
 });
@@ -571,6 +577,29 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "my-resources-panel__meta" },
 });
+if (__VLS_ctx.filters.scope === 'personal') {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "asset-visibility-tabs" },
+        role: "tablist",
+        'aria-label': "个人素材公开范围",
+    });
+    for (const [option] of __VLS_getVForSourceType((__VLS_ctx.visibilityOptions))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.filters.scope === 'personal'))
+                        return;
+                    __VLS_ctx.switchVisibility(option.value);
+                } },
+            key: (option.value),
+            type: "button",
+            role: "tab",
+            'aria-selected': (__VLS_ctx.filters.visibility === option.value),
+            ...{ class: (['asset-visibility-tabs__item', __VLS_ctx.filters.visibility === option.value ? 'is-active' : '']) },
+            disabled: (__VLS_ctx.loading),
+        });
+        (option.label);
+    }
+}
 if (__VLS_ctx.assetList.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "asset-manage-list" },
@@ -694,21 +723,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
+});
 /** @type {[typeof TeacherWorkspaceDialog, typeof TeacherWorkspaceDialog, ]} */ ;
 // @ts-ignore
 const __VLS_3 = __VLS_asFunctionalComponent(TeacherWorkspaceDialog, new TeacherWorkspaceDialog({
@@ -916,6 +950,7 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-visibility-tabs']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-item__head']} */ ;
@@ -937,6 +972,11 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-form']} */ ;
@@ -994,7 +1034,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             uploadTip: uploadTip,
             fileNameText: fileNameText,
             contentPlaceholder: contentPlaceholder,
-            pageNumbers: pageNumbers,
             renderPlainText: renderPlainText,
             syncRichTextContent: syncRichTextContent,
             formatRichText: formatRichText,
@@ -1008,6 +1047,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             downloadAsset: downloadAsset,
             applySearch: applySearch,
             resetFilters: resetFilters,
+            switchVisibility: switchVisibility,
             changePage: changePage,
             startEdit: startEdit,
             submitAsset: submitAsset,

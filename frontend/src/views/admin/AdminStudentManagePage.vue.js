@@ -33,7 +33,7 @@ const stats = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -47,12 +47,6 @@ const reminderTexts = computed(() => [
         ? `仍有 ${stats.total - stats.profileCompletedCount} 位学生尚未完善个人简介。`
         : '当前学生账号资料完善度较好，可继续维护邮箱等联系信息。',
 ]);
-const pageNumbers = computed(() => {
-    const totalPages = Math.max(pagination.totalPages, 1);
-    const start = Math.max(1, Math.min(pagination.page - 2, totalPages - 4));
-    const end = Math.min(totalPages, start + 4);
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-});
 const editorTitle = computed(() => (editingId.value ? '修改学生用户' : '新增学生用户'));
 const editorActionText = computed(() => (editingId.value ? '保存修改' : '确认新增'));
 function normalizePage(value) {
@@ -183,7 +177,7 @@ async function loadStudents() {
     try {
         const data = await getAdminStudentUserList({
             page: normalizePage(route.query.page),
-            pageSize: 6,
+            pageSize: 4,
         });
         studentList.value = data.list;
         collegeOptions.value = data.formOptions.colleges;
@@ -206,7 +200,7 @@ async function loadStudents() {
         stats.emailBoundCount = 0;
         stats.profileCompletedCount = 0;
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '学生用户列表加载失败';
@@ -535,23 +529,17 @@ if (__VLS_ctx.pagination.total > 0) {
                 __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
             } },
         type: "button",
-        ...{ class: "course-chip" },
+        ...{ class: "course-chip course-pagination__nav" },
         disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+        'aria-label': "上一页",
     });
-    for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.pagination.total > 0))
-                        return;
-                    __VLS_ctx.changePage(pageNumber);
-                } },
-            key: (pageNumber),
-            type: "button",
-            ...{ class: (['admin-manage-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-            disabled: (__VLS_ctx.loading),
-        });
-        (pageNumber);
-    }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        type: "button",
+        ...{ class: "admin-manage-page-btn is-active" },
+        disabled: (__VLS_ctx.loading),
+        'aria-current': "page",
+    });
+    (__VLS_ctx.pagination.page);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         ...{ onClick: (...[$event]) => {
                 if (!(__VLS_ctx.pagination.total > 0))
@@ -559,8 +547,9 @@ if (__VLS_ctx.pagination.total > 0) {
                 __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
             } },
         type: "button",
-        ...{ class: "course-chip" },
+        ...{ class: "course-chip course-pagination__nav" },
         disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+        'aria-label': "下一页",
     });
 }
 if (__VLS_ctx.editorVisible) {
@@ -770,7 +759,11 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor-mask']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__head']} */ ;
@@ -817,7 +810,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             pagination: pagination,
             headerText: headerText,
             reminderTexts: reminderTexts,
-            pageNumbers: pageNumbers,
             editorTitle: editorTitle,
             editorActionText: editorActionText,
             openCreateEditor: openCreateEditor,

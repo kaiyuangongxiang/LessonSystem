@@ -30,7 +30,7 @@ const topicForm = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -70,12 +70,6 @@ const boardSummary = computed(() => {
         return '已展开当前主题详情，你可以继续查看楼中回复，或在底部直接补充反馈。';
     }
     return '点击任意主题卡片即可展开完整讨论内容，查看主贴、回复与楼中交流。';
-});
-const pageNumbers = computed(() => {
-    const totalPages = Math.max(pagination.totalPages || 1, 1);
-    const start = Math.max(1, Math.min(pagination.page - 2, Math.max(totalPages - 4, 1)));
-    const end = Math.min(totalPages, start + 4);
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 });
 function getRoleLabel(role) {
     return role === 'admin' ? '管理员' : '教师';
@@ -185,7 +179,7 @@ async function loadMessages() {
     try {
         const data = await getTeacherMessageList({
             page: normalizePage(route.query.page),
-            pageSize: 6,
+            pageSize: 4,
             keyword: form.keyword,
         });
         messageList.value = data.list;
@@ -197,7 +191,7 @@ async function loadMessages() {
     catch (error) {
         messageList.value = [];
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '教学交流列表加载失败';
@@ -846,28 +840,25 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
             __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
 });
 if (__VLS_ctx.showTopicEditor) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -1038,7 +1029,11 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__head']} */ ;
@@ -1081,7 +1076,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             rootReplies: rootReplies,
             heroMetrics: heroMetrics,
             boardSummary: boardSummary,
-            pageNumbers: pageNumbers,
             getRoleLabel: getRoleLabel,
             formatTopicNumber: formatTopicNumber,
             resetTopicForm: resetTopicForm,

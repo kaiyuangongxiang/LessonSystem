@@ -99,17 +99,9 @@
       <section class="course-pagination my-resources-pagination">
         <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
         <div class="course-pagination__actions">
-          <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-          <button
-            v-for="pageNumber in pageNumbers"
-            :key="pageNumber"
-            type="button"
-            :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-            :disabled="loading"
-            @click="changePage(pageNumber)"
-          >
-            {{ pageNumber }}
-          </button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+          <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
         </div>
       </section>
     </article>
@@ -155,7 +147,7 @@ const filters = reactive({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 8,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -167,11 +159,6 @@ const assetTypeOptions = [
   { value: 'text', label: '文本片段' },
   { value: 'file', label: '文件素材' },
 ] as const
-
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
-})
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -257,7 +244,7 @@ async function loadAssets() {
   try {
     const data = await getPortalPublicAssets({
       page: normalizePage(route.query.page),
-      pageSize: 8,
+      pageSize: 4,
       keyword: filters.keyword,
       type: filters.type,
     })
@@ -278,7 +265,7 @@ async function loadAssets() {
     stats.mediaCount = 0
     stats.contentCount = 0
     pagination.page = 1
-    pagination.pageSize = 8
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '公共素材加载失败'

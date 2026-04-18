@@ -41,17 +41,13 @@ const editorForm = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '教师用户';
     return `${name}，这里可以维护教学内容，并为备课单挂载个人素材。`;
-});
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
 });
 const assetTypeOptions = [
     { value: 'image', label: '图片' },
@@ -340,7 +336,7 @@ async function loadPersonalAssets() {
     try {
         const data = await getTeacherAssets({
             page: 1,
-            pageSize: 60,
+            pageSize: 40,
             type: 'all',
             visibility: 'all',
         });
@@ -357,7 +353,7 @@ async function loadPreps() {
     try {
         const data = await getTeacherPreps({
             page: normalizePage(route.query.page),
-            pageSize: 6,
+            pageSize: 4,
             keyword: filters.keyword,
             courseId: filters.courseId,
             status: filters.status,
@@ -387,7 +383,7 @@ async function loadPreps() {
         stats.publishedCount = 0;
         stats.courseCount = 0;
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '备课单列表加载失败';
@@ -669,21 +665,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
+});
 /** @type {[typeof TeacherWorkspaceDialog, typeof TeacherWorkspaceDialog, ]} */ ;
 // @ts-ignore
 const __VLS_3 = __VLS_asFunctionalComponent(TeacherWorkspaceDialog, new TeacherWorkspaceDialog({
@@ -995,6 +996,11 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
@@ -1066,7 +1072,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             editorForm: editorForm,
             pagination: pagination,
             headerText: headerText,
-            pageNumbers: pageNumbers,
             assetTypeOptions: assetTypeOptions,
             canAttachAssets: canAttachAssets,
             filteredPersonalAssetOptions: filteredPersonalAssetOptions,

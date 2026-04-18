@@ -179,18 +179,10 @@
         <section class="course-pagination my-resources-pagination">
           <div class="course-pagination__desc">共 {{ pagination.total }} 条资源记录 · 支持分页浏览</div>
           <div class="course-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
-          </div>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+          <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+          <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
+        </div>
         </section>
       </section>
     </section>
@@ -241,7 +233,7 @@ const stats = reactive<TeacherResourceStats>({
 })
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -251,10 +243,7 @@ const headerText = computed(() => {
   return `${name}，这里统一查看本人上传的资料与视频，并继续维护资源内容。`
 })
 
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5)
-})
+
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -412,7 +401,7 @@ async function loadResources() {
   try {
     const data = await getTeacherResources({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: form.keyword,
       courseId: form.courseId,
       type: form.type,
@@ -436,7 +425,7 @@ async function loadResources() {
     stats.videoCount = 0
     stats.interactionCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '我的资源加载失败'

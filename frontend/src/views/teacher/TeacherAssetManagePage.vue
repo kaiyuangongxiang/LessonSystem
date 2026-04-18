@@ -75,12 +75,10 @@
           </label>
 
           <label class="my-resources-field">
-            <span>公开范围</span>
-            <select v-model="filters.visibility">
-              <option value="all">全部范围</option>
-              <option v-for="option in visibilityOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
+            <span>资料范围</span>
+            <select v-model="filters.scope" @change="applySearch">
+              <option value="all">全部</option>
+              <option value="personal">个人</option>
             </select>
           </label>
 
@@ -98,6 +96,21 @@
             <h3>素材列表</h3>
           </div>
           <div class="my-resources-panel__meta">创建入口已收起到页头按钮，编辑在弹窗中完成</div>
+        </div>
+
+        <div v-if="filters.scope === 'personal'" class="asset-visibility-tabs" role="tablist" aria-label="个人素材公开范围">
+          <button
+            v-for="option in visibilityOptions"
+            :key="option.value"
+            type="button"
+            role="tab"
+            :aria-selected="filters.visibility === option.value"
+            :class="['asset-visibility-tabs__item', filters.visibility === option.value ? 'is-active' : '']"
+            :disabled="loading"
+            @click="switchVisibility(option.value)"
+          >
+            {{ option.label }}
+          </button>
         </div>
 
         <div v-if="assetList.length" class="asset-manage-list">
@@ -135,17 +148,9 @@
         <section class="course-pagination my-resources-pagination">
           <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
           <div class="course-pagination__actions">
-            <button type="button" class="course-chip" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)">上一页</button>
-            <button
-              v-for="pageNumber in pageNumbers"
-              :key="pageNumber"
-              type="button"
-              :class="['course-page-btn', pageNumber === pagination.page ? 'is-active' : '']"
-              :disabled="loading"
-              @click="changePage(pageNumber)"
-            >
-              {{ pageNumber }}
-            </button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
+            <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
           </div>
         </section>
       </section>
@@ -299,7 +304,8 @@ const stats = reactive<TeacherAssetStats>({
 const filters = reactive({
   keyword: '',
   type: 'all' as TeacherAssetType | 'all',
-  visibility: 'all' as TeacherAssetVisibility | 'all',
+  scope: 'all' as 'all' | 'personal',
+  visibility: 'public' as TeacherAssetVisibility,
 })
 
 const editorForm = reactive({
@@ -312,7 +318,7 @@ const editorForm = reactive({
 
 const pagination = reactive({
   page: 1,
-  pageSize: 6,
+  pageSize: 4,
   total: 0,
   totalPages: 0,
 })
@@ -326,8 +332,8 @@ const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
 ]
 
 const visibilityOptions: Array<{ value: TeacherAssetVisibility; label: string }> = [
-  { value: 'private', label: '私密' },
   { value: 'public', label: '公开' },
+  { value: 'private', label: '私密' },
 ]
 
 const isContentType = computed(() => editorForm.type === 'text')
@@ -368,11 +374,6 @@ const fileNameText = computed(() => {
 })
 
 const contentPlaceholder = computed(() => '请输入可复用的文本内容')
-
-const pageNumbers = computed(() => {
-  const totalPages = pagination.totalPages || 1
-  return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
-})
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -495,8 +496,11 @@ async function downloadAsset(assetId: number) {
 function syncFiltersWithRoute() {
   filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
   filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? (route.query.type as TeacherAssetType | 'all') : 'all'
+  filters.scope = route.query.scope === 'personal' ? 'personal' : 'all'
   filters.visibility =
-    route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all'
+    filters.scope === 'personal' && route.query.visibility === 'private'
+      ? 'private'
+      : 'public'
 }
 
 function updateRoute(page = 1) {
@@ -506,7 +510,8 @@ function updateRoute(page = 1) {
       page: String(page),
       ...(filters.keyword ? { keyword: filters.keyword } : {}),
       ...(filters.type !== 'all' ? { type: filters.type } : {}),
-      ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
+      ...(filters.scope !== 'all' ? { scope: filters.scope } : {}),
+      ...(filters.scope === 'personal' ? { visibility: filters.visibility } : {}),
     },
   })
 }
@@ -518,7 +523,17 @@ function applySearch() {
 function resetFilters() {
   filters.keyword = ''
   filters.type = 'all'
-  filters.visibility = 'all'
+  filters.scope = 'all'
+  filters.visibility = 'public'
+  updateRoute(1)
+}
+
+function switchVisibility(visibility: TeacherAssetVisibility) {
+  if (filters.visibility === visibility || loading.value) {
+    return
+  }
+
+  filters.visibility = visibility
   updateRoute(1)
 }
 
@@ -634,10 +649,10 @@ async function loadAssets() {
   try {
     const data = await getTeacherAssets({
       page: normalizePage(route.query.page),
-      pageSize: 6,
+      pageSize: 4,
       keyword: filters.keyword,
       type: filters.type,
-      visibility: filters.visibility,
+      visibility: filters.scope === 'personal' ? filters.visibility : 'all',
     })
 
     assetList.value = data.list
@@ -662,7 +677,7 @@ async function loadAssets() {
     stats.videoCount = 0
     stats.contentCount = 0
     pagination.page = 1
-    pagination.pageSize = 6
+    pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
     errorMessage.value = error?.response?.data?.message || '素材列表加载失败'

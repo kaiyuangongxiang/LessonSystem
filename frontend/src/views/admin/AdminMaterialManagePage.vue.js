@@ -24,7 +24,7 @@ const stats = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -36,10 +36,6 @@ const reminderTexts = computed(() => [
     stats.total > 0 ? `当前共有 ${stats.total} 条资源处于有效状态。` : '当前还没有可管理的资源。',
     stats.interactionCount > 0 ? `累计下载和播放次数为 ${stats.interactionCount} 次。` : '当前资源尚未产生互动记录。',
 ]);
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
-});
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -138,7 +134,7 @@ async function loadResources() {
     try {
         const data = await getAdminMaterialList({
             page: normalizePage(route.query.page),
-            pageSize: 6,
+            pageSize: 4,
             keyword: form.keyword,
             courseId: form.courseId,
         });
@@ -161,7 +157,7 @@ async function loadResources() {
         stats.teacherCount = 0;
         stats.interactionCount = 0;
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '资源管理列表加载失败';
@@ -556,21 +552,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['admin-manage-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "admin-manage-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
+});
 /** @type {__VLS_StyleScopedClasses['admin-manage-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-dashboard-sidebar__eyebrow']} */ ;
@@ -659,6 +660,11 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -676,7 +682,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             pagination: pagination,
             headerText: headerText,
             reminderTexts: reminderTexts,
-            pageNumbers: pageNumbers,
             resourceTypeLabel: resourceTypeLabel,
             resourceMetaText: resourceMetaText,
             applySearch: applySearch,

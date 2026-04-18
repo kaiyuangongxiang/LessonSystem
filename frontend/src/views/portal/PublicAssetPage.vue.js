@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import { getPortalPublicAssets } from '@/services/portal';
@@ -19,7 +19,7 @@ const filters = reactive({
 });
 const pagination = reactive({
     page: 1,
-    pageSize: 8,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -30,10 +30,6 @@ const assetTypeOptions = [
     { value: 'text', label: '文本片段' },
     { value: 'file', label: '文件素材' },
 ];
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
-});
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -105,7 +101,7 @@ async function loadAssets() {
     try {
         const data = await getPortalPublicAssets({
             page: normalizePage(route.query.page),
-            pageSize: 8,
+            pageSize: 4,
             keyword: filters.keyword,
             type: filters.type,
         });
@@ -126,7 +122,7 @@ async function loadAssets() {
         stats.mediaCount = 0;
         stats.contentCount = 0;
         pagination.page = 1;
-        pagination.pageSize = 8;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         errorMessage.value = error?.response?.data?.message || '公共素材加载失败';
@@ -347,21 +343,26 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1 || __VLS_ctx.loading),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-        disabled: (__VLS_ctx.loading),
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    disabled: (__VLS_ctx.loading),
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages || __VLS_ctx.loading),
+    'aria-label': "下一页",
+});
 /** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
 /** @type {__VLS_StyleScopedClasses['public-asset-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero']} */ ;
@@ -403,6 +404,11 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -415,7 +421,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             filters: filters,
             pagination: pagination,
             assetTypeOptions: assetTypeOptions,
-            pageNumbers: pageNumbers,
             renderPlainText: renderPlainText,
             assetTypeLabel: assetTypeLabel,
             formatFileSize: formatFileSize,

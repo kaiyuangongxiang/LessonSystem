@@ -9,7 +9,7 @@ const errorMessage = ref('');
 const courses = ref([]);
 const pagination = reactive({
     page: 1,
-    pageSize: 6,
+    pageSize: 4,
     total: 0,
     totalPages: 0,
 });
@@ -71,10 +71,6 @@ const visibleCourses = computed(() => {
         },
     ];
 });
-const pageNumbers = computed(() => {
-    const totalPages = pagination.totalPages || 1;
-    return Array.from({ length: totalPages }, (_, index) => index + 1).slice(0, 5);
-});
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -115,7 +111,7 @@ async function loadCourses() {
                 collegeId: selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value,
                 sort: routeSort.value,
                 page: normalizePage(route.query.page),
-                pageSize: 6,
+                pageSize: 4,
             },
         });
         const data = response.data.data;
@@ -129,7 +125,7 @@ async function loadCourses() {
     catch (error) {
         courses.value = [];
         pagination.page = 1;
-        pagination.pageSize = 6;
+        pagination.pageSize = 4;
         pagination.total = 0;
         pagination.totalPages = 0;
         colleges.value = [];
@@ -291,20 +287,25 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
             __VLS_ctx.changePage(__VLS_ctx.pagination.page - 1);
         } },
     type: "button",
-    ...{ class: "course-chip" },
+    ...{ class: "course-chip course-pagination__nav" },
     disabled: (__VLS_ctx.pagination.page <= 1),
+    'aria-label': "上一页",
 });
-for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changePage(pageNumber);
-            } },
-        key: (pageNumber),
-        type: "button",
-        ...{ class: (['course-page-btn', pageNumber === __VLS_ctx.pagination.page ? 'is-active' : '']) },
-    });
-    (pageNumber);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "button",
+    ...{ class: "course-page-btn is-active" },
+    'aria-current': "page",
+});
+(__VLS_ctx.pagination.page);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.changePage(__VLS_ctx.pagination.page + 1);
+        } },
+    type: "button",
+    ...{ class: "course-chip course-pagination__nav" },
+    disabled: (__VLS_ctx.pagination.page >= __VLS_ctx.pagination.totalPages),
+    'aria-label': "下一页",
+});
 /** @type {__VLS_StyleScopedClasses['course-list-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-nav__eyebrow']} */ ;
@@ -332,6 +333,11 @@ for (const [pageNumber] of __VLS_getVForSourceType((__VLS_ctx.pageNumbers))) {
 /** @type {__VLS_StyleScopedClasses['course-pagination__desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-page-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-pagination__nav']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -345,7 +351,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             hasActiveFilters: hasActiveFilters,
             filterSummary: filterSummary,
             visibleCourses: visibleCourses,
-            pageNumbers: pageNumbers,
             updateRoute: updateRoute,
             handleCollegeChange: handleCollegeChange,
             changePage: changePage,
