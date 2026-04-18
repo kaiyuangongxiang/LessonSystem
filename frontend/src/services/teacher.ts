@@ -10,7 +10,7 @@ export interface TeacherDashboardStats {
 
 export interface TeacherDashboardAssetItem {
   id: number
-  type: 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
+  type: TeacherAssetType
   title: string
   visibility: 'public' | 'private'
   uploadDate: string
@@ -401,6 +401,15 @@ export async function deleteTeacherPrepAttachment(prepId: number, attachmentId: 
   return response.data.data
 }
 
+export async function previewTeacherPrepAttachment(attachmentId: number) {
+  const response = await http.get<Blob>(`/teacher/preps/attachments/${attachmentId}/file`, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+}
+
 export async function getTeacherCoursewares(params: TeacherCoursewareQuery) {
   const response = await http.get<ApiSuccess<TeacherCoursewareListData>>('/teacher/coursewares', {
     params,
@@ -433,7 +442,7 @@ export async function publishTeacherCourseware(coursewareId: number) {
   return response.data.data
 }
 
-export type TeacherAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
+export type TeacherAssetType = 'image' | 'audio' | 'video' | 'text' | 'file'
 export type TeacherAssetVisibility = 'private' | 'public'
 
 export interface TeacherPrepAttachmentItem {
@@ -552,6 +561,29 @@ export async function createTeacherAsset(payload: TeacherAssetPayload) {
 export async function getTeacherAssetDetail(assetId: number) {
   const response = await http.get<ApiSuccess<TeacherAssetItem>>(`/teacher/assets/${assetId}`)
   return response.data.data
+}
+
+export async function previewTeacherAsset(assetId: number) {
+  const response = await http.get<Blob>(`/teacher/assets/${assetId}/download`, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+}
+
+export async function downloadTeacherAsset(assetId: number, fileName = 'download') {
+  const response = await http.get<Blob>(`/teacher/assets/${assetId}/download`, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
 }
 
 export async function updateTeacherAssetDetail(assetId: number, payload: TeacherAssetUpdatePayload) {

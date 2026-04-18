@@ -4,8 +4,8 @@ import { logger } from '../utils/logger.js'
 
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
-const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
-const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
+const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video', 'file'])
+const ASSET_CONTENT_TYPES = new Set(['text'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
 const ASSET_VISIBILITIES = new Set(['private', 'public'])
 const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
@@ -3269,7 +3269,7 @@ export async function getAdminAssetList({ adminId, query }) {
         SUM(CASE WHEN COALESCE(visibility, 'private') = 'public' THEN 1 ELSE 0 END) AS publicCount,
         SUM(CASE WHEN COALESCE(visibility, 'private') = 'private' THEN 1 ELSE 0 END) AS privateCount,
         COUNT(DISTINCT teacher_id) AS teacherCount,
-        SUM(CASE WHEN asset_type IN ('image', 'audio', 'video') THEN 1 ELSE 0 END) AS fileCount
+        SUM(CASE WHEN asset_type IN ('image', 'audio', 'video', 'file') THEN 1 ELSE 0 END) AS fileCount
      FROM asset_library
      WHERE status = 1`,
   )

@@ -10,7 +10,7 @@ const backendRoot = path.resolve(currentDir, '../../')
 const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
-const PUBLIC_ASSET_TYPES = new Set(['image', 'audio', 'video', 'text', 'question', 'template'])
+const PUBLIC_ASSET_TYPES = new Set(['image', 'audio', 'video', 'text', 'file'])
 
 const DEFAULT_PROFILE = {
   heroTitle: '让课程、资料与视频在一个入口里协同',
@@ -432,7 +432,7 @@ export async function getPortalPublicAssetListData(query) {
         COUNT(*) AS total,
         SUM(CASE WHEN asset_type = 'image' THEN 1 ELSE 0 END) AS imageCount,
         SUM(CASE WHEN asset_type IN ('audio', 'video') THEN 1 ELSE 0 END) AS mediaCount,
-        SUM(CASE WHEN asset_type IN ('text', 'question', 'template') THEN 1 ELSE 0 END) AS contentCount
+        SUM(CASE WHEN asset_type = 'text' THEN 1 ELSE 0 END) AS contentCount
      FROM asset_library
      WHERE status = 1 AND COALESCE(visibility, 'private') = 'public'`,
   )

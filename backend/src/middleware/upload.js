@@ -11,6 +11,7 @@ const videoCoverUploadRoot = path.resolve(projectRoot, 'uploads', 'video-covers'
 const assetImageUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'images')
 const assetAudioUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'audios')
 const assetVideoUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'videos')
+const assetFileUploadRoot = path.resolve(projectRoot, 'uploads', 'assets', 'files')
 const prepAttachmentUploadRoot = path.resolve(projectRoot, 'uploads', 'preps', 'attachments')
 
 const materialExtensions = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx'])
@@ -45,12 +46,26 @@ const assetAudioMimeTypes = new Set([
   'audio/x-m4a',
   'application/octet-stream',
 ])
+const assetFileExtensions = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.zip', '.rar', '.7z'])
+const assetFileMimeTypes = new Set([
+  ...materialMimeTypes,
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/x-rar-compressed',
+  'application/vnd.rar',
+  'application/x-7z-compressed',
+  'application/octet-stream',
+])
 const prepAttachmentExtensions = new Set([
   ...materialExtensions,
   ...videoExtensions,
   ...coverExtensions,
   ...assetImageExtensions,
   ...assetAudioExtensions,
+  ...assetFileExtensions,
 ])
 const prepAttachmentMimeTypes = new Set([
   ...materialMimeTypes,
@@ -58,6 +73,7 @@ const prepAttachmentMimeTypes = new Set([
   ...coverMimeTypes,
   ...assetImageMimeTypes,
   ...assetAudioMimeTypes,
+  ...assetFileMimeTypes,
 ])
 
 function ensureUploadDir(uploadRoot) {
@@ -73,6 +89,37 @@ function sanitizeBaseName(fileName) {
     .slice(0, 48)
 }
 
+function countReadableChars(value) {
+  return (String(value || '').match(/[\u4e00-\u9fff\w\s.\-()[\]]/g) || []).length
+}
+
+function normalizeUploadedOriginalName(file) {
+  const originalName = String(file?.originalname || '')
+  if (!originalName) {
+    return ''
+  }
+
+  const decodedName = Buffer.from(originalName, 'latin1').toString('utf8')
+  const hasRawCjk = /[\u4e00-\u9fff]/.test(originalName)
+  const hasRawLatin1 = /[\u00C0-\u00FF]/.test(originalName)
+  const hasDecodedCjk = /[\u4e00-\u9fff]/.test(decodedName)
+
+  if (decodedName.includes('\uFFFD') || /[\u0000-\u0008\u000E-\u001F]/.test(decodedName)) {
+    return originalName
+  }
+
+  const shouldDecode =
+    (!hasRawCjk && hasRawLatin1 && hasDecodedCjk) ||
+    (hasRawLatin1 && countReadableChars(decodedName) > countReadableChars(originalName) + 1)
+
+  if (shouldDecode) {
+    file.originalname = decodedName
+    return decodedName
+  }
+
+  return originalName
+}
+
 function createStorage({ destinationRoot, fallbackBaseName }) {
   return multer.diskStorage({
     destination(req, file, callback) {
@@ -85,8 +132,9 @@ function createStorage({ destinationRoot, fallbackBaseName }) {
       }
     },
     filename(req, file, callback) {
-      const extension = path.extname(file.originalname || '').toLowerCase()
-      const baseName = sanitizeBaseName(file.originalname || fallbackBaseName) || fallbackBaseName
+      const originalName = normalizeUploadedOriginalName(file)
+      const extension = path.extname(originalName || '').toLowerCase()
+      const baseName = sanitizeBaseName(originalName || fallbackBaseName) || fallbackBaseName
       callback(null, `${Date.now()}-${baseName}${extension}`)
     },
   })
@@ -124,6 +172,9 @@ const assetStorage = createStorage({
     if (assetType === 'video') {
       return assetVideoUploadRoot
     }
+    if (assetType === 'file') {
+      return assetFileUploadRoot
+    }
     return assetImageUploadRoot
   },
   fallbackBaseName: 'asset',
@@ -135,7 +186,8 @@ const prepAttachmentStorage = createStorage({
 })
 
 function materialFileFilter(req, file, callback) {
-  const extension = path.extname(file.originalname || '').toLowerCase()
+  const originalName = normalizeUploadedOriginalName(file)
+  const extension = path.extname(originalName || '').toLowerCase()
   const mimeType = String(file.mimetype || '').toLowerCase()
 
   if (!materialExtensions.has(extension) || !materialMimeTypes.has(mimeType)) {
@@ -149,7 +201,8 @@ function materialFileFilter(req, file, callback) {
 }
 
 function videoFileFilter(req, file, callback) {
-  const extension = path.extname(file.originalname || '').toLowerCase()
+  const originalName = normalizeUploadedOriginalName(file)
+  const extension = path.extname(originalName || '').toLowerCase()
   const mimeType = String(file.mimetype || '').toLowerCase()
 
   if (file.fieldname === 'video') {
@@ -208,7 +261,8 @@ function assetFileFilter(req, file, callback) {
   }
 
   const assetType = String(req.body?.type || '').trim().toLowerCase()
-  const extension = path.extname(file.originalname || '').toLowerCase()
+  const originalName = normalizeUploadedOriginalName(file)
+  const extension = path.extname(originalName || '').toLowerCase()
   const mimeType = String(file.mimetype || '').toLowerCase()
 
   if (assetType === 'image') {
@@ -238,6 +292,18 @@ function assetFileFilter(req, file, callback) {
   if (assetType === 'video') {
     if (!videoExtensions.has(extension) || !videoMimeTypes.has(mimeType)) {
       const error = new Error('视频素材仅支持 MP4、MOV 格式')
+      error.status = 400
+      callback(error)
+      return
+    }
+
+    callback(null, true)
+    return
+  }
+
+  if (assetType === 'file') {
+    if (!assetFileExtensions.has(extension) || !assetFileMimeTypes.has(mimeType)) {
+      const error = new Error('文件素材仅支持 PDF、Word、PPT、Excel、TXT、ZIP、RAR、7Z 格式')
       error.status = 400
       callback(error)
       return
@@ -294,7 +360,8 @@ function prepAttachmentFileFilter(req, file, callback) {
     return
   }
 
-  const extension = path.extname(file.originalname || '').toLowerCase()
+  const originalName = normalizeUploadedOriginalName(file)
+  const extension = path.extname(originalName || '').toLowerCase()
   const mimeType = String(file.mimetype || '').toLowerCase()
 
   if (!prepAttachmentExtensions.has(extension) || !prepAttachmentMimeTypes.has(mimeType)) {

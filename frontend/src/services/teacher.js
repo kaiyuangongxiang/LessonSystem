@@ -45,6 +45,14 @@ export async function deleteTeacherPrepAttachment(prepId, attachmentId) {
     const response = await http.delete(`/teacher/preps/${prepId}/attachments/${attachmentId}`);
     return response.data.data;
 }
+export async function previewTeacherPrepAttachment(attachmentId) {
+    const response = await http.get(`/teacher/preps/attachments/${attachmentId}/file`, {
+        responseType: 'blob',
+    });
+    const blobUrl = URL.createObjectURL(response.data);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+}
 export async function getTeacherCoursewares(params) {
     const response = await http.get('/teacher/coursewares', {
         params,
@@ -100,6 +108,27 @@ export async function createTeacherAsset(payload) {
 export async function getTeacherAssetDetail(assetId) {
     const response = await http.get(`/teacher/assets/${assetId}`);
     return response.data.data;
+}
+export async function previewTeacherAsset(assetId) {
+    const response = await http.get(`/teacher/assets/${assetId}/download`, {
+        responseType: 'blob',
+    });
+    const blobUrl = URL.createObjectURL(response.data);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+}
+export async function downloadTeacherAsset(assetId, fileName = 'download') {
+    const response = await http.get(`/teacher/assets/${assetId}/download`, {
+        responseType: 'blob',
+    });
+    const blobUrl = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 }
 export async function updateTeacherAssetDetail(assetId, payload) {
     const response = await http.put(`/teacher/assets/${assetId}`, payload);

@@ -2,14 +2,13 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
 import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue';
-import { addTeacherPrepAssetAttachments, createTeacherPrep, deleteTeacherPrep, deleteTeacherPrepAttachment, getTeacherAssets, getTeacherPreps, updateTeacherPrep, uploadTeacherPrepAttachments, } from '@/services/teacher';
+import { addTeacherPrepAssetAttachments, createTeacherPrep, deleteTeacherPrep, deleteTeacherPrepAttachment, getTeacherAssets, getTeacherPreps, previewTeacherPrepAttachment, updateTeacherPrep, } from '@/services/teacher';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const loading = ref(false);
 const saving = ref(false);
-const uploadingLocal = ref(false);
 const attachingAssets = ref(false);
 const deletingPrepId = ref(null);
 const deletingAttachmentId = ref(null);
@@ -22,8 +21,7 @@ const prepList = ref([]);
 const personalAssetOptions = ref([]);
 const editorAttachments = ref([]);
 const selectedAssetIds = ref([]);
-const localFiles = ref([]);
-const localFileInputRef = ref(null);
+const assetTypeFilter = ref('all');
 const stats = reactive({
     total: 0,
     draftCount: 0,
@@ -49,13 +47,27 @@ const pagination = reactive({
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '教师用户';
-    return `${name}，这里可以维护教学内容，并为备课单挂载本地附件或个人素材。`;
+    return `${name}，这里可以维护教学内容，并为备课单挂载个人素材。`;
 });
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
     return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
 });
-const dialogBusy = computed(() => saving.value || uploadingLocal.value || attachingAssets.value || deletingAttachmentId.value !== null);
+const assetTypeOptions = [
+    { value: 'image', label: '图片' },
+    { value: 'audio', label: '音频' },
+    { value: 'video', label: '视频' },
+    { value: 'text', label: '文本' },
+    { value: 'file', label: '文件' },
+];
+const canAttachAssets = computed(() => Boolean(editorForm.title.trim()) && Boolean(editorForm.courseId) && Boolean(editorForm.teachingContent.trim()));
+const filteredPersonalAssetOptions = computed(() => {
+    if (assetTypeFilter.value === 'all') {
+        return personalAssetOptions.value;
+    }
+    return personalAssetOptions.value.filter((item) => item.type === assetTypeFilter.value);
+});
+const dialogBusy = computed(() => saving.value || attachingAssets.value || deletingAttachmentId.value !== null);
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -76,9 +88,7 @@ function assetTypeLabel(type) {
         audio: '音频',
         video: '视频',
         text: '文本',
-        question: '题目',
-        template: '模板',
-        file: '附件',
+        file: '文件',
     };
     return labels[type] || type;
 }
@@ -90,10 +100,7 @@ function fillEditor(item) {
     editorForm.teachingContent = item.teachingContent;
     editorAttachments.value = item.attachments || [];
     selectedAssetIds.value = [];
-    localFiles.value = [];
-    if (localFileInputRef.value) {
-        localFileInputRef.value.value = '';
-    }
+    assetTypeFilter.value = 'all';
 }
 function resetEditor() {
     editingId.value = null;
@@ -103,18 +110,38 @@ function resetEditor() {
     editorForm.teachingContent = '';
     editorAttachments.value = [];
     selectedAssetIds.value = [];
-    localFiles.value = [];
-    if (localFileInputRef.value) {
-        localFileInputRef.value.value = '';
+    assetTypeFilter.value = 'all';
+}
+function syncPrepListItem(item) {
+    const index = prepList.value.findIndex((prep) => prep.id === item.id);
+    if (index === -1) {
+        return;
     }
+    prepList.value.splice(index, 1, {
+        ...prepList.value[index],
+        ...item,
+        attachments: Array.isArray(item.attachments) ? item.attachments : prepList.value[index].attachments,
+        attachmentCount: Array.isArray(item.attachments) ? item.attachments.length : item.attachmentCount,
+    });
+}
+function syncPrepListAttachments(prepId, attachments) {
+    const index = prepList.value.findIndex((prep) => prep.id === prepId);
+    if (index === -1) {
+        return;
+    }
+    prepList.value.splice(index, 1, {
+        ...prepList.value[index],
+        attachments,
+        attachmentCount: attachments.length,
+    });
 }
 function openCreateDialog() {
     clearMessages();
     resetEditor();
     showEditorDialog.value = true;
 }
-function closeEditorDialog() {
-    if (dialogBusy.value) {
+function closeEditorDialog(force = false) {
+    if (dialogBusy.value && !force) {
         return;
     }
     showEditorDialog.value = false;
@@ -154,39 +181,68 @@ function startEdit(item) {
     fillEditor(item);
     showEditorDialog.value = true;
 }
-function openLocalFilePicker() {
-    if (!editingId.value)
-        return;
-    localFileInputRef.value?.click();
+async function previewAttachment(attachmentId) {
+    try {
+        await previewTeacherPrepAttachment(attachmentId);
+    }
+    catch (error) {
+        errorMessage.value = error?.response?.data?.message || '备课附件预览失败';
+    }
 }
-function handleLocalFilesChange(event) {
-    const input = event.target;
-    localFiles.value = Array.from(input.files || []);
+function buildPrepPayload() {
+    return {
+        courseId: editorForm.courseId,
+        title: editorForm.title.trim(),
+        status: editorForm.status,
+        teachingContent: editorForm.teachingContent.trim(),
+    };
 }
-function previewAttachment(path) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-    window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
+async function ensurePrepForAttachments() {
+    if (editingId.value) {
+        return editingId.value;
+    }
+    if (!canAttachAssets.value) {
+        errorMessage.value = '请先填写标题、所属课程和教学内容，再挂载素材';
+        return null;
+    }
+    const createdPrep = await createTeacherPrep(buildPrepPayload());
+    editingId.value = createdPrep.id;
+    editorForm.status = createdPrep.status === 'published' ? 'published' : 'draft';
+    editorAttachments.value = createdPrep.attachments || [];
+    await loadPreps();
+    syncPrepListItem(createdPrep);
+    successMessage.value = `备课单“${createdPrep.title}”已自动创建，可继续挂载素材`;
+    return createdPrep.id;
 }
 async function submitPrep() {
     clearMessages();
-    if (!editorForm.title || !editorForm.courseId) {
-        errorMessage.value = '请先填写标题并选择所属课程';
+    if (!canAttachAssets.value) {
+        errorMessage.value = '请先填写标题、所属课程和教学内容';
         return;
     }
     saving.value = true;
     try {
         const isEditing = Boolean(editingId.value);
-        const payload = {
-            courseId: editorForm.courseId,
-            title: editorForm.title,
-            status: editorForm.status,
-            teachingContent: editorForm.teachingContent,
-        };
+        const pendingAssetIds = [...selectedAssetIds.value];
+        const payload = buildPrepPayload();
         const result = editingId.value ? await updateTeacherPrep(editingId.value, payload) : await createTeacherPrep(payload);
-        fillEditor(result);
-        showEditorDialog.value = true;
+        let syncedPrep = result;
+        if (pendingAssetIds.length) {
+            const attachmentResult = await addTeacherPrepAssetAttachments(result.id, pendingAssetIds);
+            editorAttachments.value = attachmentResult.attachments;
+            selectedAssetIds.value = [];
+            syncedPrep = {
+                ...result,
+                attachments: attachmentResult.attachments,
+                attachmentCount: attachmentResult.attachments.length,
+            };
+        }
         await loadPreps();
-        successMessage.value = isEditing ? `备课单“${result.title}”已保存` : `备课单“${result.title}”已创建`;
+        syncPrepListItem(syncedPrep);
+        successMessage.value = isEditing
+            ? `备课单“${result.title}”已保存${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`
+            : `备课单“${result.title}”已创建${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`;
+        closeEditorDialog(true);
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '备课单保存失败';
@@ -214,39 +270,7 @@ async function toggleStatus(item) {
         errorMessage.value = error?.response?.data?.message || '备课单状态更新失败';
     }
 }
-async function uploadLocalAttachments() {
-    if (!editingId.value) {
-        errorMessage.value = '请先保存备课单，再上传附件';
-        return;
-    }
-    if (!localFiles.value.length) {
-        errorMessage.value = '请先选择要上传的文件';
-        return;
-    }
-    uploadingLocal.value = true;
-    clearMessages();
-    try {
-        const result = await uploadTeacherPrepAttachments(editingId.value, localFiles.value);
-        editorAttachments.value = result.attachments;
-        localFiles.value = [];
-        if (localFileInputRef.value) {
-            localFileInputRef.value.value = '';
-        }
-        await loadPreps();
-        successMessage.value = '本地附件已挂载到当前备课单';
-    }
-    catch (error) {
-        errorMessage.value = error?.response?.data?.message || '附件上传失败';
-    }
-    finally {
-        uploadingLocal.value = false;
-    }
-}
 async function attachSelectedAssets() {
-    if (!editingId.value) {
-        errorMessage.value = '请先保存备课单，再选择个人素材';
-        return;
-    }
     if (!selectedAssetIds.value.length) {
         errorMessage.value = '请先勾选要挂载的个人素材';
         return;
@@ -254,8 +278,13 @@ async function attachSelectedAssets() {
     attachingAssets.value = true;
     clearMessages();
     try {
-        const result = await addTeacherPrepAssetAttachments(editingId.value, selectedAssetIds.value);
+        const prepId = await ensurePrepForAttachments();
+        if (!prepId) {
+            return;
+        }
+        const result = await addTeacherPrepAssetAttachments(prepId, selectedAssetIds.value);
         editorAttachments.value = result.attachments;
+        syncPrepListAttachments(prepId, result.attachments);
         selectedAssetIds.value = [];
         await loadPreps();
         successMessage.value = '个人素材已挂载到当前备课单';
@@ -275,6 +304,7 @@ async function removeAttachment(attachment) {
     try {
         await deleteTeacherPrepAttachment(editingId.value, attachment.id);
         editorAttachments.value = editorAttachments.value.filter((item) => item.id !== attachment.id);
+        syncPrepListAttachments(editingId.value, editorAttachments.value);
         await loadPreps();
         successMessage.value = `已移除附件“${attachment.title}”`;
     }
@@ -695,12 +725,16 @@ if (__VLS_ctx.successMessage) {
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
     ...{ onSubmit: (__VLS_ctx.submitPrep) },
+    id: "teacher-prep-editor-form",
     ...{ class: "prep-manage-form" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "my-resources-field" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     value: (__VLS_ctx.editorForm.title),
     type: "text",
@@ -711,6 +745,9 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
     ...{ class: "my-resources-field" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
     value: (__VLS_ctx.editorForm.courseId),
 });
@@ -746,27 +783,15 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements
     ...{ class: "my-resources-field my-resources-field--full" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "auth-required" },
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
     value: (__VLS_ctx.editorForm.teachingContent),
     rows: "10",
     maxlength: "5000",
     placeholder: "请输入本次备课的教学内容安排、重点说明和课堂组织内容",
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-filter-actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.closeEditorDialog) },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: (__VLS_ctx.dialogBusy),
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    type: "submit",
-    ...{ class: "auth-btn" },
-    disabled: (__VLS_ctx.saving),
-});
-(__VLS_ctx.saving ? '保存中...' : __VLS_ctx.editingId ? '保存备课单' : '创建备课单');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "my-resources-panel teacher-workspace-dialog__section" },
 });
@@ -781,7 +806,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "my-resources-panel__meta" },
 });
-(__VLS_ctx.editingId ? `当前附件 ${__VLS_ctx.editorAttachments.length}` : '请先保存备课单后再挂载素材');
+(__VLS_ctx.editingId ? `当前附件 ${__VLS_ctx.editorAttachments.length}` : __VLS_ctx.canAttachAssets ? '必填项已完成，可直接挂载素材' : '请先填写必填项后再挂载素材');
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "prep-manage-attachment-grid" },
 });
@@ -790,41 +815,36 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElemen
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
-    ...{ onChange: (__VLS_ctx.handleLocalFilesChange) },
-    ref: "localFileInputRef",
-    ...{ class: "prep-manage-attachment-box__input" },
-    type: "file",
-    multiple: true,
-    disabled: (!__VLS_ctx.editingId || __VLS_ctx.uploadingLocal),
-});
-/** @type {typeof __VLS_ctx.localFileInputRef} */ ;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "prep-manage-attachment-box__actions" },
+    ...{ class: "prep-manage-asset-toolbar" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.openLocalFilePicker) },
-    type: "button",
-    ...{ class: "course-chip" },
-    disabled: (!__VLS_ctx.editingId || __VLS_ctx.uploadingLocal),
+__VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    ...{ class: "prep-manage-asset-filter" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.uploadLocalAttachments) },
-    type: "button",
-    ...{ class: "course-chip course-chip--soft" },
-    disabled: (!__VLS_ctx.editingId || !__VLS_ctx.localFiles.length || __VLS_ctx.uploadingLocal),
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
+    value: (__VLS_ctx.assetTypeFilter),
 });
-(__VLS_ctx.uploadingLocal ? '上传中...' : `上传 ${__VLS_ctx.localFiles.length || 0} 个文件`);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "prep-manage-attachment-box" },
+__VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+    value: "all",
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-if (__VLS_ctx.personalAssetOptions.length) {
+for (const [type] of __VLS_getVForSourceType((__VLS_ctx.assetTypeOptions))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
+        key: (type.value),
+        value: (type.value),
+    });
+    (type.label);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "prep-manage-asset-toolbar__meta" },
+});
+(__VLS_ctx.filteredPersonalAssetOptions.length);
+(__VLS_ctx.assetTypeFilter !== 'all' ? ` · ${__VLS_ctx.assetTypeLabel(__VLS_ctx.assetTypeFilter)}` : '');
+if (__VLS_ctx.filteredPersonalAssetOptions.length) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "prep-manage-asset-select" },
     });
-    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.personalAssetOptions))) {
+    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.filteredPersonalAssetOptions))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
             key: (item.id),
             ...{ class: "prep-manage-asset-option" },
@@ -832,7 +852,7 @@ if (__VLS_ctx.personalAssetOptions.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
             type: "checkbox",
             value: (item.id),
-            disabled: (!__VLS_ctx.editingId || __VLS_ctx.attachingAssets),
+            disabled: (((!__VLS_ctx.canAttachAssets && !__VLS_ctx.editingId) || __VLS_ctx.attachingAssets)),
         });
         (__VLS_ctx.selectedAssetIds);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
@@ -847,6 +867,7 @@ else {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "course-detail-empty course-detail-empty--compact" },
     });
+    (__VLS_ctx.personalAssetOptions.length ? '当前筛选条件下没有可挂载的素材。' : '当前还没有可选择的个人素材。');
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "prep-manage-attachment-box__actions" },
@@ -855,7 +876,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ onClick: (__VLS_ctx.attachSelectedAssets) },
     type: "button",
     ...{ class: "course-chip course-chip--soft" },
-    disabled: (!__VLS_ctx.editingId || __VLS_ctx.attachingAssets || !__VLS_ctx.selectedAssetIds.length),
+    disabled: (((!__VLS_ctx.canAttachAssets && !__VLS_ctx.editingId) || __VLS_ctx.attachingAssets || !__VLS_ctx.selectedAssetIds.length)),
 });
 (__VLS_ctx.attachingAssets ? '挂载中...' : `挂载 ${__VLS_ctx.selectedAssetIds.length || 0} 个素材`);
 if (__VLS_ctx.editorAttachments.length) {
@@ -883,7 +904,7 @@ if (__VLS_ctx.editorAttachments.length) {
                             return;
                         if (!(attachment.downloadUrl))
                             return;
-                        __VLS_ctx.previewAttachment(attachment.downloadUrl);
+                        __VLS_ctx.previewAttachment(attachment.id);
                     } },
                 type: "button",
                 ...{ class: "course-chip course-chip--soft" },
@@ -906,8 +927,18 @@ else {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "course-detail-empty course-detail-empty--compact" },
     });
-    (__VLS_ctx.editingId ? '当前备课单还没有挂载素材。' : '先保存备课单后，才能上传或选择素材。');
+    (__VLS_ctx.editingId ? '当前备课单还没有挂载素材。' : '');
 }
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "my-resources-filter-actions prep-manage-form__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    type: "submit",
+    form: "teacher-prep-editor-form",
+    ...{ class: "auth-btn" },
+    disabled: (__VLS_ctx.saving || __VLS_ctx.attachingAssets),
+});
+(__VLS_ctx.saving ? '保存中...' : __VLS_ctx.editingId ? '保存备课单' : '创建备课单');
 var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-page']} */ ;
@@ -972,15 +1003,14 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-form']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-form__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-required']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-workspace-dialog__section']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__head']} */ ;
@@ -988,12 +1018,9 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['my-resources-panel__meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-attachment-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-attachment-box']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-attachment-box__input']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-attachment-box__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
-/** @type {__VLS_StyleScopedClasses['prep-manage-attachment-box']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-manage-asset-toolbar']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-manage-asset-filter']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-manage-asset-toolbar__meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-asset-select']} */ ;
 /** @type {__VLS_StyleScopedClasses['prep-manage-asset-option']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-detail-empty']} */ ;
@@ -1010,6 +1037,9 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['my-resources-delete-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-detail-empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-detail-empty--compact']} */ ;
+/** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['prep-manage-form__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -1018,7 +1048,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             TeacherWorkspaceDialog: TeacherWorkspaceDialog,
             loading: loading,
             saving: saving,
-            uploadingLocal: uploadingLocal,
             attachingAssets: attachingAssets,
             deletingPrepId: deletingPrepId,
             deletingAttachmentId: deletingAttachmentId,
@@ -1031,14 +1060,16 @@ const __VLS_self = (await import('vue')).defineComponent({
             personalAssetOptions: personalAssetOptions,
             editorAttachments: editorAttachments,
             selectedAssetIds: selectedAssetIds,
-            localFiles: localFiles,
-            localFileInputRef: localFileInputRef,
+            assetTypeFilter: assetTypeFilter,
             stats: stats,
             filters: filters,
             editorForm: editorForm,
             pagination: pagination,
             headerText: headerText,
             pageNumbers: pageNumbers,
+            assetTypeOptions: assetTypeOptions,
+            canAttachAssets: canAttachAssets,
+            filteredPersonalAssetOptions: filteredPersonalAssetOptions,
             dialogBusy: dialogBusy,
             renderExcerpt: renderExcerpt,
             assetTypeLabel: assetTypeLabel,
@@ -1048,12 +1079,9 @@ const __VLS_self = (await import('vue')).defineComponent({
             resetFilters: resetFilters,
             changePage: changePage,
             startEdit: startEdit,
-            openLocalFilePicker: openLocalFilePicker,
-            handleLocalFilesChange: handleLocalFilesChange,
             previewAttachment: previewAttachment,
             submitPrep: submitPrep,
             toggleStatus: toggleStatus,
-            uploadLocalAttachments: uploadLocalAttachments,
             attachSelectedAssets: attachSelectedAssets,
             removeAttachment: removeAttachment,
             removePrep: removePrep,

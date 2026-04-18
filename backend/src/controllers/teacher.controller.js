@@ -11,6 +11,7 @@ import {
   deleteTeacherPrep,
   deleteTeacherResource,
   getTeacherAssetDetail,
+  getTeacherAssetDownloadData,
   getTeacherAssetList,
   getTeacherCourseOptions,
   getTeacherDashboardData,
@@ -355,6 +356,19 @@ export async function getAssetDetail(req, res, next) {
       message: '获取素材详情成功',
       data: result,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function downloadAsset(req, res, next) {
+  try {
+    const result = await getTeacherAssetDownloadData({
+      teacherId: req.auth.userId,
+      assetId: req.params.assetId,
+    })
+
+    res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)
   }

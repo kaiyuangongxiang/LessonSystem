@@ -33,7 +33,7 @@ const router = useRouter()
 
 const menuItems: Array<{ key: TeacherNavKey; label: string; path: string }> = [
   { key: 'home', label: '教师首页', path: '/teacher' },
-  { key: 'assets', label: '我的素材', path: '/teacher/assets' },
+  { key: 'assets', label: '资料管理', path: '/teacher/assets' },
   { key: 'preps', label: '备课单', path: '/teacher/preps' },
   { key: 'coursewares', label: '在线课件', path: '/teacher/coursewares' },
   { key: 'profile', label: '个人资料', path: '/teacher/profile' },

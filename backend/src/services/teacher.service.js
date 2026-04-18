@@ -9,8 +9,8 @@ const projectRoot = path.resolve(currentDir, '../../../')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 50
 const MAX_DESCRIPTION_LENGTH = 2000
-const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video'])
-const ASSET_CONTENT_TYPES = new Set(['text', 'question', 'template'])
+const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video', 'file'])
+const ASSET_CONTENT_TYPES = new Set(['text'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
 const ASSET_VISIBILITIES = new Set(['private', 'public'])
 const PREP_STATUSES = new Set(['draft', 'published', 'archived'])
@@ -231,9 +231,18 @@ function normalizeAssetTitle(value) {
   return assetTitle
 }
 
+function stripHtmlTags(value) {
+  return String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim()
+}
+
 function normalizeAssetContent(value, required = false) {
   const assetContent = typeof value === 'string' ? value.trim() : ''
-  if (required && !assetContent) {
+  if (required && !stripHtmlTags(assetContent)) {
     throw badRequest('素材内容不能为空')
   }
 
@@ -1462,7 +1471,7 @@ export async function getTeacherAssetList({ teacherId, query }) {
         SUM(CASE WHEN asset_type = 'image' THEN 1 ELSE 0 END) AS imageCount,
         SUM(CASE WHEN asset_type = 'audio' THEN 1 ELSE 0 END) AS audioCount,
         SUM(CASE WHEN asset_type = 'video' THEN 1 ELSE 0 END) AS videoCount,
-        SUM(CASE WHEN asset_type IN ('text', 'question', 'template') THEN 1 ELSE 0 END) AS contentCount
+        SUM(CASE WHEN asset_type = 'text' THEN 1 ELSE 0 END) AS contentCount
      FROM asset_library
      WHERE teacher_id = ? AND status = 1`,
     [teacherId],
@@ -1537,15 +1546,13 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
     const course = courseId ? await getOwnedCourseRow(courseId, teacherId) : null
 
     if (ASSET_FILE_TYPES.has(type) && !file) {
-      if (type === 'image') {
-        throw badRequest('图片素材必须上传文件')
+      const requiredFileLabels = {
+        image: '图片素材必须上传文件',
+        audio: '音频素材必须上传文件',
+        video: '视频素材必须上传文件',
+        file: '文件素材必须上传文件',
       }
-
-      if (type === 'video') {
-        throw badRequest('视频素材必须上传文件')
-      }
-
-      throw badRequest('音频素材必须上传文件')
+      throw badRequest(requiredFileLabels[type] || '文件类素材必须上传文件')
     }
 
     if (ASSET_CONTENT_TYPES.has(type) && file) {
@@ -1624,6 +1631,39 @@ export async function getTeacherAssetDetail({ teacherId, assetId }) {
     fileSize: Number(asset.fileSize || 0),
     uploadTime: asset.uploadTime,
     previewUrl: ASSET_FILE_TYPES.has(asset.type) ? buildAssetPreviewUrl(Number(asset.id)) : '',
+  }
+}
+
+export async function getTeacherAssetDownloadData({ teacherId, assetId }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedAssetId = normalizeAssetId(assetId)
+  const asset = await getOwnedAssetRow(normalizedAssetId, teacherId)
+
+  if (!ASSET_FILE_TYPES.has(asset.type)) {
+    throw badRequest('当前素材类型不支持下载')
+  }
+
+  const resolvedPath = await resolveStoredFilePath(asset.filePath)
+  if (!resolvedPath) {
+    logger.warn('teacher_asset_file_missing', {
+      teacherId,
+      assetId: normalizedAssetId,
+      storedPath: asset.filePath,
+    })
+    throw notFound('素材文件不存在')
+  }
+
+  logger.info('teacher_asset_download_ready', {
+    teacherId,
+    assetId: normalizedAssetId,
+    type: asset.type,
+    visibility: asset.visibility || 'private',
+  })
+
+  return {
+    filePath: resolvedPath,
+    fileName: asset.fileName || path.basename(resolvedPath),
   }
 }
 

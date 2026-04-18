@@ -161,14 +161,14 @@
           {{ successMessage }}
         </p>
 
-        <form class="prep-manage-form" @submit.prevent="submitPrep">
+        <form id="teacher-prep-editor-form" class="prep-manage-form" @submit.prevent="submitPrep">
           <label class="my-resources-field">
-            <span>备课单标题</span>
+            <span>备课单标题 <span class="auth-required">*</span></span>
             <input v-model.trim="editorForm.title" type="text" maxlength="200" placeholder="请输入备课单标题" />
           </label>
 
           <label class="my-resources-field">
-            <span>所属课程</span>
+            <span>所属课程 <span class="auth-required">*</span></span>
             <select v-model="editorForm.courseId">
               <option value="">请选择所属课程</option>
               <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
@@ -187,11 +187,11 @@
 
           <div class="prep-manage-form__hint">
             <strong>填写建议</strong>
-            <p>先保存标题、课程和教学内容，再挂载本地附件或个人素材，这样后续整理会更顺手。</p>
+            <p>标题、课程和教学内容填写完整后，就可以先挂载素材；后续再继续保存和完善会更顺手。</p>
           </div>
 
           <label class="my-resources-field my-resources-field--full">
-            <span>教学内容</span>
+            <span>教学内容 <span class="auth-required">*</span></span>
             <textarea
               v-model.trim="editorForm.teachingContent"
               rows="10"
@@ -200,12 +200,6 @@
             ></textarea>
           </label>
 
-          <div class="my-resources-filter-actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="dialogBusy" @click="closeEditorDialog">关闭</button>
-            <button type="submit" class="auth-btn" :disabled="saving">
-              {{ saving ? '保存中...' : editingId ? '保存备课单' : '创建备课单' }}
-            </button>
-          </div>
         </form>
 
         <section class="my-resources-panel teacher-workspace-dialog__section">
@@ -215,56 +209,53 @@
               <h3>素材挂载</h3>
             </div>
             <div class="my-resources-panel__meta">
-              {{ editingId ? `当前附件 ${editorAttachments.length}` : '请先保存备课单后再挂载素材' }}
+              {{ editingId ? `当前附件 ${editorAttachments.length}` : canAttachAssets ? '必填项已完成，可直接挂载素材' : '请先填写必填项后再挂载素材' }}
             </div>
           </div>
 
           <div class="prep-manage-attachment-grid">
             <article class="prep-manage-attachment-box">
-              <strong>方式一：本地上传</strong>
-              <p>上传后的附件仅挂载到当前备课单，不会进入“我的素材”。</p>
-              <input
-                ref="localFileInputRef"
-                class="prep-manage-attachment-box__input"
-                type="file"
-                multiple
-                :disabled="!editingId || uploadingLocal"
-                @change="handleLocalFilesChange"
-              />
-
-              <div class="prep-manage-attachment-box__actions">
-                <button type="button" class="course-chip" :disabled="!editingId || uploadingLocal" @click="openLocalFilePicker">选择文件</button>
-                <button
-                  type="button"
-                  class="course-chip course-chip--soft"
-                  :disabled="!editingId || !localFiles.length || uploadingLocal"
-                  @click="uploadLocalAttachments"
-                >
-                  {{ uploadingLocal ? '上传中...' : `上传 ${localFiles.length || 0} 个文件` }}
-                </button>
-              </div>
-            </article>
-
-            <article class="prep-manage-attachment-box">
-              <strong>方式二：选择个人素材</strong>
+              <strong>选择个人素材</strong>
               <p>仅可选择当前教师自己的素材进行挂载。</p>
 
-              <div v-if="personalAssetOptions.length" class="prep-manage-asset-select">
-                <label v-for="item in personalAssetOptions" :key="item.id" class="prep-manage-asset-option">
-                  <input v-model="selectedAssetIds" type="checkbox" :value="item.id" :disabled="!editingId || attachingAssets" />
+              <div class="prep-manage-asset-toolbar">
+                <label class="prep-manage-asset-filter">
+                  <span>类型筛选</span>
+                  <select v-model="assetTypeFilter">
+                    <option value="all">全部类型</option>
+                    <option v-for="type in assetTypeOptions" :key="type.value" :value="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                </label>
+                <div class="prep-manage-asset-toolbar__meta">
+                  共 {{ filteredPersonalAssetOptions.length }} 项{{ assetTypeFilter !== 'all' ? ` · ${assetTypeLabel(assetTypeFilter)}` : '' }}
+                </div>
+              </div>
+
+              <div v-if="filteredPersonalAssetOptions.length" class="prep-manage-asset-select">
+                <label v-for="item in filteredPersonalAssetOptions" :key="item.id" class="prep-manage-asset-option">
+                  <input
+                    v-model="selectedAssetIds"
+                    type="checkbox"
+                    :value="item.id"
+                    :disabled="((!canAttachAssets && !editingId) || attachingAssets)"
+                  />
                   <div>
                     <strong>{{ item.title }}</strong>
                     <span>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开' : '私密' }}</span>
                   </div>
                 </label>
               </div>
-              <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有可选择的个人素材。</div>
+              <div v-else class="course-detail-empty course-detail-empty--compact">
+                {{ personalAssetOptions.length ? '当前筛选条件下没有可挂载的素材。' : '当前还没有可选择的个人素材。' }}
+              </div>
 
               <div class="prep-manage-attachment-box__actions">
                 <button
                   type="button"
                   class="course-chip course-chip--soft"
-                  :disabled="!editingId || attachingAssets || !selectedAssetIds.length"
+                  :disabled="((!canAttachAssets && !editingId) || attachingAssets || !selectedAssetIds.length)"
                   @click="attachSelectedAssets"
                 >
                   {{ attachingAssets ? '挂载中...' : `挂载 ${selectedAssetIds.length || 0} 个素材` }}
@@ -285,7 +276,7 @@
                   v-if="attachment.downloadUrl"
                   type="button"
                   class="course-chip course-chip--soft"
-                  @click="previewAttachment(attachment.downloadUrl)"
+                  @click="previewAttachment(attachment.id)"
                 >
                   查看
                 </button>
@@ -301,9 +292,15 @@
             </article>
           </div>
           <div v-else class="course-detail-empty course-detail-empty--compact">
-            {{ editingId ? '当前备课单还没有挂载素材。' : '先保存备课单后，才能上传或选择素材。' }}
+            {{ editingId ? '当前备课单还没有挂载素材。' : '' }}
           </div>
         </section>
+
+        <div class="my-resources-filter-actions prep-manage-form__actions">
+          <button type="submit" form="teacher-prep-editor-form" class="auth-btn" :disabled="saving || attachingAssets">
+            {{ saving ? '保存中...' : editingId ? '保存备课单' : '创建备课单' }}
+          </button>
+        </div>
       </TeacherWorkspaceDialog>
     </section>
   </main>
@@ -321,11 +318,13 @@ import {
   deleteTeacherPrepAttachment,
   getTeacherAssets,
   getTeacherPreps,
+  previewTeacherPrepAttachment,
+  type TeacherAssetType,
   updateTeacherPrep,
-  uploadTeacherPrepAttachments,
   type TeacherAssetItem,
   type TeacherPrepAttachmentItem,
   type TeacherPrepItem,
+  type TeacherPrepPayload,
   type TeacherPrepStats,
 } from '@/services/teacher'
 import { useAuthStore } from '@/stores/auth'
@@ -335,7 +334,6 @@ const route = useRoute()
 const authStore = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
-const uploadingLocal = ref(false)
 const attachingAssets = ref(false)
 const deletingPrepId = ref<number | null>(null)
 const deletingAttachmentId = ref<number | null>(null)
@@ -348,8 +346,7 @@ const prepList = ref<TeacherPrepItem[]>([])
 const personalAssetOptions = ref<TeacherAssetItem[]>([])
 const editorAttachments = ref<TeacherPrepAttachmentItem[]>([])
 const selectedAssetIds = ref<number[]>([])
-const localFiles = ref<File[]>([])
-const localFileInputRef = ref<HTMLInputElement | null>(null)
+const assetTypeFilter = ref<TeacherAssetType | 'all'>('all')
 
 const stats = reactive<TeacherPrepStats>({
   total: 0,
@@ -380,7 +377,7 @@ const pagination = reactive({
 
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '教师用户'
-  return `${name}，这里可以维护教学内容，并为备课单挂载本地附件或个人素材。`
+  return `${name}，这里可以维护教学内容，并为备课单挂载个人素材。`
 })
 
 const pageNumbers = computed(() => {
@@ -388,8 +385,28 @@ const pageNumbers = computed(() => {
   return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1)
 })
 
+const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
+  { value: 'image', label: '图片' },
+  { value: 'audio', label: '音频' },
+  { value: 'video', label: '视频' },
+  { value: 'text', label: '文本' },
+  { value: 'file', label: '文件' },
+]
+
+const canAttachAssets = computed(
+  () => Boolean(editorForm.title.trim()) && Boolean(editorForm.courseId) && Boolean(editorForm.teachingContent.trim()),
+)
+
+const filteredPersonalAssetOptions = computed(() => {
+  if (assetTypeFilter.value === 'all') {
+    return personalAssetOptions.value
+  }
+
+  return personalAssetOptions.value.filter((item) => item.type === assetTypeFilter.value)
+})
+
 const dialogBusy = computed(
-  () => saving.value || uploadingLocal.value || attachingAssets.value || deletingAttachmentId.value !== null,
+  () => saving.value || attachingAssets.value || deletingAttachmentId.value !== null,
 )
 
 function normalizePage(value: unknown) {
@@ -414,9 +431,7 @@ function assetTypeLabel(type: string) {
     audio: '音频',
     video: '视频',
     text: '文本',
-    question: '题目',
-    template: '模板',
-    file: '附件',
+    file: '文件',
   }
 
   return labels[type] || type
@@ -430,11 +445,7 @@ function fillEditor(item: TeacherPrepItem) {
   editorForm.teachingContent = item.teachingContent
   editorAttachments.value = item.attachments || []
   selectedAssetIds.value = []
-  localFiles.value = []
-
-  if (localFileInputRef.value) {
-    localFileInputRef.value.value = ''
-  }
+  assetTypeFilter.value = 'all'
 }
 
 function resetEditor() {
@@ -445,11 +456,34 @@ function resetEditor() {
   editorForm.teachingContent = ''
   editorAttachments.value = []
   selectedAssetIds.value = []
-  localFiles.value = []
+  assetTypeFilter.value = 'all'
+}
 
-  if (localFileInputRef.value) {
-    localFileInputRef.value.value = ''
+function syncPrepListItem(item: TeacherPrepItem) {
+  const index = prepList.value.findIndex((prep) => prep.id === item.id)
+  if (index === -1) {
+    return
   }
+
+  prepList.value.splice(index, 1, {
+    ...prepList.value[index],
+    ...item,
+    attachments: Array.isArray(item.attachments) ? item.attachments : prepList.value[index].attachments,
+    attachmentCount: Array.isArray(item.attachments) ? item.attachments.length : item.attachmentCount,
+  })
+}
+
+function syncPrepListAttachments(prepId: number, attachments: TeacherPrepAttachmentItem[]) {
+  const index = prepList.value.findIndex((prep) => prep.id === prepId)
+  if (index === -1) {
+    return
+  }
+
+  prepList.value.splice(index, 1, {
+    ...prepList.value[index],
+    attachments,
+    attachmentCount: attachments.length,
+  })
 }
 
 function openCreateDialog() {
@@ -458,8 +492,8 @@ function openCreateDialog() {
   showEditorDialog.value = true
 }
 
-function closeEditorDialog() {
-  if (dialogBusy.value) {
+function closeEditorDialog(force = false) {
+  if (dialogBusy.value && !force) {
     return
   }
 
@@ -507,26 +541,48 @@ function startEdit(item: TeacherPrepItem) {
   showEditorDialog.value = true
 }
 
-function openLocalFilePicker() {
-  if (!editingId.value) return
-  localFileInputRef.value?.click()
+async function previewAttachment(attachmentId: number) {
+  try {
+    await previewTeacherPrepAttachment(attachmentId)
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '备课附件预览失败'
+  }
 }
 
-function handleLocalFilesChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  localFiles.value = Array.from(input.files || [])
+function buildPrepPayload(): TeacherPrepPayload {
+  return {
+    courseId: editorForm.courseId,
+    title: editorForm.title.trim(),
+    status: editorForm.status,
+    teachingContent: editorForm.teachingContent.trim(),
+  }
 }
 
-function previewAttachment(path: string) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-  window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
+async function ensurePrepForAttachments() {
+  if (editingId.value) {
+    return editingId.value
+  }
+
+  if (!canAttachAssets.value) {
+    errorMessage.value = '请先填写标题、所属课程和教学内容，再挂载素材'
+    return null
+  }
+
+  const createdPrep = await createTeacherPrep(buildPrepPayload())
+  editingId.value = createdPrep.id
+  editorForm.status = createdPrep.status === 'published' ? 'published' : 'draft'
+  editorAttachments.value = createdPrep.attachments || []
+  await loadPreps()
+  syncPrepListItem(createdPrep)
+  successMessage.value = `备课单“${createdPrep.title}”已自动创建，可继续挂载素材`
+  return createdPrep.id
 }
 
 async function submitPrep() {
   clearMessages()
 
-  if (!editorForm.title || !editorForm.courseId) {
-    errorMessage.value = '请先填写标题并选择所属课程'
+  if (!canAttachAssets.value) {
+    errorMessage.value = '请先填写标题、所属课程和教学内容'
     return
   }
 
@@ -534,18 +590,29 @@ async function submitPrep() {
 
   try {
     const isEditing = Boolean(editingId.value)
-    const payload = {
-      courseId: editorForm.courseId,
-      title: editorForm.title,
-      status: editorForm.status,
-      teachingContent: editorForm.teachingContent,
-    }
+    const pendingAssetIds = [...selectedAssetIds.value]
+    const payload = buildPrepPayload()
 
     const result = editingId.value ? await updateTeacherPrep(editingId.value, payload) : await createTeacherPrep(payload)
-    fillEditor(result)
-    showEditorDialog.value = true
+    let syncedPrep: TeacherPrepItem = result
+
+    if (pendingAssetIds.length) {
+      const attachmentResult = await addTeacherPrepAssetAttachments(result.id, pendingAssetIds)
+      editorAttachments.value = attachmentResult.attachments
+      selectedAssetIds.value = []
+      syncedPrep = {
+        ...result,
+        attachments: attachmentResult.attachments,
+        attachmentCount: attachmentResult.attachments.length,
+      }
+    }
+
     await loadPreps()
-    successMessage.value = isEditing ? `备课单“${result.title}”已保存` : `备课单“${result.title}”已创建`
+    syncPrepListItem(syncedPrep)
+    successMessage.value = isEditing
+      ? `备课单“${result.title}”已保存${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`
+      : `备课单“${result.title}”已创建${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`
+    closeEditorDialog(true)
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '备课单保存失败'
   } finally {
@@ -576,44 +643,7 @@ async function toggleStatus(item: TeacherPrepItem) {
   }
 }
 
-async function uploadLocalAttachments() {
-  if (!editingId.value) {
-    errorMessage.value = '请先保存备课单，再上传附件'
-    return
-  }
-
-  if (!localFiles.value.length) {
-    errorMessage.value = '请先选择要上传的文件'
-    return
-  }
-
-  uploadingLocal.value = true
-  clearMessages()
-
-  try {
-    const result = await uploadTeacherPrepAttachments(editingId.value, localFiles.value)
-    editorAttachments.value = result.attachments
-    localFiles.value = []
-
-    if (localFileInputRef.value) {
-      localFileInputRef.value.value = ''
-    }
-
-    await loadPreps()
-    successMessage.value = '本地附件已挂载到当前备课单'
-  } catch (error: any) {
-    errorMessage.value = error?.response?.data?.message || '附件上传失败'
-  } finally {
-    uploadingLocal.value = false
-  }
-}
-
 async function attachSelectedAssets() {
-  if (!editingId.value) {
-    errorMessage.value = '请先保存备课单，再选择个人素材'
-    return
-  }
-
   if (!selectedAssetIds.value.length) {
     errorMessage.value = '请先勾选要挂载的个人素材'
     return
@@ -623,8 +653,14 @@ async function attachSelectedAssets() {
   clearMessages()
 
   try {
-    const result = await addTeacherPrepAssetAttachments(editingId.value, selectedAssetIds.value)
+    const prepId = await ensurePrepForAttachments()
+    if (!prepId) {
+      return
+    }
+
+    const result = await addTeacherPrepAssetAttachments(prepId, selectedAssetIds.value)
     editorAttachments.value = result.attachments
+    syncPrepListAttachments(prepId, result.attachments)
     selectedAssetIds.value = []
     await loadPreps()
     successMessage.value = '个人素材已挂载到当前备课单'
@@ -644,6 +680,7 @@ async function removeAttachment(attachment: TeacherPrepAttachmentItem) {
   try {
     await deleteTeacherPrepAttachment(editingId.value, attachment.id)
     editorAttachments.value = editorAttachments.value.filter((item) => item.id !== attachment.id)
+    syncPrepListAttachments(editingId.value, editorAttachments.value)
     await loadPreps()
     successMessage.value = `已移除附件“${attachment.title}”`
   } catch (error: any) {

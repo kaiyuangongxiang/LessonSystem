@@ -1,6 +1,6 @@
 import http, { type ApiSuccess } from './http'
 
-export type PortalAssetType = 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
+export type PortalAssetType = 'image' | 'audio' | 'video' | 'text' | 'file'
 
 export interface PortalNoticeItem {
   id: number

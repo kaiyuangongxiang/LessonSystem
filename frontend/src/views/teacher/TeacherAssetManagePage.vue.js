@@ -1,8 +1,8 @@
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue';
 import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue';
-import { createTeacherAsset, deleteTeacherAssetDetail, getTeacherAssetDetail, getTeacherAssets, updateTeacherAssetDetail, } from '@/services/teacher';
+import { createTeacherAsset, deleteTeacherAssetDetail, downloadTeacherAsset, getTeacherAssetDetail, getTeacherAssets, previewTeacherAsset, updateTeacherAssetDetail, } from '@/services/teacher';
 const router = useRouter();
 const route = useRoute();
 const loading = ref(false);
@@ -14,6 +14,7 @@ const errorMessage = ref('');
 const successMessage = ref('');
 const selectedFile = ref(null);
 const fileInputRef = ref(null);
+const richEditorRef = ref(null);
 const fileInputKey = ref(0);
 const assetList = ref([]);
 const stats = reactive({
@@ -48,19 +49,27 @@ const assetTypeOptions = [
     { value: 'audio', label: '音频素材' },
     { value: 'video', label: '视频素材' },
     { value: 'text', label: '文本片段' },
-    { value: 'question', label: '题目卡片' },
-    { value: 'template', label: '模板素材' },
+    { value: 'file', label: '文件素材' },
 ];
 const visibilityOptions = [
     { value: 'private', label: '私密' },
     { value: 'public', label: '公开' },
 ];
-const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type));
+const isContentType = computed(() => editorForm.type === 'text');
+const richTextActions = [
+    { command: 'bold', label: '加粗', title: '加粗' },
+    { command: 'italic', label: '斜体', title: '斜体' },
+    { command: 'underline', label: '下划线', title: '下划线' },
+    { command: 'insertUnorderedList', label: '列表', title: '项目列表' },
+    { command: 'insertOrderedList', label: '编号', title: '编号列表' },
+];
 const fileAccept = computed(() => {
     if (editorForm.type === 'audio')
         return '.mp3,.wav,.ogg,.m4a';
     if (editorForm.type === 'video')
         return '.mp4,.mov,.avi,.webm';
+    if (editorForm.type === 'file')
+        return '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar,.7z';
     return '.jpg,.jpeg,.png,.gif,.webp';
 });
 const uploadLabel = computed(() => {
@@ -68,6 +77,8 @@ const uploadLabel = computed(() => {
         return '上传音频文件';
     if (editorForm.type === 'video')
         return '上传视频文件';
+    if (editorForm.type === 'file')
+        return '上传文件素材';
     return '上传图片文件';
 });
 const uploadTip = computed(() => {
@@ -75,6 +86,8 @@ const uploadTip = computed(() => {
         return '支持 MP3、WAV、OGG、M4A 格式。';
     if (editorForm.type === 'video')
         return '支持 MP4、MOV、AVI、WEBM 格式。';
+    if (editorForm.type === 'file')
+        return '支持 PDF、Word、PPT、Excel、TXT、ZIP、RAR、7Z 格式。';
     return '支持 JPG、PNG、GIF、WEBP 格式。';
 });
 const fileNameText = computed(() => {
@@ -84,13 +97,7 @@ const fileNameText = computed(() => {
         return '编辑状态下保留原文件';
     return '未选择文件';
 });
-const contentPlaceholder = computed(() => {
-    if (editorForm.type === 'question')
-        return '请输入题干、答案要点或解析';
-    if (editorForm.type === 'template')
-        return '请输入模板结构或使用说明';
-    return '请输入可复用的文本内容';
-});
+const contentPlaceholder = computed(() => '请输入可复用的文本内容');
 const pageNumbers = computed(() => {
     const totalPages = pagination.totalPages || 1;
     return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
@@ -102,6 +109,40 @@ function normalizePage(value) {
 function clearMessages() {
     errorMessage.value = '';
     successMessage.value = '';
+}
+function stripHtml(value) {
+    return value
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+function renderPlainText(value, fallback = '暂无内容') {
+    const text = stripHtml(value);
+    if (!text)
+        return fallback;
+    return text.length > 180 ? `${text.slice(0, 180)}...` : text;
+}
+function syncRichEditor() {
+    if (!richEditorRef.value || !isContentType.value) {
+        return;
+    }
+    if (richEditorRef.value.innerHTML !== editorForm.content) {
+        richEditorRef.value.innerHTML = editorForm.content;
+    }
+}
+function syncRichTextContent() {
+    editorForm.content = richEditorRef.value?.innerHTML.trim() || '';
+}
+function formatRichText(command) {
+    richEditorRef.value?.focus();
+    document.execCommand(command, false);
+    syncRichTextContent();
 }
 function resetEditor() {
     editingId.value = null;
@@ -143,9 +184,25 @@ function handleFileChange(event) {
     const target = event.target;
     selectedFile.value = target.files?.[0] || null;
 }
-function previewAsset(path) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-    window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer');
+async function previewAsset(item) {
+    if (!item.fileName) {
+        return;
+    }
+    try {
+        await previewTeacherAsset(item.id);
+    }
+    catch (error) {
+        errorMessage.value = error?.response?.data?.message || '资料预览失败';
+    }
+}
+async function downloadAsset(assetId) {
+    const target = assetList.value.find((item) => item.id === assetId);
+    try {
+        await downloadTeacherAsset(assetId, target?.fileName || 'download');
+    }
+    catch (error) {
+        errorMessage.value = error?.response?.data?.message || '资料下载失败';
+    }
 }
 function syncFiltersWithRoute() {
     filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
@@ -189,6 +246,8 @@ async function startEdit(assetId) {
         selectedFile.value = null;
         fileInputKey.value += 1;
         showEditorDialog.value = true;
+        await nextTick();
+        syncRichEditor();
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '素材详情加载失败';
@@ -196,11 +255,12 @@ async function startEdit(assetId) {
 }
 async function submitAsset() {
     clearMessages();
+    syncRichTextContent();
     if (!editorForm.title) {
         errorMessage.value = '请先填写素材标题';
         return;
     }
-    if (isContentType.value && !editorForm.content) {
+    if (isContentType.value && !stripHtml(editorForm.content)) {
         errorMessage.value = '当前素材类型需要填写素材内容';
         return;
     }
@@ -309,6 +369,20 @@ async function loadAssets() {
         loading.value = false;
     }
 }
+watch(() => showEditorDialog.value, async (visible) => {
+    if (visible) {
+        await nextTick();
+        syncRichEditor();
+    }
+});
+watch(() => editorForm.type, async (type) => {
+    if (type !== 'text') {
+        editorForm.content = '';
+        return;
+    }
+    await nextTick();
+    syncRichEditor();
+});
 watch(() => route.fullPath, () => {
     loadAssets();
 }, { immediate: true });
@@ -532,7 +606,7 @@ if (__VLS_ctx.assetList.length) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
                 ...{ class: "asset-manage-item__content" },
             });
-            (item.content);
+            (__VLS_ctx.renderPlainText(item.content));
         }
         else {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
@@ -554,10 +628,23 @@ if (__VLS_ctx.assetList.length) {
                             return;
                         if (!(item.previewUrl))
                             return;
-                        __VLS_ctx.previewAsset(item.previewUrl);
+                        __VLS_ctx.previewAsset(item);
                     } },
                 type: "button",
                 ...{ class: "course-chip course-chip--soft" },
+            });
+        }
+        if (item.fileName) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                ...{ onClick: (...[$event]) => {
+                        if (!(__VLS_ctx.assetList.length))
+                            return;
+                        if (!(item.fileName))
+                            return;
+                        __VLS_ctx.downloadAsset(item.id);
+                    } },
+                type: "button",
+                ...{ class: "course-chip" },
             });
         }
         __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
@@ -569,17 +656,21 @@ if (__VLS_ctx.assetList.length) {
             type: "button",
             ...{ class: "course-chip" },
         });
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.assetList.length))
-                        return;
-                    __VLS_ctx.removeAsset(item);
-                } },
-            type: "button",
-            ...{ class: "course-chip my-resources-delete-btn" },
-            disabled: (__VLS_ctx.deletingId === item.id),
-        });
-        (__VLS_ctx.deletingId === item.id ? '删除中...' : '删除');
+        if (item.visibility === 'private') {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                ...{ onClick: (...[$event]) => {
+                        if (!(__VLS_ctx.assetList.length))
+                            return;
+                        if (!(item.visibility === 'private'))
+                            return;
+                        __VLS_ctx.removeAsset(item);
+                    } },
+                type: "button",
+                ...{ class: "course-chip my-resources-delete-btn" },
+                disabled: (__VLS_ctx.deletingId === item.id),
+            });
+            (__VLS_ctx.deletingId === item.id ? '删除中...' : '删除');
+        }
     }
 }
 else if (!__VLS_ctx.loading) {
@@ -703,15 +794,45 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicEleme
     placeholder: "补充素材用途、使用场景或备注说明",
 });
 if (__VLS_ctx.isContentType) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "my-resources-field asset-manage-form__full" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-        value: (__VLS_ctx.editorForm.content),
-        rows: "7",
-        maxlength: "5000",
-        placeholder: (__VLS_ctx.contentPlaceholder),
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "asset-rich-editor" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "asset-rich-editor__toolbar" },
+        'aria-label': "富文本工具栏",
+    });
+    for (const [action] of __VLS_getVForSourceType((__VLS_ctx.richTextActions))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onMousedown: () => { } },
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.isContentType))
+                        return;
+                    __VLS_ctx.formatRichText(action.command);
+                } },
+            key: (action.command),
+            type: "button",
+            ...{ class: "asset-rich-editor__tool" },
+            title: (action.title),
+        });
+        (action.label);
+    }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ onInput: (__VLS_ctx.syncRichTextContent) },
+        ...{ onBlur: (__VLS_ctx.syncRichTextContent) },
+        ref: "richEditorRef",
+        ...{ class: "asset-rich-editor__content" },
+        contenteditable: "true",
+        role: "textbox",
+        'aria-multiline': "true",
+        'data-placeholder': (__VLS_ctx.contentPlaceholder),
+    });
+    /** @type {typeof __VLS_ctx.richEditorRef} */ ;
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.small, __VLS_intrinsicElements.small)({
+        ...{ class: "asset-manage-field-tip" },
     });
 }
 else {
@@ -750,13 +871,7 @@ else {
     (__VLS_ctx.editingId ? '编辑文件类素材时会保留原文件，仅修改标题、说明和公开范围。' : __VLS_ctx.uploadTip);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "my-resources-filter-actions" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.closeEditorDialog) },
-    type: "button",
-    ...{ class: "auth-btn auth-btn--secondary" },
-    disabled: (__VLS_ctx.saving),
+    ...{ class: "my-resources-filter-actions asset-manage-form__actions" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "submit",
@@ -814,6 +929,7 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-delete-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-detail-empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination']} */ ;
@@ -832,6 +948,11 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['asset-manage-form__full']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-form__full']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-rich-editor']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-rich-editor__toolbar']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-rich-editor__tool']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-rich-editor__content']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-field-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-form__full']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-upload-picker']} */ ;
@@ -840,8 +961,7 @@ var __VLS_5;
 /** @type {__VLS_StyleScopedClasses['asset-upload-picker__name']} */ ;
 /** @type {__VLS_StyleScopedClasses['asset-manage-field-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['my-resources-filter-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['asset-manage-form__actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -858,6 +978,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             errorMessage: errorMessage,
             successMessage: successMessage,
             fileInputRef: fileInputRef,
+            richEditorRef: richEditorRef,
             fileInputKey: fileInputKey,
             assetList: assetList,
             stats: stats,
@@ -867,12 +988,16 @@ const __VLS_self = (await import('vue')).defineComponent({
             assetTypeOptions: assetTypeOptions,
             visibilityOptions: visibilityOptions,
             isContentType: isContentType,
+            richTextActions: richTextActions,
             fileAccept: fileAccept,
             uploadLabel: uploadLabel,
             uploadTip: uploadTip,
             fileNameText: fileNameText,
             contentPlaceholder: contentPlaceholder,
             pageNumbers: pageNumbers,
+            renderPlainText: renderPlainText,
+            syncRichTextContent: syncRichTextContent,
+            formatRichText: formatRichText,
             openCreateDialog: openCreateDialog,
             closeEditorDialog: closeEditorDialog,
             assetTypeLabel: assetTypeLabel,
@@ -880,6 +1005,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             openFilePicker: openFilePicker,
             handleFileChange: handleFileChange,
             previewAsset: previewAsset,
+            downloadAsset: downloadAsset,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,

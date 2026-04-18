@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   deleteAsset,
+  downloadAsset,
   deletePrepAttachment,
   getCoursewareDetail,
   getCoursewares,
@@ -62,6 +63,7 @@ router.post('/coursewares/:coursewareId/publish', publishCourseware)
 router.get('/assets', getAssets)
 router.post('/assets', uploadAssetFile.single('file'), postAsset)
 router.get('/assets/:assetId', getAssetDetail)
+router.get('/assets/:assetId/download', downloadAsset)
 router.put('/assets/:assetId', updateAsset)
 router.delete('/assets/:assetId', deleteAsset)
 router.get('/profile', getProfile)

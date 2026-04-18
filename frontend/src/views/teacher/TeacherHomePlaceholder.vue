@@ -66,7 +66,7 @@
           </div>
 
           <div class="teacher-dashboard-action-list">
-            <button type="button" class="auth-btn" @click="router.push('/teacher/assets')">管理我的素材</button>
+            <button type="button" class="auth-btn" @click="router.push('/teacher/assets')">打开资料管理</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/preps')">整理备课单</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/coursewares')">打开在线课件</button>
             <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/teacher/profile')">维护个人资料</button>
@@ -158,7 +158,7 @@ const metricCards = computed(() => {
 
   return [
     { label: '课程数量', value: stats.courseCount, tip: '当前教师名下课程' },
-    { label: '我的素材', value: stats.assetCount, tip: '已上传素材总数' },
+    { label: '资料总数', value: stats.assetCount, tip: '已上传资料总数' },
     { label: '公开素材', value: stats.publicAssetCount, tip: '前台可见的公开素材' },
     { label: '备课单', value: stats.prepCount, tip: `其中已发布 ${stats.publishedPrepCount} 条` },
   ]
@@ -179,8 +179,7 @@ function assetTypeLabel(type: string) {
     audio: '音频',
     video: '视频',
     text: '文本',
-    question: '题目',
-    template: '模板',
+    file: '文件',
   }
 
   return labels[type] || type

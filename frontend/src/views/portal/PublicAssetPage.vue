@@ -6,7 +6,7 @@
       <div class="public-asset-hero__content">
         <div class="portal-hero__eyebrow">PUBLIC ASSET LIBRARY</div>
         <h1>公共素材库</h1>
-        <p>集中查看教师公开发布的图片、音频、视频和文本类素材，支持基础筛选、预览和下载。</p>
+        <p>集中查看教师公开发布的图片、音频、视频、文本片段和文件素材，支持基础筛选、预览和下载。</p>
       </div>
     </header>
 
@@ -26,7 +26,7 @@
         <strong>{{ stats.mediaCount }}</strong>
       </article>
       <article class="public-asset-stat-card">
-        <span>文本与题目</span>
+        <span>文本片段</span>
         <strong>{{ stats.contentCount }}</strong>
       </article>
     </section>
@@ -81,7 +81,7 @@
             <span>{{ item.uploadTime }}</span>
           </div>
 
-          <p class="public-asset-item__desc">{{ item.description || item.content || '暂无素材说明' }}</p>
+          <p class="public-asset-item__desc">{{ item.description || renderPlainText(item.content, '暂无素材说明') }}</p>
 
           <p v-if="item.fileName" class="public-asset-item__meta">
             {{ item.fileName }}
@@ -129,7 +129,7 @@ const errorMessage = ref('')
 const assetList = ref<
   Array<{
     id: number
-    type: 'image' | 'audio' | 'video' | 'text' | 'question' | 'template'
+    type: 'image' | 'audio' | 'video' | 'text' | 'file'
     title: string
     description: string
     content: string
@@ -150,7 +150,7 @@ const stats = reactive({
 
 const filters = reactive({
   keyword: '',
-  type: 'all' as 'all' | 'image' | 'audio' | 'video' | 'text' | 'question' | 'template',
+  type: 'all' as 'all' | 'image' | 'audio' | 'video' | 'text' | 'file',
 })
 
 const pagination = reactive({
@@ -164,9 +164,8 @@ const assetTypeOptions = [
   { value: 'image', label: '图片' },
   { value: 'audio', label: '音频' },
   { value: 'video', label: '视频' },
-  { value: 'text', label: '文本' },
-  { value: 'question', label: '题目' },
-  { value: 'template', label: '模板' },
+  { value: 'text', label: '文本片段' },
+  { value: 'file', label: '文件素材' },
 ] as const
 
 const pageNumbers = computed(() => {
@@ -177,6 +176,25 @@ const pageNumbers = computed(() => {
 function normalizePage(value: unknown) {
   const page = Number(value)
   return Number.isInteger(page) && page > 0 ? page : 1
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function renderPlainText(value: string, fallback = '暂无内容') {
+  const text = stripHtml(value)
+  if (!text) return fallback
+  return text.length > 180 ? `${text.slice(0, 180)}...` : text
 }
 
 function assetTypeLabel(type: string) {

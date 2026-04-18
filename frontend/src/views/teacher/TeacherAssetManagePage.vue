@@ -12,8 +12,8 @@
     <section class="teacher-dashboard-main asset-manage-main">
       <header class="teacher-dashboard-head">
         <div>
-          <div class="teacher-dashboard-head__eyebrow">MY ASSETS</div>
-          <h2>我的素材</h2>
+          <div class="teacher-dashboard-head__eyebrow">RESOURCE MANAGEMENT</div>
+          <h2>资料管理</h2>
           <p>素材上传不再占用主页面布局，创建和编辑都会在独立弹窗内完成，同时保留公开与私密管理。</p>
         </div>
 
@@ -45,7 +45,7 @@
         <article class="teacher-dashboard-metric">
           <span>图片 / 音视频 / 文本</span>
           <strong>{{ `${stats.imageCount} / ${stats.audioCount + stats.videoCount} / ${stats.contentCount}` }}</strong>
-          <em>覆盖常用教学素材类型</em>
+          <em>文件素材也会计入素材总数</em>
         </article>
       </section>
 
@@ -114,16 +114,17 @@
 
             <p class="asset-manage-item__meta">{{ assetTypeLabel(item.type) }}</p>
             <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
-            <p v-if="item.content" class="asset-manage-item__content">{{ item.content }}</p>
+            <p v-if="item.content" class="asset-manage-item__content">{{ renderPlainText(item.content) }}</p>
             <p v-else class="asset-manage-item__meta">
               {{ item.fileName || '未记录文件名' }}
               <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
             </p>
 
             <div class="asset-manage-item__actions">
-              <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
+              <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item)">预览</button>
+              <button v-if="item.fileName" type="button" class="course-chip" @click="downloadAsset(item.id)">下载</button>
               <button type="button" class="course-chip" @click="startEdit(item.id)">编辑</button>
-              <button type="button" class="course-chip my-resources-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
+              <button v-if="item.visibility === 'private'" type="button" class="course-chip my-resources-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
                 {{ deletingId === item.id ? '删除中...' : '删除' }}
               </button>
             </div>
@@ -188,10 +189,35 @@
             <textarea v-model.trim="editorForm.description" rows="3" maxlength="2000" placeholder="补充素材用途、使用场景或备注说明"></textarea>
           </label>
 
-          <label v-if="isContentType" class="my-resources-field asset-manage-form__full">
+          <div v-if="isContentType" class="my-resources-field asset-manage-form__full">
             <span>素材内容</span>
-            <textarea v-model.trim="editorForm.content" rows="7" maxlength="5000" :placeholder="contentPlaceholder"></textarea>
-          </label>
+            <div class="asset-rich-editor">
+              <div class="asset-rich-editor__toolbar" aria-label="富文本工具栏">
+                <button
+                  v-for="action in richTextActions"
+                  :key="action.command"
+                  type="button"
+                  class="asset-rich-editor__tool"
+                  :title="action.title"
+                  @mousedown.prevent
+                  @click="formatRichText(action.command)"
+                >
+                  {{ action.label }}
+                </button>
+              </div>
+              <div
+                ref="richEditorRef"
+                class="asset-rich-editor__content"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                :data-placeholder="contentPlaceholder"
+                @input="syncRichTextContent"
+                @blur="syncRichTextContent"
+              ></div>
+            </div>
+            <small class="asset-manage-field-tip">支持加粗、斜体、下划线、项目列表和编号列表，保存后会作为文本片段复用。</small>
+          </div>
 
           <label v-else class="my-resources-field asset-manage-form__full">
             <span>{{ uploadLabel }}</span>
@@ -215,8 +241,7 @@
             </small>
           </label>
 
-          <div class="my-resources-filter-actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditorDialog">关闭</button>
+          <div class="my-resources-filter-actions asset-manage-form__actions">
             <button type="submit" class="auth-btn" :disabled="saving">
               {{ saving ? '提交中...' : editingId ? '保存素材' : '创建素材' }}
             </button>
@@ -228,15 +253,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TeacherSidebarNav from '@/components/navigation/TeacherSidebarNav.vue'
 import TeacherWorkspaceDialog from '@/components/TeacherWorkspaceDialog.vue'
 import {
   createTeacherAsset,
   deleteTeacherAssetDetail,
+  downloadTeacherAsset,
   getTeacherAssetDetail,
   getTeacherAssets,
+  previewTeacherAsset,
   type TeacherAssetItem,
   type TeacherAssetStats,
   type TeacherAssetType,
@@ -255,6 +282,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const selectedFile = ref<File | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const richEditorRef = ref<HTMLDivElement | null>(null)
 const fileInputKey = ref(0)
 const assetList = ref<TeacherAssetItem[]>([])
 
@@ -294,8 +322,7 @@ const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
   { value: 'audio', label: '音频素材' },
   { value: 'video', label: '视频素材' },
   { value: 'text', label: '文本片段' },
-  { value: 'question', label: '题目卡片' },
-  { value: 'template', label: '模板素材' },
+  { value: 'file', label: '文件素材' },
 ]
 
 const visibilityOptions: Array<{ value: TeacherAssetVisibility; label: string }> = [
@@ -303,23 +330,34 @@ const visibilityOptions: Array<{ value: TeacherAssetVisibility; label: string }>
   { value: 'public', label: '公开' },
 ]
 
-const isContentType = computed(() => ['text', 'question', 'template'].includes(editorForm.type))
+const isContentType = computed(() => editorForm.type === 'text')
+
+const richTextActions = [
+  { command: 'bold', label: '加粗', title: '加粗' },
+  { command: 'italic', label: '斜体', title: '斜体' },
+  { command: 'underline', label: '下划线', title: '下划线' },
+  { command: 'insertUnorderedList', label: '列表', title: '项目列表' },
+  { command: 'insertOrderedList', label: '编号', title: '编号列表' },
+] as const
 
 const fileAccept = computed(() => {
   if (editorForm.type === 'audio') return '.mp3,.wav,.ogg,.m4a'
   if (editorForm.type === 'video') return '.mp4,.mov,.avi,.webm'
+  if (editorForm.type === 'file') return '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar,.7z'
   return '.jpg,.jpeg,.png,.gif,.webp'
 })
 
 const uploadLabel = computed(() => {
   if (editorForm.type === 'audio') return '上传音频文件'
   if (editorForm.type === 'video') return '上传视频文件'
+  if (editorForm.type === 'file') return '上传文件素材'
   return '上传图片文件'
 })
 
 const uploadTip = computed(() => {
   if (editorForm.type === 'audio') return '支持 MP3、WAV、OGG、M4A 格式。'
   if (editorForm.type === 'video') return '支持 MP4、MOV、AVI、WEBM 格式。'
+  if (editorForm.type === 'file') return '支持 PDF、Word、PPT、Excel、TXT、ZIP、RAR、7Z 格式。'
   return '支持 JPG、PNG、GIF、WEBP 格式。'
 })
 
@@ -329,11 +367,7 @@ const fileNameText = computed(() => {
   return '未选择文件'
 })
 
-const contentPlaceholder = computed(() => {
-  if (editorForm.type === 'question') return '请输入题干、答案要点或解析'
-  if (editorForm.type === 'template') return '请输入模板结构或使用说明'
-  return '请输入可复用的文本内容'
-})
+const contentPlaceholder = computed(() => '请输入可复用的文本内容')
 
 const pageNumbers = computed(() => {
   const totalPages = pagination.totalPages || 1
@@ -348,6 +382,45 @@ function normalizePage(value: unknown) {
 function clearMessages() {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function renderPlainText(value: string, fallback = '暂无内容') {
+  const text = stripHtml(value)
+  if (!text) return fallback
+  return text.length > 180 ? `${text.slice(0, 180)}...` : text
+}
+
+function syncRichEditor() {
+  if (!richEditorRef.value || !isContentType.value) {
+    return
+  }
+
+  if (richEditorRef.value.innerHTML !== editorForm.content) {
+    richEditorRef.value.innerHTML = editorForm.content
+  }
+}
+
+function syncRichTextContent() {
+  editorForm.content = richEditorRef.value?.innerHTML.trim() || ''
+}
+
+function formatRichText(command: string) {
+  richEditorRef.value?.focus()
+  document.execCommand(command, false)
+  syncRichTextContent()
 }
 
 function resetEditor() {
@@ -397,9 +470,26 @@ function handleFileChange(event: Event) {
   selectedFile.value = target.files?.[0] || null
 }
 
-function previewAsset(path: string) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-  window.open(`${baseUrl}${path}`, '_blank', 'noopener,noreferrer')
+async function previewAsset(item: TeacherAssetItem) {
+  if (!item.fileName) {
+    return
+  }
+
+  try {
+    await previewTeacherAsset(item.id)
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '资料预览失败'
+  }
+}
+
+async function downloadAsset(assetId: number) {
+  const target = assetList.value.find((item) => item.id === assetId)
+
+  try {
+    await downloadTeacherAsset(assetId, target?.fileName || 'download')
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '资料下载失败'
+  }
 }
 
 function syncFiltersWithRoute() {
@@ -450,6 +540,8 @@ async function startEdit(assetId: number) {
     selectedFile.value = null
     fileInputKey.value += 1
     showEditorDialog.value = true
+    await nextTick()
+    syncRichEditor()
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '素材详情加载失败'
   }
@@ -457,13 +549,14 @@ async function startEdit(assetId: number) {
 
 async function submitAsset() {
   clearMessages()
+  syncRichTextContent()
 
   if (!editorForm.title) {
     errorMessage.value = '请先填写素材标题'
     return
   }
 
-  if (isContentType.value && !editorForm.content) {
+  if (isContentType.value && !stripHtml(editorForm.content)) {
     errorMessage.value = '当前素材类型需要填写素材内容'
     return
   }
@@ -577,6 +670,29 @@ async function loadAssets() {
     loading.value = false
   }
 }
+
+watch(
+  () => showEditorDialog.value,
+  async (visible) => {
+    if (visible) {
+      await nextTick()
+      syncRichEditor()
+    }
+  },
+)
+
+watch(
+  () => editorForm.type,
+  async (type) => {
+    if (type !== 'text') {
+      editorForm.content = ''
+      return
+    }
+
+    await nextTick()
+    syncRichEditor()
+  },
+)
 
 watch(
   () => route.fullPath,

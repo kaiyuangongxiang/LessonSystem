@@ -103,7 +103,7 @@
               </div>
             </div>
 
-            <p class="admin-asset-item__desc">{{ item.description || item.content || '暂无素材说明' }}</p>
+            <p class="admin-asset-item__desc">{{ item.description || renderPlainText(item.content, '暂无素材说明') }}</p>
             <p v-if="item.fileName" class="admin-asset-item__meta">
               {{ item.fileName }}
               <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
@@ -181,9 +181,8 @@ const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
   { value: 'image', label: '图片' },
   { value: 'audio', label: '音频' },
   { value: 'video', label: '视频' },
-  { value: 'text', label: '文本' },
-  { value: 'question', label: '题目' },
-  { value: 'template', label: '模板' },
+  { value: 'text', label: '文本片段' },
+  { value: 'file', label: '文件素材' },
 ]
 
 const pageNumbers = computed(() => {
@@ -199,6 +198,25 @@ function normalizePage(value: unknown) {
 function clearMessages() {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function renderPlainText(value: string, fallback = '暂无内容') {
+  const text = stripHtml(value)
+  if (!text) return fallback
+  return text.length > 180 ? `${text.slice(0, 180)}...` : text
 }
 
 function assetTypeLabel(type: AdminAssetType) {
