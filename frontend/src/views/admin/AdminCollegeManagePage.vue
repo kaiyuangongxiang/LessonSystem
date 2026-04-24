@@ -153,7 +153,6 @@
         <div class="admin-course-editor__footer">
           <p>删除学院前会校验是否存在关联教师或课程，避免误删基础数据。</p>
           <div class="admin-course-editor__actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
             <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : editorActionText }}</button>
           </div>
         </div>
@@ -278,6 +277,10 @@ function closeEditor() {
     return
   }
 
+  forceCloseEditor()
+}
+
+function forceCloseEditor() {
   editorVisible.value = false
   resetEditorForm()
 }
@@ -315,12 +318,12 @@ async function submitEditor() {
     if (editingId.value) {
       const result = await updateAdminCollege(editingId.value, payload)
       successMessage.value = `学院《${result.name}》已更新。`
-      closeEditor()
+      forceCloseEditor()
       await loadColleges()
     } else {
       const result = await createAdminCollege(payload)
       successMessage.value = `学院《${result.name}》已创建。`
-      closeEditor()
+      forceCloseEditor()
 
       if (pagination.page !== 1) {
         updateRoute(1)

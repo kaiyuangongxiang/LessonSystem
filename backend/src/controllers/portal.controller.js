@@ -6,6 +6,7 @@ import {
   getPortalCourseListData,
   getPortalHomeData,
   getPortalMaterialDownloadData,
+  getPortalPrepAttachmentFileData,
   getPortalPublicAssetListData,
   getPortalVideoPlayData,
 } from '../services/portal.service.js'
@@ -97,6 +98,25 @@ export async function getPortalAssetFile(req, res, next) {
 export async function downloadPortalAsset(req, res, next) {
   try {
     const result = await getPortalAssetFileData(req.params.assetId)
+    res.download(result.filePath, result.fileName)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPortalPrepAttachmentFile(req, res, next) {
+  try {
+    const result = await getPortalPrepAttachmentFileData(req.params.attachmentId)
+    res.type(result.contentType || path.extname(result.fileName) || 'application/octet-stream')
+    res.sendFile(result.filePath)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function downloadPortalPrepAttachment(req, res, next) {
+  try {
+    const result = await getPortalPrepAttachmentFileData(req.params.attachmentId)
     res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)

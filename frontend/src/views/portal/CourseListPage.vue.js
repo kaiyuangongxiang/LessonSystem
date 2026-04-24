@@ -4,18 +4,19 @@ import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
 import http from '@/services/http';
 const router = useRouter();
 const route = useRoute();
+const COURSE_PAGE_SIZE = 3;
 const loading = ref(false);
 const errorMessage = ref('');
 const courses = ref([]);
 const pagination = reactive({
     page: 1,
-    pageSize: 4,
+    pageSize: COURSE_PAGE_SIZE,
     total: 0,
     totalPages: 0,
 });
 const colleges = ref([]);
 const routeKeyword = computed(() => (typeof route.query.keyword === 'string' ? route.query.keyword : ''));
-const routeSort = computed(() => (route.query.sort === 'video-rich' ? 'video-rich' : 'latest'));
+const routeSort = computed(() => (route.query.sort === 'time-asc' ? 'time-asc' : 'time-desc'));
 const selectedCollegeId = computed(() => {
     const raw = route.query.collegeId;
     return typeof raw === 'string' && raw ? raw : 'all';
@@ -25,13 +26,13 @@ const selectedCollegeName = computed(() => {
     const current = collegeOptions.value.find((item) => String(item.id) === String(selectedCollegeId.value));
     return current?.name || '全部学院';
 });
-const hasActiveFilters = computed(() => Boolean(routeKeyword.value || selectedCollegeId.value !== 'all' || routeSort.value !== 'latest'));
+const hasActiveFilters = computed(() => Boolean(routeKeyword.value || selectedCollegeId.value !== 'all' || routeSort.value !== 'time-desc'));
 const filterSummary = computed(() => {
     const parts = [selectedCollegeName.value];
     if (routeKeyword.value) {
         parts.push(`关键词：${routeKeyword.value}`);
     }
-    parts.push(routeSort.value === 'video-rich' ? '视频资源优先' : '最近更新');
+    parts.push(routeSort.value === 'time-asc' ? '时间升序' : '时间降序');
     return parts.join(' · ');
 });
 const visibleCourses = computed(() => {
@@ -76,24 +77,28 @@ function normalizePage(value) {
     return Number.isInteger(page) && page > 0 ? page : 1;
 }
 function updateRoute(next) {
+    const nextKeyword = next.clearKeyword ? undefined : (next.keyword ?? routeKeyword.value) || undefined;
+    const nextCollegeId = next.clearCollege
+        ? undefined
+        : next.collegeId ?? (selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value);
     router.push({
         path: '/courses',
         query: {
-            keyword: (next.keyword ?? routeKeyword.value) || undefined,
-            collegeId: next.collegeId ?? (selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value),
+            keyword: nextKeyword,
+            collegeId: nextCollegeId,
             sort: next.sort ?? routeSort.value,
             page: String(next.page ?? normalizePage(route.query.page)),
         },
     });
 }
 function handleCollegeChange(collegeId) {
-    updateRoute({ collegeId: collegeId === 'all' ? undefined : collegeId, page: 1 });
+    updateRoute(collegeId === 'all' ? { clearCollege: true, page: 1 } : { collegeId, page: 1 });
 }
 function changePage(page) {
     updateRoute({ page });
 }
 function resetFilters() {
-    updateRoute({ keyword: undefined, collegeId: undefined, sort: 'latest', page: 1 });
+    updateRoute({ clearKeyword: true, clearCollege: true, sort: 'time-desc', page: 1 });
 }
 function goCourseDetail(courseId) {
     if (!courseId) {
@@ -111,7 +116,7 @@ async function loadCourses() {
                 collegeId: selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value,
                 sort: routeSort.value,
                 page: normalizePage(route.query.page),
-                pageSize: 4,
+                pageSize: COURSE_PAGE_SIZE,
             },
         });
         const data = response.data.data;
@@ -125,7 +130,7 @@ async function loadCourses() {
     catch (error) {
         courses.value = [];
         pagination.page = 1;
-        pagination.pageSize = 4;
+        pagination.pageSize = COURSE_PAGE_SIZE;
         pagination.total = 0;
         pagination.totalPages = 0;
         colleges.value = [];
@@ -204,17 +209,17 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.updateRoute({ sort: 'latest', page: 1 });
+            __VLS_ctx.updateRoute({ sort: 'time-desc', page: 1 });
         } },
     type: "button",
-    ...{ class: (['course-chip', 'course-chip--sort', __VLS_ctx.routeSort === 'latest' ? 'is-active' : '']) },
+    ...{ class: (['course-chip', 'course-chip--sort', __VLS_ctx.routeSort === 'time-desc' ? 'is-active' : '']) },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     ...{ onClick: (...[$event]) => {
-            __VLS_ctx.updateRoute({ sort: 'video-rich', page: 1 });
+            __VLS_ctx.updateRoute({ sort: 'time-asc', page: 1 });
         } },
     type: "button",
-    ...{ class: (['course-chip', 'course-chip--sort', __VLS_ctx.routeSort === 'video-rich' ? 'is-active' : '']) },
+    ...{ class: (['course-chip', 'course-chip--sort', __VLS_ctx.routeSort === 'time-asc' ? 'is-active' : '']) },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "course-list-filter-meta" },
@@ -225,13 +230,12 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 (__VLS_ctx.filterSummary);
-if (__VLS_ctx.hasActiveFilters) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.resetFilters) },
-        type: "button",
-        ...{ class: "course-list-reset-btn" },
-    });
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.resetFilters) },
+    type: "button",
+    ...{ class: (['course-list-reset-btn', __VLS_ctx.hasActiveFilters ? '' : 'is-placeholder']) },
+    disabled: (!__VLS_ctx.hasActiveFilters),
+});
 if (__VLS_ctx.errorMessage) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "course-feedback" },
@@ -322,7 +326,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['course-list-sort']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-filter-meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-filter-state']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-list-reset-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-feedback']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-list-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-card']} */ ;

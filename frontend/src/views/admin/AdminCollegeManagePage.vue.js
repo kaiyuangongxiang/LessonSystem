@@ -85,6 +85,9 @@ function closeEditor() {
     if (saving.value) {
         return;
     }
+    forceCloseEditor();
+}
+function forceCloseEditor() {
     editorVisible.value = false;
     resetEditorForm();
 }
@@ -114,13 +117,13 @@ async function submitEditor() {
         if (editingId.value) {
             const result = await updateAdminCollege(editingId.value, payload);
             successMessage.value = `学院《${result.name}》已更新。`;
-            closeEditor();
+            forceCloseEditor();
             await loadColleges();
         }
         else {
             const result = await createAdminCollege(payload);
             successMessage.value = `学院《${result.name}》已创建。`;
-            closeEditor();
+            forceCloseEditor();
             if (pagination.page !== 1) {
                 updateRoute(1);
             }
@@ -595,12 +598,6 @@ if (__VLS_ctx.editorVisible) {
         ...{ class: "admin-course-editor__actions" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.closeEditor) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.saving),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
         ...{ class: "auth-btn" },
         disabled: (__VLS_ctx.saving),
@@ -690,8 +687,6 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({

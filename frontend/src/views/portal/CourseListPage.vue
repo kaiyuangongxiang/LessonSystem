@@ -38,17 +38,17 @@
           <div class="course-list-sort">
             <button
               type="button"
-              :class="['course-chip', 'course-chip--sort', routeSort === 'latest' ? 'is-active' : '']"
-              @click="updateRoute({ sort: 'latest', page: 1 })"
+              :class="['course-chip', 'course-chip--sort', routeSort === 'time-desc' ? 'is-active' : '']"
+              @click="updateRoute({ sort: 'time-desc', page: 1 })"
             >
-              最近更新
+              时间降序
             </button>
             <button
               type="button"
-              :class="['course-chip', 'course-chip--sort', routeSort === 'video-rich' ? 'is-active' : '']"
-              @click="updateRoute({ sort: 'video-rich', page: 1 })"
+              :class="['course-chip', 'course-chip--sort', routeSort === 'time-asc' ? 'is-active' : '']"
+              @click="updateRoute({ sort: 'time-asc', page: 1 })"
             >
-              视频优先
+              时间升序
             </button>
           </div>
         </div>
@@ -58,7 +58,9 @@
             <span>当前筛选</span>
             <strong>{{ filterSummary }}</strong>
           </div>
-          <button v-if="hasActiveFilters" type="button" class="course-list-reset-btn" @click="resetFilters">重置筛选</button>
+          <button type="button" :class="['course-list-reset-btn', hasActiveFilters ? '' : 'is-placeholder']" :disabled="!hasActiveFilters" @click="resetFilters">
+            重置筛选
+          </button>
         </div>
       </div>
     </section>
@@ -128,20 +130,21 @@ interface CourseListResponse {
 
 const router = useRouter()
 const route = useRoute()
+const COURSE_PAGE_SIZE = 3
 const loading = ref(false)
 const errorMessage = ref('')
 
 const courses = ref<CourseItem[]>([])
 const pagination = reactive({
   page: 1,
-  pageSize: 4,
+  pageSize: COURSE_PAGE_SIZE,
   total: 0,
   totalPages: 0,
 })
 const colleges = ref<Array<{ id: number; name: string }>>([])
 
 const routeKeyword = computed(() => (typeof route.query.keyword === 'string' ? route.query.keyword : ''))
-const routeSort = computed(() => (route.query.sort === 'video-rich' ? 'video-rich' : 'latest'))
+const routeSort = computed(() => (route.query.sort === 'time-asc' ? 'time-asc' : 'time-desc'))
 const selectedCollegeId = computed(() => {
   const raw = route.query.collegeId
   return typeof raw === 'string' && raw ? raw : 'all'
@@ -154,7 +157,7 @@ const selectedCollegeName = computed(() => {
   return current?.name || '全部学院'
 })
 
-const hasActiveFilters = computed(() => Boolean(routeKeyword.value || selectedCollegeId.value !== 'all' || routeSort.value !== 'latest'))
+const hasActiveFilters = computed(() => Boolean(routeKeyword.value || selectedCollegeId.value !== 'all' || routeSort.value !== 'time-desc'))
 
 const filterSummary = computed(() => {
   const parts = [selectedCollegeName.value]
@@ -163,7 +166,7 @@ const filterSummary = computed(() => {
     parts.push(`关键词：${routeKeyword.value}`)
   }
 
-  parts.push(routeSort.value === 'video-rich' ? '视频资源优先' : '最近更新')
+  parts.push(routeSort.value === 'time-asc' ? '时间升序' : '时间降序')
   return parts.join(' · ')
 })
 
@@ -211,12 +214,24 @@ function normalizePage(value: unknown) {
   return Number.isInteger(page) && page > 0 ? page : 1
 }
 
-function updateRoute(next: { keyword?: string; collegeId?: string | number; sort?: string; page?: number }) {
+function updateRoute(next: {
+  keyword?: string
+  collegeId?: string | number
+  sort?: string
+  page?: number
+  clearKeyword?: boolean
+  clearCollege?: boolean
+}) {
+  const nextKeyword = next.clearKeyword ? undefined : (next.keyword ?? routeKeyword.value) || undefined
+  const nextCollegeId = next.clearCollege
+    ? undefined
+    : next.collegeId ?? (selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value)
+
   router.push({
     path: '/courses',
     query: {
-      keyword: (next.keyword ?? routeKeyword.value) || undefined,
-      collegeId: next.collegeId ?? (selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value),
+      keyword: nextKeyword,
+      collegeId: nextCollegeId,
       sort: next.sort ?? routeSort.value,
       page: String(next.page ?? normalizePage(route.query.page)),
     },
@@ -224,7 +239,7 @@ function updateRoute(next: { keyword?: string; collegeId?: string | number; sort
 }
 
 function handleCollegeChange(collegeId: string | number) {
-  updateRoute({ collegeId: collegeId === 'all' ? undefined : collegeId, page: 1 })
+  updateRoute(collegeId === 'all' ? { clearCollege: true, page: 1 } : { collegeId, page: 1 })
 }
 
 function changePage(page: number) {
@@ -232,7 +247,7 @@ function changePage(page: number) {
 }
 
 function resetFilters() {
-  updateRoute({ keyword: undefined, collegeId: undefined, sort: 'latest', page: 1 })
+  updateRoute({ clearKeyword: true, clearCollege: true, sort: 'time-desc', page: 1 })
 }
 
 function goCourseDetail(courseId: number) {
@@ -254,7 +269,7 @@ async function loadCourses() {
         collegeId: selectedCollegeId.value === 'all' ? undefined : selectedCollegeId.value,
         sort: routeSort.value,
         page: normalizePage(route.query.page),
-        pageSize: 4,
+        pageSize: COURSE_PAGE_SIZE,
       },
     })
 
@@ -268,7 +283,7 @@ async function loadCourses() {
   } catch (error: any) {
     courses.value = []
     pagination.page = 1
-    pagination.pageSize = 4
+    pagination.pageSize = COURSE_PAGE_SIZE
     pagination.total = 0
     pagination.totalPages = 0
     colleges.value = []

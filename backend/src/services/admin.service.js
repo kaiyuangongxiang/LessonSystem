@@ -91,16 +91,6 @@ function normalizeCourseSummary(value) {
   return summary
 }
 
-function normalizeCourseLongText(value, label) {
-  const text = typeof value === 'string' ? value.trim() : ''
-
-  if (text.length > 5000) {
-    throw badRequest(`${label}不能超过5000个字`)
-  }
-
-  return text
-}
-
 function normalizeCollegeName(value) {
   const name = typeof value === 'string' ? value.trim() : ''
 
@@ -547,9 +537,6 @@ function normalizeCoursePayload(payload) {
   return {
     name: normalizeCourseName(body.name),
     summary: normalizeCourseSummary(body.summary),
-    teachingGoal: normalizeCourseLongText(body.teachingGoal, '教学目标'),
-    teachingContent: normalizeCourseLongText(body.teachingContent, '教学内容'),
-    teachingIdea: normalizeCourseLongText(body.teachingIdea, '教学思路'),
     collegeId: normalizeRequiredCollegeId(body.collegeId),
     teacherId: normalizeTeacherId(body.teacherId),
   }
@@ -844,14 +831,11 @@ function buildCourseWhereClause({ keyword, collegeId }) {
     conditions.push(`(
       c.course_name LIKE ?
       OR COALESCE(c.course_summary, '') LIKE ?
-      OR COALESCE(c.teaching_goal, '') LIKE ?
-      OR COALESCE(c.teaching_content, '') LIKE ?
-      OR COALESCE(c.teaching_idea, '') LIKE ?
       OR COALESCE(col.college_name, '') LIKE ?
       OR COALESCE(t.teacher_name, '') LIKE ?
       OR COALESCE(t.username, '') LIKE ?
     )`)
-    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
+    params.push(keywordPattern, keywordPattern, keywordPattern, keywordPattern, keywordPattern)
   }
 
   if (collegeId) {
@@ -1478,9 +1462,6 @@ async function getAdminCourseDetail(courseId) {
     `SELECT c.course_id AS id,
             c.course_name AS name,
             COALESCE(c.course_summary, '') AS summary,
-            COALESCE(c.teaching_goal, '') AS teachingGoal,
-            COALESCE(c.teaching_content, '') AS teachingContent,
-            COALESCE(c.teaching_idea, '') AS teachingIdea,
             c.college_id AS collegeId,
             c.teacher_id AS teacherId,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
@@ -1525,9 +1506,6 @@ async function getAdminCourseDetail(courseId) {
     id: Number(item.id),
     name: item.name,
     summary: item.summary,
-    teachingGoal: item.teachingGoal,
-    teachingContent: item.teachingContent,
-    teachingIdea: item.teachingIdea,
     collegeId: item.collegeId === null ? null : Number(item.collegeId),
     teacherId: item.teacherId === null ? null : Number(item.teacherId),
     collegeName: item.collegeName,
@@ -2786,9 +2764,6 @@ export async function getAdminCourseList({ adminId, query }) {
     `SELECT c.course_id AS id,
             c.course_name AS name,
             COALESCE(c.course_summary, '') AS summary,
-            COALESCE(c.teaching_goal, '') AS teachingGoal,
-            COALESCE(c.teaching_content, '') AS teachingContent,
-            COALESCE(c.teaching_idea, '') AS teachingIdea,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
             c.college_id AS collegeId,
             COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师') AS teacherName,
@@ -2841,10 +2816,7 @@ export async function getAdminCourseList({ adminId, query }) {
         (SELECT COUNT(*)
          FROM course_intro
          WHERE status = 1
-           AND COALESCE(NULLIF(TRIM(course_summary), ''), NULL) IS NOT NULL
-           AND COALESCE(NULLIF(TRIM(teaching_goal), ''), NULL) IS NOT NULL
-           AND COALESCE(NULLIF(TRIM(teaching_content), ''), NULL) IS NOT NULL
-           AND COALESCE(NULLIF(TRIM(teaching_idea), ''), NULL) IS NOT NULL) AS contentReadyCount`,
+           AND COALESCE(NULLIF(TRIM(course_summary), ''), NULL) IS NOT NULL) AS summaryReadyCount`,
   )
 
   const statsRow = statsRows[0] || {
@@ -2853,7 +2825,7 @@ export async function getAdminCourseList({ adminId, query }) {
     materialCount: 0,
     videoCount: 0,
     collegeAssignedCount: 0,
-    contentReadyCount: 0,
+    summaryReadyCount: 0,
   }
 
   logger.info('admin_course_list_loaded', {
@@ -2874,7 +2846,7 @@ export async function getAdminCourseList({ adminId, query }) {
       materialCount: Number(statsRow.materialCount || 0),
       videoCount: Number(statsRow.videoCount || 0),
       collegeAssignedCount: Number(statsRow.collegeAssignedCount || 0),
-      contentReadyCount: Number(statsRow.contentReadyCount || 0),
+      summaryReadyCount: Number(statsRow.summaryReadyCount || 0),
     },
     list: list.map((item) => ({
       ...item,
@@ -2916,19 +2888,13 @@ export async function createAdminCourse({ adminId, payload }) {
     `INSERT INTO course_intro (
        course_name,
        course_summary,
-       teaching_goal,
-       teaching_content,
-       teaching_idea,
        college_id,
        teacher_id,
        status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+     ) VALUES (?, ?, ?, ?, 1)`,
     [
       course.name,
       course.summary || null,
-      course.teachingGoal || null,
-      course.teachingContent || null,
-      course.teachingIdea || null,
       course.collegeId,
       course.teacherId,
     ],
@@ -2966,9 +2932,6 @@ export async function updateAdminCourse({ adminId, courseId, payload }) {
     `UPDATE course_intro
      SET course_name = ?,
          course_summary = ?,
-         teaching_goal = ?,
-         teaching_content = ?,
-         teaching_idea = ?,
          college_id = ?,
          teacher_id = ?,
          update_time = CURRENT_TIMESTAMP
@@ -2976,9 +2939,6 @@ export async function updateAdminCourse({ adminId, courseId, payload }) {
     [
       course.name,
       course.summary || null,
-      course.teachingGoal || null,
-      course.teachingContent || null,
-      course.teachingIdea || null,
       course.collegeId,
       course.teacherId,
       normalizedCourseId,

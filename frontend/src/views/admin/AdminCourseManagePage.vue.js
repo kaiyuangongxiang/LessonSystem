@@ -27,9 +27,6 @@ const editorForm = reactive({
     collegeId: '',
     teacherId: '',
     summary: '',
-    teachingGoal: '',
-    teachingContent: '',
-    teachingIdea: '',
 });
 const stats = reactive({
     total: 0,
@@ -37,7 +34,7 @@ const stats = reactive({
     materialCount: 0,
     videoCount: 0,
     collegeAssignedCount: 0,
-    contentReadyCount: 0,
+    summaryReadyCount: 0,
 });
 const pagination = reactive({
     page: 1,
@@ -47,16 +44,16 @@ const pagination = reactive({
 });
 const headerText = computed(() => {
     const name = authStore.profile?.name || authStore.profile?.username || '管理员';
-    return `${name}，这里用于统一维护课程基础信息、教学内容结构和课程归属关系。`;
+    return `${name}，这里用于统一维护课程基础信息和课程归属关系。`;
 });
 const reminderTexts = computed(() => {
     return [
         stats.collegeAssignedCount < stats.total
             ? `当前仍有 ${stats.total - stats.collegeAssignedCount} 门课程未补齐学院归属。`
             : '当前课程都已补齐学院归属。',
-        stats.contentReadyCount < stats.total
-            ? `当前仍有 ${stats.total - stats.contentReadyCount} 门课程缺少教学内容字段。`
-            : '当前课程的简介、目标、内容和思路都已补齐。',
+        stats.summaryReadyCount < stats.total
+            ? `当前仍有 ${stats.total - stats.summaryReadyCount} 门课程缺少课程简介。`
+            : '当前课程简介都已补齐。',
     ];
 });
 const currentFilterSummary = computed(() => {
@@ -151,12 +148,6 @@ function resetEditorForm() {
     editorForm.collegeId = '';
     editorForm.teacherId = '';
     editorForm.summary = '';
-    editorForm.teachingGoal = '';
-    editorForm.teachingContent = '';
-    editorForm.teachingIdea = '';
-}
-function getContentReadyCount(item) {
-    return [item.summary, item.teachingGoal, item.teachingContent, item.teachingIdea].filter((value) => Boolean(value?.trim())).length;
 }
 function teacherCollegeText(item) {
     if (!item.teacherCollegeName) {
@@ -179,15 +170,15 @@ function openEditEditor(item) {
     editorForm.collegeId = item.collegeId ? String(item.collegeId) : '';
     editorForm.teacherId = item.teacherId ? String(item.teacherId) : '';
     editorForm.summary = item.summary;
-    editorForm.teachingGoal = item.teachingGoal;
-    editorForm.teachingContent = item.teachingContent;
-    editorForm.teachingIdea = item.teachingIdea;
     editorVisible.value = true;
 }
 function closeEditor() {
     if (saving.value) {
         return;
     }
+    forceCloseEditor();
+}
+function forceCloseEditor() {
     editorVisible.value = false;
     resetEditorForm();
 }
@@ -223,9 +214,6 @@ async function submitEditor() {
         const payload = {
             name: editorForm.name,
             summary: editorForm.summary,
-            teachingGoal: editorForm.teachingGoal,
-            teachingContent: editorForm.teachingContent,
-            teachingIdea: editorForm.teachingIdea,
             collegeId: editorForm.collegeId,
             teacherId: editorForm.teacherId,
         };
@@ -235,7 +223,7 @@ async function submitEditor() {
             filterCollegeOptions.value = result.formOptions.colleges;
             teacherOptions.value = result.formOptions.teachers;
             successMessage.value = `课程《${result.name}》已更新。`;
-            closeEditor();
+            forceCloseEditor();
             await loadCourses();
         }
         else {
@@ -244,7 +232,7 @@ async function submitEditor() {
             filterCollegeOptions.value = result.formOptions.colleges;
             teacherOptions.value = result.formOptions.teachers;
             successMessage.value = `课程《${result.name}》已创建。`;
-            closeEditor();
+            forceCloseEditor();
             if (pagination.page !== 1) {
                 updateRoute(1);
             }
@@ -304,7 +292,7 @@ async function loadCourses() {
         stats.materialCount = data.stats.materialCount;
         stats.videoCount = data.stats.videoCount;
         stats.collegeAssignedCount = data.stats.collegeAssignedCount;
-        stats.contentReadyCount = data.stats.contentReadyCount;
+        stats.summaryReadyCount = data.stats.summaryReadyCount;
         pagination.page = data.pagination.page;
         pagination.pageSize = data.pagination.pageSize;
         pagination.total = data.pagination.total;
@@ -320,7 +308,7 @@ async function loadCourses() {
         stats.materialCount = 0;
         stats.videoCount = 0;
         stats.collegeAssignedCount = 0;
-        stats.contentReadyCount = 0;
+        stats.summaryReadyCount = 0;
         pagination.page = 1;
         pagination.pageSize = 4;
         pagination.total = 0;
@@ -490,6 +478,51 @@ if (__VLS_ctx.successMessage) {
     (__VLS_ctx.successMessage);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+    ...{ class: "admin-manage-stats" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.total);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.collegeAssignedCount);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.summaryReadyCount);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.teacherCount);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.materialCount);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+    ...{ class: "admin-manage-stat-card is-highlight" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+(__VLS_ctx.stats.videoCount);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-filter-panel admin-course-toolbar" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
@@ -512,7 +545,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
     value: (__VLS_ctx.form.keyword),
     type: "text",
     maxlength: "100",
-    placeholder: "搜索课程名称、简介、教学目标、教学内容、教师或学院",
+    placeholder: "搜索课程名称、简介、教师或学院",
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
     ...{ class: "admin-manage-field" },
@@ -559,51 +592,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     disabled: (__VLS_ctx.loading),
 });
 (__VLS_ctx.loading ? '加载中...' : '应用筛选');
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "admin-manage-stats" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.total);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.collegeAssignedCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.contentReadyCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.teacherCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.materialCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-    ...{ class: "admin-manage-stat-card is-highlight" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-(__VLS_ctx.stats.videoCount);
-__VLS_asFunctionalElement(__VLS_intrinsicElements.em, __VLS_intrinsicElements.em)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "admin-manage-panel admin-course-list-panel" },
 });
@@ -667,9 +655,9 @@ else if (__VLS_ctx.courseList.length) {
         });
         (__VLS_ctx.teacherCollegeText(item));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-            ...{ class: (['admin-course-status-badge', __VLS_ctx.getContentReadyCount(item) === 4 ? 'is-success' : 'is-warning']) },
+            ...{ class: (['admin-course-status-badge', item.summary.trim() ? 'is-success' : 'is-warning']) },
         });
-        (`课程内容 ${__VLS_ctx.getContentReadyCount(item)}/4`);
+        (item.summary.trim() ? '简介已填写' : '待补简介');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "admin-course-crud-item__meta" },
         });
@@ -677,12 +665,6 @@ else if (__VLS_ctx.courseList.length) {
         (item.materialCount);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         (item.videoCount);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.teachingGoal ? '已写教学目标' : '缺教学目标');
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.teachingContent ? '已写教学内容' : '缺教学内容');
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.teachingIdea ? '已写教学思路' : '缺教学思路');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         (item.updateDate);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -849,45 +831,12 @@ if (__VLS_ctx.editorVisible) {
         maxlength: "2000",
         placeholder: "概述课程定位、适用对象和资源范围",
     });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "admin-manage-field admin-manage-field--full" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-        value: (__VLS_ctx.editorForm.teachingGoal),
-        maxlength: "5000",
-        placeholder: "填写本课程预期达成的教学目标",
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "admin-manage-field admin-manage-field--full" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-        value: (__VLS_ctx.editorForm.teachingContent),
-        maxlength: "5000",
-        placeholder: "填写课程核心内容、章节安排或重点模块",
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-        ...{ class: "admin-manage-field admin-manage-field--full" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-        value: (__VLS_ctx.editorForm.teachingIdea),
-        maxlength: "5000",
-        placeholder: "填写教学组织方式、资源使用思路和课堂实施方法",
-    });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "admin-course-editor__footer" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "admin-course-editor__actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.closeEditor) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.saving),
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
@@ -926,6 +875,14 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['feedback-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['feedback-text--success']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-feedback']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stats']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-filter-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-toolbar']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__eyebrow']} */ ;
@@ -939,14 +896,6 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stats']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-stat-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['is-highlight']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-list-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-panel__head']} */ ;
@@ -992,16 +941,8 @@ if (__VLS_ctx.editorVisible) {
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field']} */ ;
-/** @type {__VLS_StyleScopedClasses['admin-manage-field--full']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -1029,7 +970,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             teacherSelectionHint: teacherSelectionHint,
             editorTitle: editorTitle,
             editorActionText: editorActionText,
-            getContentReadyCount: getContentReadyCount,
             teacherCollegeText: teacherCollegeText,
             openCreateEditor: openCreateEditor,
             openEditEditor: openEditEditor,

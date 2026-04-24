@@ -19,6 +19,13 @@ function resolveHomeByRole(role: string) {
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from) {
+    if (to.path === from.path) {
+      return false
+    }
+
+    return { left: 0, top: 0 }
+  },
   routes: [
     {
       path: '/',
@@ -206,7 +213,7 @@ router.beforeEach((to) => {
   return true
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   if (typeof document === 'undefined') {
     return
   }
@@ -215,6 +222,22 @@ router.afterEach((to) => {
   const isTeacherPage = typeof to.path === 'string' && to.path.startsWith('/teacher')
   document.body.classList.toggle('body-admin-locked', isAdminPage)
   document.body.classList.toggle('body-teacher-locked', isTeacherPage)
+
+  if (to.path === from.path) {
+    return
+  }
+
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ left: 0, top: 0 })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    document
+      .querySelectorAll<HTMLElement>('.teacher-dashboard-main, .admin-dashboard-main, .admin-manage-main')
+      .forEach((element) => {
+        element.scrollTop = 0
+      })
+  })
 })
 
 export default router

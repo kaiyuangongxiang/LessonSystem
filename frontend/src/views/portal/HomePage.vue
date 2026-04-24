@@ -111,17 +111,23 @@
             <div class="portal-section-head__eyebrow">LATEST MATERIALS</div>
             <h2>最新资料</h2>
           </div>
+          <button class="portal-section-head__link" type="button" @click="router.push('/assets')">进入素材库</button>
         </div>
 
         <ul class="portal-resource-list">
-          <li v-for="material in visibleMaterials" :key="material.id" class="portal-resource-row">
+          <li
+            v-for="material in visibleMaterials"
+            :key="material.id"
+            class="portal-resource-row"
+            @click="goAssetLibrary(material)"
+          >
             <div>
-              <strong>{{ material.name }}</strong>
-              <p>{{ material.courseName }}</p>
+              <strong>{{ material.title }}</strong>
+              <p>{{ assetTypeLabel(material.type) }} · {{ material.description || material.teacherName }}</p>
             </div>
             <div class="portal-resource-row__meta">
               <span>{{ material.teacherName }}</span>
-              <span>{{ material.uploadDate }}</span>
+              <span>{{ material.uploadTime }}</span>
             </div>
           </li>
         </ul>
@@ -130,19 +136,18 @@
       <article class="portal-panel portal-panel--videos">
         <div class="portal-section-head">
           <div>
-            <div class="portal-section-head__eyebrow">LATEST VIDEOS</div>
-            <h2>最新视频</h2>
+            <div class="portal-section-head__eyebrow">FORUM MESSAGE</div>
+            <h2>论坛留言</h2>
           </div>
+          <button class="portal-section-head__link" type="button" @click="goTeachingMessages">进入论坛</button>
         </div>
 
-        <div class="portal-video-grid">
-          <article v-for="video in visibleVideos" :key="video.id" class="portal-video-card">
-            <div class="portal-video-card__cover"></div>
-            <strong>{{ video.title }}</strong>
-            <p>{{ video.courseName }}</p>
-            <span>{{ formatDuration(video.duration) }} · {{ video.teacherName }}</span>
-          </article>
-        </div>
+        <button type="button" class="portal-forum-entry" @click="goTeachingMessages">
+          <span class="portal-forum-entry__badge">Teaching Exchange</span>
+          <strong>进入教学交流，查看论坛留言与主题回复</strong>
+          <p>围绕课程资源、课堂问题和备课经验发起讨论，教师与管理员可以在主题下持续回复、追踪和沉淀交流记录。</p>
+          <span class="portal-forum-entry__action">进入论坛留言</span>
+        </button>
       </article>
     </section>
   </main>
@@ -152,7 +157,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
-import http from '@/services/http'
+import { getPortalHome, getPortalPublicAssets, type PortalAssetType, type PortalPublicAssetItem } from '@/services/portal'
 import { useAuthStore } from '@/stores/auth'
 
 interface NoticeItem {
@@ -169,23 +174,6 @@ interface CourseItem {
   teacherName: string
 }
 
-interface MaterialItem {
-  id: number
-  name: string
-  courseName: string
-  teacherName: string
-  uploadDate: string
-}
-
-interface VideoItem {
-  id: number
-  title: string
-  courseName: string
-  teacherName: string
-  duration: number | null
-  uploadDate: string
-}
-
 interface HomeResponse {
   profile: {
     systemName: string
@@ -194,8 +182,6 @@ interface HomeResponse {
   }
   notices: NoticeItem[]
   courses: CourseItem[]
-  materials: MaterialItem[]
-  videos: VideoItem[]
   stats: {
     courseCount: number
     materialCount: number
@@ -221,14 +207,13 @@ const home = reactive<HomeResponse>({
   },
   notices: [],
   courses: [],
-  materials: [],
-  videos: [],
   stats: {
     courseCount: 0,
     materialCount: 0,
     videoCount: 0,
   },
 })
+const latestAssets = ref<PortalPublicAssetItem[]>([])
 const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE)
 const activeNoticeIndex = ref(0)
 const activeNotice = computed(() => visibleNotices.value[activeNoticeIndex.value] || visibleNotices.value[0])
@@ -302,27 +287,25 @@ const visibleCourses = computed(() => {
 })
 
 const visibleMaterials = computed(() => {
-  if (!home.materials.length) {
+  if (!latestAssets.value.length) {
     return [
-      { id: 0, name: '资料列表待接入', courseName: '课程关联信息待补充', teacherName: '系统预留', uploadDate: '待更新' },
-      { id: 1, name: '下载资源待更新', courseName: '后续展示最新上传资料', teacherName: '系统预留', uploadDate: '待更新' },
-      { id: 2, name: '讲义与导学案待更新', courseName: '支持课程维度聚合', teacherName: '系统预留', uploadDate: '待更新' },
+      {
+        id: 0,
+        type: 'file' as PortalAssetType,
+        visibility: 'public' as const,
+        title: '公开素材待更新',
+        description: '教师公开发布的素材会展示在这里',
+        content: '',
+        fileName: '',
+        fileSize: 0,
+        uploadTime: '待更新',
+        teacherName: '系统预留',
+        previewUrl: '',
+      },
     ]
   }
 
-  return home.materials
-})
-
-const visibleVideos = computed(() => {
-  if (!home.videos.length) {
-    return [
-      { id: 0, title: '视频内容待接入', courseName: '课程视频将在此展示', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-      { id: 1, title: '微课资源待更新', courseName: '后续支持在线播放', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-      { id: 2, title: '教学演示待更新', courseName: '配合课程详情统一承接', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-    ]
-  }
-
-  return home.videos
+  return latestAssets.value
 })
 
 function scrollToTop() {
@@ -361,6 +344,13 @@ function goCourseDetail(courseId: number) {
   router.push(`/courses/${courseId}`)
 }
 
+function goAssetLibrary(material?: PortalPublicAssetItem) {
+  router.push({
+    path: '/assets',
+    query: material?.id ? { keyword: material.title } : undefined,
+  })
+}
+
 function goPrimaryAction() {
   if (!authStore.isAuthenticated) {
     router.push({ path: '/login', query: { role: 'teacher' } })
@@ -384,20 +374,21 @@ function goTeachingMessages() {
   router.push('/admin/messages')
 }
 
-function formatDuration(duration: number | null) {
-  if (!duration) {
-    return '待更新'
+function assetTypeLabel(type: string) {
+  const labels: Record<PortalAssetType, string> = {
+    image: '图片素材',
+    audio: '音频素材',
+    video: '视频素材',
+    text: '文本片段',
+    file: '文件素材',
   }
 
-  const minutes = Math.floor(duration / 60)
-  const seconds = duration % 60
-  return `${minutes} 分 ${seconds.toString().padStart(2, '0')} 秒`
+  return labels[type as PortalAssetType] || type
 }
 
 async function loadHome() {
   try {
-    const response = await http.get('/portal/home')
-    const data = response.data.data as HomeResponse
+    const data = await getPortalHome()
 
     home.profile = {
       ...home.profile,
@@ -406,16 +397,32 @@ async function loadHome() {
     }
     home.notices = data.notices
     home.courses = data.courses
-    home.materials = data.materials
-    home.videos = data.videos
     home.stats = data.stats
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '首页数据加载失败，当前展示默认内容'
   }
 }
 
+async function loadLatestAssets() {
+  try {
+    const data = await getPortalPublicAssets({
+      page: 1,
+      pageSize: 3,
+      type: 'all',
+    })
+
+    latestAssets.value = data.list
+    home.stats.materialCount = data.stats.total
+  } catch (error: any) {
+    if (!errorMessage.value) {
+      errorMessage.value = error?.response?.data?.message || '最新资料加载失败，当前展示默认内容'
+    }
+  }
+}
+
 onMounted(() => {
   loadHome()
+  loadLatestAssets()
 })
 
 onBeforeUnmount(() => {

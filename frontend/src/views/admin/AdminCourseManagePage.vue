@@ -44,6 +44,39 @@
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success admin-manage-feedback">{{ successMessage }}</p>
 
+      <section class="admin-manage-stats">
+        <article class="admin-manage-stat-card">
+          <span>课程总数</span>
+          <strong>{{ stats.total }}</strong>
+          <em>当前有效课程数量</em>
+        </article>
+        <article class="admin-manage-stat-card">
+          <span>已关联学院</span>
+          <strong>{{ stats.collegeAssignedCount }}</strong>
+          <em>学院信息已补全的课程</em>
+        </article>
+        <article class="admin-manage-stat-card">
+          <span>简介完整课程</span>
+          <strong>{{ stats.summaryReadyCount }}</strong>
+          <em>已补充课程简介的课程</em>
+        </article>
+        <article class="admin-manage-stat-card">
+          <span>关联教师数</span>
+          <strong>{{ stats.teacherCount }}</strong>
+          <em>当前负责课程的教师数</em>
+        </article>
+        <article class="admin-manage-stat-card">
+          <span>课程资料量</span>
+          <strong>{{ stats.materialCount }}</strong>
+          <em>系统内课程资料总量</em>
+        </article>
+        <article class="admin-manage-stat-card is-highlight">
+          <span>课程视频量</span>
+          <strong>{{ stats.videoCount }}</strong>
+          <em>系统内课程视频总量</em>
+        </article>
+      </section>
+
       <section class="admin-manage-filter-panel admin-course-toolbar">
         <div>
           <div class="admin-manage-panel__eyebrow">SMART FILTER</div>
@@ -54,7 +87,7 @@
         <form class="admin-manage-filter-form admin-manage-filter-form--course" @submit.prevent="applySearch">
           <label class="admin-manage-field">
             <span>关键字</span>
-            <input v-model.trim="form.keyword" type="text" maxlength="100" placeholder="搜索课程名称、简介、教学目标、教学内容、教师或学院" />
+            <input v-model.trim="form.keyword" type="text" maxlength="100" placeholder="搜索课程名称、简介、教师或学院" />
           </label>
 
           <label class="admin-manage-field">
@@ -80,39 +113,6 @@
             <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '应用筛选' }}</button>
           </div>
         </form>
-      </section>
-
-      <section class="admin-manage-stats">
-        <article class="admin-manage-stat-card">
-          <span>课程总数</span>
-          <strong>{{ stats.total }}</strong>
-          <em>当前有效课程数量</em>
-        </article>
-        <article class="admin-manage-stat-card">
-          <span>已关联学院</span>
-          <strong>{{ stats.collegeAssignedCount }}</strong>
-          <em>学院信息已补全的课程</em>
-        </article>
-        <article class="admin-manage-stat-card">
-          <span>内容完整课程</span>
-          <strong>{{ stats.contentReadyCount }}</strong>
-          <em>简介、目标、内容、思路已补全</em>
-        </article>
-        <article class="admin-manage-stat-card">
-          <span>关联教师数</span>
-          <strong>{{ stats.teacherCount }}</strong>
-          <em>当前负责课程的教师数</em>
-        </article>
-        <article class="admin-manage-stat-card">
-          <span>课程资料量</span>
-          <strong>{{ stats.materialCount }}</strong>
-          <em>系统内课程资料总量</em>
-        </article>
-        <article class="admin-manage-stat-card is-highlight">
-          <span>课程视频量</span>
-          <strong>{{ stats.videoCount }}</strong>
-          <em>系统内课程视频总量</em>
-        </article>
       </section>
 
       <section class="admin-manage-panel admin-course-list-panel">
@@ -154,17 +154,14 @@
                 >
                   {{ teacherCollegeText(item) }}
                 </span>
-                <span :class="['admin-course-status-badge', getContentReadyCount(item) === 4 ? 'is-success' : 'is-warning']">
-                  {{ `课程内容 ${getContentReadyCount(item)}/4` }}
+                <span :class="['admin-course-status-badge', item.summary.trim() ? 'is-success' : 'is-warning']">
+                  {{ item.summary.trim() ? '简介已填写' : '待补简介' }}
                 </span>
               </div>
 
               <div class="admin-course-crud-item__meta">
                 <span>资料 {{ item.materialCount }}</span>
                 <span>视频 {{ item.videoCount }}</span>
-                <span>{{ item.teachingGoal ? '已写教学目标' : '缺教学目标' }}</span>
-                <span>{{ item.teachingContent ? '已写教学内容' : '缺教学内容' }}</span>
-                <span>{{ item.teachingIdea ? '已写教学思路' : '缺教学思路' }}</span>
                 <span>最近更新 {{ item.updateDate }}</span>
               </div>
             </div>
@@ -237,25 +234,9 @@
           <textarea v-model.trim="editorForm.summary" maxlength="2000" placeholder="概述课程定位、适用对象和资源范围"></textarea>
         </label>
 
-        <label class="admin-manage-field admin-manage-field--full">
-          <span>教学目标</span>
-          <textarea v-model.trim="editorForm.teachingGoal" maxlength="5000" placeholder="填写本课程预期达成的教学目标"></textarea>
-        </label>
-
-        <label class="admin-manage-field admin-manage-field--full">
-          <span>教学内容</span>
-          <textarea v-model.trim="editorForm.teachingContent" maxlength="5000" placeholder="填写课程核心内容、章节安排或重点模块"></textarea>
-        </label>
-
-        <label class="admin-manage-field admin-manage-field--full">
-          <span>教学思路</span>
-          <textarea v-model.trim="editorForm.teachingIdea" maxlength="5000" placeholder="填写教学组织方式、资源使用思路和课堂实施方法"></textarea>
-        </label>
-
         <div class="admin-course-editor__footer">
-          <p>课程管理现在直接对应数据库里的 `course_intro` 关键字段，建议优先补齐学院归属和三段教学内容，后续门户展示会更完整。</p>
+          <p>课程管理现在直接对应数据库里的 `course_intro` 基础字段，建议优先补齐学院归属、课程负责人和课程简介。</p>
           <div class="admin-course-editor__actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
             <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : editorActionText }}</button>
           </div>
         </div>
@@ -308,9 +289,6 @@ const editorForm = reactive({
   collegeId: '',
   teacherId: '',
   summary: '',
-  teachingGoal: '',
-  teachingContent: '',
-  teachingIdea: '',
 })
 
 const stats = reactive<AdminCourseStats>({
@@ -319,7 +297,7 @@ const stats = reactive<AdminCourseStats>({
   materialCount: 0,
   videoCount: 0,
   collegeAssignedCount: 0,
-  contentReadyCount: 0,
+  summaryReadyCount: 0,
 })
 
 const pagination = reactive({
@@ -331,7 +309,7 @@ const pagination = reactive({
 
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '管理员'
-  return `${name}，这里用于统一维护课程基础信息、教学内容结构和课程归属关系。`
+  return `${name}，这里用于统一维护课程基础信息和课程归属关系。`
 })
 
 const reminderTexts = computed(() => {
@@ -339,9 +317,9 @@ const reminderTexts = computed(() => {
     stats.collegeAssignedCount < stats.total
       ? `当前仍有 ${stats.total - stats.collegeAssignedCount} 门课程未补齐学院归属。`
       : '当前课程都已补齐学院归属。',
-    stats.contentReadyCount < stats.total
-      ? `当前仍有 ${stats.total - stats.contentReadyCount} 门课程缺少教学内容字段。`
-      : '当前课程的简介、目标、内容和思路都已补齐。',
+    stats.summaryReadyCount < stats.total
+      ? `当前仍有 ${stats.total - stats.summaryReadyCount} 门课程缺少课程简介。`
+      : '当前课程简介都已补齐。',
   ]
 })
 
@@ -460,13 +438,6 @@ function resetEditorForm() {
   editorForm.collegeId = ''
   editorForm.teacherId = ''
   editorForm.summary = ''
-  editorForm.teachingGoal = ''
-  editorForm.teachingContent = ''
-  editorForm.teachingIdea = ''
-}
-
-function getContentReadyCount(item: AdminCourseItem) {
-  return [item.summary, item.teachingGoal, item.teachingContent, item.teachingIdea].filter((value) => Boolean(value?.trim())).length
 }
 
 function teacherCollegeText(item: AdminCourseItem) {
@@ -494,9 +465,6 @@ function openEditEditor(item: AdminCourseItem) {
   editorForm.collegeId = item.collegeId ? String(item.collegeId) : ''
   editorForm.teacherId = item.teacherId ? String(item.teacherId) : ''
   editorForm.summary = item.summary
-  editorForm.teachingGoal = item.teachingGoal
-  editorForm.teachingContent = item.teachingContent
-  editorForm.teachingIdea = item.teachingIdea
   editorVisible.value = true
 }
 
@@ -505,6 +473,10 @@ function closeEditor() {
     return
   }
 
+  forceCloseEditor()
+}
+
+function forceCloseEditor() {
   editorVisible.value = false
   resetEditorForm()
 }
@@ -549,9 +521,6 @@ async function submitEditor() {
     const payload = {
       name: editorForm.name,
       summary: editorForm.summary,
-      teachingGoal: editorForm.teachingGoal,
-      teachingContent: editorForm.teachingContent,
-      teachingIdea: editorForm.teachingIdea,
       collegeId: editorForm.collegeId,
       teacherId: editorForm.teacherId,
     }
@@ -562,7 +531,7 @@ async function submitEditor() {
       filterCollegeOptions.value = result.formOptions.colleges
       teacherOptions.value = result.formOptions.teachers
       successMessage.value = `课程《${result.name}》已更新。`
-      closeEditor()
+      forceCloseEditor()
       await loadCourses()
     } else {
       const result = await createAdminCourse(payload)
@@ -570,7 +539,7 @@ async function submitEditor() {
       filterCollegeOptions.value = result.formOptions.colleges
       teacherOptions.value = result.formOptions.teachers
       successMessage.value = `课程《${result.name}》已创建。`
-      closeEditor()
+      forceCloseEditor()
 
       if (pagination.page !== 1) {
         updateRoute(1)
@@ -633,7 +602,7 @@ async function loadCourses() {
     stats.materialCount = data.stats.materialCount
     stats.videoCount = data.stats.videoCount
     stats.collegeAssignedCount = data.stats.collegeAssignedCount
-    stats.contentReadyCount = data.stats.contentReadyCount
+    stats.summaryReadyCount = data.stats.summaryReadyCount
     pagination.page = data.pagination.page
     pagination.pageSize = data.pagination.pageSize
     pagination.total = data.pagination.total
@@ -648,7 +617,7 @@ async function loadCourses() {
     stats.materialCount = 0
     stats.videoCount = 0
     stats.collegeAssignedCount = 0
-    stats.contentReadyCount = 0
+    stats.summaryReadyCount = 0
     pagination.page = 1
     pagination.pageSize = 4
     pagination.total = 0

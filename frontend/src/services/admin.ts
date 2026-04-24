@@ -265,16 +265,13 @@ export interface AdminCourseStats {
   materialCount: number
   videoCount: number
   collegeAssignedCount: number
-  contentReadyCount: number
+  summaryReadyCount: number
 }
 
 export interface AdminCourseItem {
   id: number
   name: string
   summary: string
-  teachingGoal: string
-  teachingContent: string
-  teachingIdea: string
   collegeId: number | null
   collegeName: string
   teacherId: number | null
@@ -318,9 +315,6 @@ export interface AdminCourseQuery {
 export interface AdminCoursePayload {
   name: string
   summary: string
-  teachingGoal: string
-  teachingContent: string
-  teachingIdea: string
   collegeId: string | number
   teacherId: string | number
 }

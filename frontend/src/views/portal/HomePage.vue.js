@@ -1,7 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
-import http from '@/services/http';
+import { getPortalHome, getPortalPublicAssets } from '@/services/portal';
 import { useAuthStore } from '@/stores/auth';
 const DEFAULT_HERO_TITLE = '让课程、资料与视频在一个入口里协同';
 const router = useRouter();
@@ -19,14 +19,13 @@ const home = reactive({
     },
     notices: [],
     courses: [],
-    materials: [],
-    videos: [],
     stats: {
         courseCount: 0,
         materialCount: 0,
         videoCount: 0,
     },
 });
+const latestAssets = ref([]);
 const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE);
 const activeNoticeIndex = ref(0);
 const activeNotice = computed(() => visibleNotices.value[activeNoticeIndex.value] || visibleNotices.value[0]);
@@ -86,24 +85,24 @@ const visibleCourses = computed(() => {
     return home.courses;
 });
 const visibleMaterials = computed(() => {
-    if (!home.materials.length) {
+    if (!latestAssets.value.length) {
         return [
-            { id: 0, name: '资料列表待接入', courseName: '课程关联信息待补充', teacherName: '系统预留', uploadDate: '待更新' },
-            { id: 1, name: '下载资源待更新', courseName: '后续展示最新上传资料', teacherName: '系统预留', uploadDate: '待更新' },
-            { id: 2, name: '讲义与导学案待更新', courseName: '支持课程维度聚合', teacherName: '系统预留', uploadDate: '待更新' },
+            {
+                id: 0,
+                type: 'file',
+                visibility: 'public',
+                title: '公开素材待更新',
+                description: '教师公开发布的素材会展示在这里',
+                content: '',
+                fileName: '',
+                fileSize: 0,
+                uploadTime: '待更新',
+                teacherName: '系统预留',
+                previewUrl: '',
+            },
         ];
     }
-    return home.materials;
-});
-const visibleVideos = computed(() => {
-    if (!home.videos.length) {
-        return [
-            { id: 0, title: '视频内容待接入', courseName: '课程视频将在此展示', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-            { id: 1, title: '微课资源待更新', courseName: '后续支持在线播放', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-            { id: 2, title: '教学演示待更新', courseName: '配合课程详情统一承接', teacherName: '系统预留', duration: null, uploadDate: '待更新' },
-        ];
-    }
-    return home.videos;
+    return latestAssets.value;
 });
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -133,6 +132,12 @@ function goCourseDetail(courseId) {
     }
     router.push(`/courses/${courseId}`);
 }
+function goAssetLibrary(material) {
+    router.push({
+        path: '/assets',
+        query: material?.id ? { keyword: material.title } : undefined,
+    });
+}
 function goPrimaryAction() {
     if (!authStore.isAuthenticated) {
         router.push({ path: '/login', query: { role: 'teacher' } });
@@ -151,18 +156,19 @@ function goTeachingMessages() {
     }
     router.push('/admin/messages');
 }
-function formatDuration(duration) {
-    if (!duration) {
-        return '待更新';
-    }
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes} 分 ${seconds.toString().padStart(2, '0')} 秒`;
+function assetTypeLabel(type) {
+    const labels = {
+        image: '图片素材',
+        audio: '音频素材',
+        video: '视频素材',
+        text: '文本片段',
+        file: '文件素材',
+    };
+    return labels[type] || type;
 }
 async function loadHome() {
     try {
-        const response = await http.get('/portal/home');
-        const data = response.data.data;
+        const data = await getPortalHome();
         home.profile = {
             ...home.profile,
             ...data.profile,
@@ -170,16 +176,31 @@ async function loadHome() {
         };
         home.notices = data.notices;
         home.courses = data.courses;
-        home.materials = data.materials;
-        home.videos = data.videos;
         home.stats = data.stats;
     }
     catch (error) {
         errorMessage.value = error?.response?.data?.message || '首页数据加载失败，当前展示默认内容';
     }
 }
+async function loadLatestAssets() {
+    try {
+        const data = await getPortalPublicAssets({
+            page: 1,
+            pageSize: 3,
+            type: 'all',
+        });
+        latestAssets.value = data.list;
+        home.stats.materialCount = data.stats.total;
+    }
+    catch (error) {
+        if (!errorMessage.value) {
+            errorMessage.value = error?.response?.data?.message || '最新资料加载失败，当前展示默认内容';
+        }
+    }
+}
 onMounted(() => {
     loadHome();
+    loadLatestAssets();
 });
 onBeforeUnmount(() => {
     stopNoticeRotation();
@@ -423,26 +444,37 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "portal-section-head__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/assets');
+        } },
+    ...{ class: "portal-section-head__link" },
+    type: "button",
+});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({
     ...{ class: "portal-resource-list" },
 });
 for (const [material] of __VLS_getVForSourceType((__VLS_ctx.visibleMaterials))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({
+        ...{ onClick: (...[$event]) => {
+                __VLS_ctx.goAssetLibrary(material);
+            } },
         key: (material.id),
         ...{ class: "portal-resource-row" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-    (material.name);
+    (material.title);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (material.courseName);
+    (__VLS_ctx.assetTypeLabel(material.type));
+    (material.description || material.teacherName);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "portal-resource-row__meta" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
     (material.teacherName);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (material.uploadDate);
+    (material.uploadTime);
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
     ...{ class: "portal-panel portal-panel--videos" },
@@ -455,25 +487,24 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "portal-section-head__eyebrow" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "portal-video-grid" },
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.goTeachingMessages) },
+    ...{ class: "portal-section-head__link" },
+    type: "button",
 });
-for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-        key: (video.id),
-        ...{ class: "portal-video-card" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "portal-video-card__cover" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-    (video.title);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (video.courseName);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (__VLS_ctx.formatDuration(video.duration));
-    (video.teacherName);
-}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (__VLS_ctx.goTeachingMessages) },
+    type: "button",
+    ...{ class: "portal-forum-entry" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "portal-forum-entry__badge" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+    ...{ class: "portal-forum-entry__action" },
+});
 /** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-hero__content']} */ ;
@@ -515,6 +546,7 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-panel--materials']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head__eyebrow']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-section-head__link']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-resource-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-resource-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-resource-row__meta']} */ ;
@@ -522,9 +554,10 @@ for (const [video] of __VLS_getVForSourceType((__VLS_ctx.visibleVideos))) {
 /** @type {__VLS_StyleScopedClasses['portal-panel--videos']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['portal-section-head__eyebrow']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-video-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-video-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['portal-video-card__cover']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-section-head__link']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-forum-entry']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-forum-entry__badge']} */ ;
+/** @type {__VLS_StyleScopedClasses['portal-forum-entry__action']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -545,10 +578,10 @@ const __VLS_self = (await import('vue')).defineComponent({
             setActiveNotice: setActiveNotice,
             visibleCourses: visibleCourses,
             visibleMaterials: visibleMaterials,
-            visibleVideos: visibleVideos,
             goCourseDetail: goCourseDetail,
+            goAssetLibrary: goAssetLibrary,
             goTeachingMessages: goTeachingMessages,
-            formatDuration: formatDuration,
+            assetTypeLabel: assetTypeLabel,
         };
     },
 });
