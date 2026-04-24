@@ -40,7 +40,7 @@ function normalizeKeyword(value) {
 function normalizeMessageId(value) {
   const messageId = Number(value)
   if (!Number.isInteger(messageId) || messageId <= 0) {
-    throw badRequest('交流主题ID不合法')
+    throw badRequest('交流主题 ID 不合法')
   }
 
   return messageId
@@ -49,7 +49,7 @@ function normalizeMessageId(value) {
 function normalizeReplyId(value) {
   const replyId = Number(value)
   if (!Number.isInteger(replyId) || replyId <= 0) {
-    throw badRequest('回复ID不合法')
+    throw badRequest('回复 ID 不合法')
   }
 
   return replyId
@@ -70,7 +70,7 @@ function normalizeTitle(value) {
   }
 
   if (title.length > 100) {
-    throw badRequest('话题标题不能超过100个字')
+    throw badRequest('话题标题不能超过 100 个字')
   }
 
   return title
@@ -83,7 +83,7 @@ function normalizeContent(value, label = '内容') {
   }
 
   if (content.length > 5000) {
-    throw badRequest(`${label}不能超过5000个字`)
+    throw badRequest(`${label}不能超过 5000 个字`)
   }
 
   return content
@@ -101,7 +101,7 @@ function formatDate(value) {
 
 function getStatusLabel(status) {
   if (status === 'archived') {
-    return '已整理'
+    return '已归档'
   }
 
   if (status === 'active') {
@@ -119,7 +119,7 @@ async function getDiscussionSchemaSupport() {
          FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE()
            AND TABLE_NAME = 'message_topic'
-           AND COLUMN_NAME IN ('teacher_id', 'admin_id')`,
+           AND COLUMN_NAME IN ('teacher_id', 'admin_id', 'student_id')`,
       )
 
       const [replyColumns] = await pool.query(
@@ -127,18 +127,22 @@ async function getDiscussionSchemaSupport() {
          FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE()
            AND TABLE_NAME = 'message_topic_reply'
-           AND COLUMN_NAME IN ('teacher_id', 'admin_id', 'parent_reply_id')`,
+           AND COLUMN_NAME IN ('teacher_id', 'admin_id', 'student_id', 'parent_reply_id')`,
       )
 
       const topicTeacherIdColumn = topicColumns.find((item) => item.columnName === 'teacher_id')
       const topicAdminIdColumn = topicColumns.find((item) => item.columnName === 'admin_id')
+      const topicStudentIdColumn = topicColumns.find((item) => item.columnName === 'student_id')
       const replyTeacherIdColumn = replyColumns.find((item) => item.columnName === 'teacher_id')
       const replyAdminIdColumn = replyColumns.find((item) => item.columnName === 'admin_id')
+      const replyStudentIdColumn = replyColumns.find((item) => item.columnName === 'student_id')
       const replyParentIdColumn = replyColumns.find((item) => item.columnName === 'parent_reply_id')
 
       return {
         topicAdminEnabled: Boolean(topicAdminIdColumn) && topicTeacherIdColumn?.isNullable === 'YES',
+        topicStudentEnabled: Boolean(topicStudentIdColumn) && topicTeacherIdColumn?.isNullable === 'YES',
         replyAdminEnabled: Boolean(replyAdminIdColumn) && replyTeacherIdColumn?.isNullable === 'YES',
+        replyStudentEnabled: Boolean(replyStudentIdColumn) && replyTeacherIdColumn?.isNullable === 'YES',
         replyParentEnabled: Boolean(replyParentIdColumn),
       }
     })()
@@ -151,7 +155,7 @@ async function getTeacherIdentity(teacherId) {
   const [rows] = await pool.query(
     `SELECT teacher_id AS id,
             username,
-            COALESCE(NULLIF(teacher_name, ''), username, '未署名教师') AS name
+            COALESCE(NULLIF(teacher_name, ''), username, '未命名教师') AS name
      FROM teacher_user
      WHERE teacher_id = ?
      LIMIT 1`,
@@ -183,66 +187,140 @@ async function getAdminIdentity(adminId) {
   return rows[0]
 }
 
-function buildTopicAuthorNameExpression(schema) {
-  if (schema.topicAdminEnabled) {
-    return `COALESCE(
-      NULLIF(t.teacher_name, ''),
-      t.username,
-      NULLIF(a.real_name, ''),
-      a.admin_name,
-      '未署名用户'
-    )`
+async function getStudentIdentity(studentId) {
+  const [rows] = await pool.query(
+    `SELECT student_id AS id,
+            username,
+            COALESCE(NULLIF(student_name, ''), username, '未命名学生') AS name
+     FROM student_user
+     WHERE student_id = ?
+     LIMIT 1`,
+    [studentId],
+  )
+
+  if (!rows.length) {
+    throw notFound('学生不存在')
   }
 
-  return `COALESCE(NULLIF(t.teacher_name, ''), t.username, '未署名教师')`
+  return rows[0]
+}
+
+async function ensureViewerIdentity(viewerRole, viewerId) {
+  if (viewerRole === 'teacher') {
+    return getTeacherIdentity(viewerId)
+  }
+
+  if (viewerRole === 'student') {
+    return getStudentIdentity(viewerId)
+  }
+
+  return getAdminIdentity(viewerId)
+}
+
+function buildTopicAuthorNameExpression(schema) {
+  const parts = [`NULLIF(t.teacher_name, '')`, `t.username`]
+
+  if (schema.topicAdminEnabled) {
+    parts.push(`NULLIF(a.real_name, '')`, `a.admin_name`)
+  }
+
+  if (schema.topicStudentEnabled) {
+    parts.push(`NULLIF(s.student_name, '')`, `s.username`)
+  }
+
+  parts.push(`'未命名用户'`)
+
+  return `COALESCE(${parts.join(', ')})`
 }
 
 function buildTopicAuthorRoleExpression(schema) {
-  return schema.topicAdminEnabled ? `CASE WHEN mt.admin_id IS NOT NULL THEN 'admin' ELSE 'teacher' END` : `'teacher'`
+  if (schema.topicAdminEnabled && schema.topicStudentEnabled) {
+    return `CASE
+      WHEN mt.admin_id IS NOT NULL THEN 'admin'
+      WHEN mt.student_id IS NOT NULL THEN 'student'
+      ELSE 'teacher'
+    END`
+  }
+
+  if (schema.topicAdminEnabled) {
+    return `CASE WHEN mt.admin_id IS NOT NULL THEN 'admin' ELSE 'teacher' END`
+  }
+
+  if (schema.topicStudentEnabled) {
+    return `CASE WHEN mt.student_id IS NOT NULL THEN 'student' ELSE 'teacher' END`
+  }
+
+  return `'teacher'`
 }
 
 function buildTopicAuthorJoin(schema) {
-  return schema.topicAdminEnabled ? `LEFT JOIN admin a ON a.admin_id = mt.admin_id` : ''
+  return [schema.topicAdminEnabled ? 'LEFT JOIN admin a ON a.admin_id = mt.admin_id' : '', schema.topicStudentEnabled ? 'LEFT JOIN student_user s ON s.student_id = mt.student_id' : '']
+    .filter(Boolean)
+    .join(' ')
 }
 
 function buildReplyAuthorNameExpression(schema) {
+  const parts = [`NULLIF(rt.teacher_name, '')`, `rt.username`]
+
   if (schema.replyAdminEnabled) {
-    return `COALESCE(
-      NULLIF(rt.teacher_name, ''),
-      rt.username,
-      NULLIF(ra.real_name, ''),
-      ra.admin_name,
-      '未署名用户'
-    )`
+    parts.push(`NULLIF(ra.real_name, '')`, `ra.admin_name`)
   }
 
-  return `COALESCE(NULLIF(rt.teacher_name, ''), rt.username, '未署名教师')`
+  if (schema.replyStudentEnabled) {
+    parts.push(`NULLIF(rs.student_name, '')`, `rs.username`)
+  }
+
+  parts.push(`'未命名用户'`)
+
+  return `COALESCE(${parts.join(', ')})`
 }
 
 function buildReplyAuthorRoleExpression(schema) {
-  return schema.replyAdminEnabled ? `CASE WHEN r.admin_id IS NOT NULL THEN 'admin' ELSE 'teacher' END` : `'teacher'`
+  if (schema.replyAdminEnabled && schema.replyStudentEnabled) {
+    return `CASE
+      WHEN r.admin_id IS NOT NULL THEN 'admin'
+      WHEN r.student_id IS NOT NULL THEN 'student'
+      ELSE 'teacher'
+    END`
+  }
+
+  if (schema.replyAdminEnabled) {
+    return `CASE WHEN r.admin_id IS NOT NULL THEN 'admin' ELSE 'teacher' END`
+  }
+
+  if (schema.replyStudentEnabled) {
+    return `CASE WHEN r.student_id IS NOT NULL THEN 'student' ELSE 'teacher' END`
+  }
+
+  return `'teacher'`
 }
 
 function buildReplyAuthorJoin(schema) {
-  return schema.replyAdminEnabled ? `LEFT JOIN admin ra ON ra.admin_id = r.admin_id` : ''
+  return [schema.replyAdminEnabled ? 'LEFT JOIN admin ra ON ra.admin_id = r.admin_id' : '', schema.replyStudentEnabled ? 'LEFT JOIN student_user rs ON rs.student_id = r.student_id' : '']
+    .filter(Boolean)
+    .join(' ')
 }
 
 function buildParentReplyAuthorNameExpression(schema) {
+  const parts = [`NULLIF(pt.teacher_name, '')`, `pt.username`]
+
   if (schema.replyAdminEnabled) {
-    return `COALESCE(
-      NULLIF(pt.teacher_name, ''),
-      pt.username,
-      NULLIF(pa.real_name, ''),
-      pa.admin_name,
-      '未署名用户'
-    )`
+    parts.push(`NULLIF(pa.real_name, '')`, `pa.admin_name`)
   }
 
-  return `COALESCE(NULLIF(pt.teacher_name, ''), pt.username, '未署名教师')`
+  if (schema.replyStudentEnabled) {
+    parts.push(`NULLIF(ps.student_name, '')`, `ps.username`)
+  }
+
+  parts.push(`'未命名用户'`)
+
+  return `COALESCE(${parts.join(', ')})`
 }
 
 function buildParentReplyAuthorJoin(schema) {
-  return schema.replyAdminEnabled ? `LEFT JOIN admin pa ON pa.admin_id = parent.admin_id` : ''
+  return [schema.replyAdminEnabled ? 'LEFT JOIN admin pa ON pa.admin_id = parent.admin_id' : '', schema.replyStudentEnabled ? 'LEFT JOIN student_user ps ON ps.student_id = parent.student_id' : '']
+    .filter(Boolean)
+    .join(' ')
 }
 
 function buildTopicDeleteCapability(topic, viewerRole, viewerId) {
@@ -250,7 +328,15 @@ function buildTopicDeleteCapability(topic, viewerRole, viewerId) {
     return true
   }
 
-  return topic.authorRole === 'teacher' && Number(topic.teacherId || 0) === Number(viewerId)
+  if (topic.authorRole === 'teacher') {
+    return viewerRole === 'teacher' && Number(topic.teacherId || 0) === Number(viewerId)
+  }
+
+  if (topic.authorRole === 'student') {
+    return viewerRole === 'student' && Number(topic.studentId || 0) === Number(viewerId)
+  }
+
+  return false
 }
 
 function buildReplyDeleteCapability(reply, viewerRole, viewerId) {
@@ -258,7 +344,15 @@ function buildReplyDeleteCapability(reply, viewerRole, viewerId) {
     return true
   }
 
-  return reply.authorRole === 'teacher' && Number(reply.teacherId || 0) === Number(viewerId)
+  if (reply.authorRole === 'teacher') {
+    return viewerRole === 'teacher' && Number(reply.teacherId || 0) === Number(viewerId)
+  }
+
+  if (reply.authorRole === 'student') {
+    return viewerRole === 'student' && Number(reply.studentId || 0) === Number(viewerId)
+  }
+
+  return false
 }
 
 async function getTopicRow(messageId, schema) {
@@ -266,6 +360,7 @@ async function getTopicRow(messageId, schema) {
     `SELECT mt.topic_id AS id,
             mt.teacher_id AS teacherId,
             ${schema.topicAdminEnabled ? 'mt.admin_id AS adminId,' : 'NULL AS adminId,'}
+            ${schema.topicStudentEnabled ? 'mt.student_id AS studentId,' : 'NULL AS studentId,'}
             mt.title AS title,
             mt.content AS content,
             mt.status AS status,
@@ -294,6 +389,7 @@ async function getReplyRow({ messageId, replyId, schema }) {
             r.topic_id AS topicId,
             r.teacher_id AS teacherId,
             ${schema.replyAdminEnabled ? 'r.admin_id AS adminId,' : 'NULL AS adminId,'}
+            ${schema.replyStudentEnabled ? 'r.student_id AS studentId,' : 'NULL AS studentId,'}
             ${schema.replyParentEnabled ? 'r.parent_reply_id AS parentReplyId,' : 'NULL AS parentReplyId,'}
             r.content AS content,
             ${buildReplyAuthorNameExpression(schema)} AS authorName,
@@ -344,6 +440,7 @@ function mapTopicItem(topic, viewerRole, viewerId) {
     authorRole: topic.authorRole,
     teacherId: topic.teacherId === null || topic.teacherId === undefined ? null : Number(topic.teacherId),
     adminId: topic.adminId === null || topic.adminId === undefined ? null : Number(topic.adminId),
+    studentId: topic.studentId === null || topic.studentId === undefined ? null : Number(topic.studentId),
     publishDate: topic.publishDate,
     lastReplyAt: topic.lastReplyAt,
     status: topic.status,
@@ -361,6 +458,7 @@ function mapReplyItem(reply, viewerRole, viewerId) {
     authorRole: reply.authorRole,
     teacherId: reply.teacherId === null || reply.teacherId === undefined ? null : Number(reply.teacherId),
     adminId: reply.adminId === null || reply.adminId === undefined ? null : Number(reply.adminId),
+    studentId: reply.studentId === null || reply.studentId === undefined ? null : Number(reply.studentId),
     replyTime: reply.replyTime,
     parentReplyId: reply.parentReplyId === null || reply.parentReplyId === undefined ? null : Number(reply.parentReplyId),
     parentAuthorName: reply.parentAuthorName || '',
@@ -369,11 +467,7 @@ function mapReplyItem(reply, viewerRole, viewerId) {
 }
 
 export async function getDiscussionMessageList({ viewerRole, viewerId, query }) {
-  if (viewerRole === 'teacher') {
-    await getTeacherIdentity(viewerId)
-  } else {
-    await getAdminIdentity(viewerId)
-  }
+  await ensureViewerIdentity(viewerRole, viewerId)
 
   const schema = await getDiscussionSchemaSupport()
   const keyword = normalizeKeyword(query.keyword)
@@ -410,6 +504,7 @@ export async function getDiscussionMessageList({ viewerRole, viewerId, query }) 
     `SELECT mt.topic_id AS id,
             mt.teacher_id AS teacherId,
             ${schema.topicAdminEnabled ? 'mt.admin_id AS adminId,' : 'NULL AS adminId,'}
+            ${schema.topicStudentEnabled ? 'mt.student_id AS studentId,' : 'NULL AS studentId,'}
             mt.title AS title,
             CASE
               WHEN CHAR_LENGTH(mt.content) > 92 THEN CONCAT(LEFT(mt.content, 92), '...')
@@ -474,13 +569,42 @@ export async function createDiscussionTopic({ viewerRole, viewerId, payload }) {
            VALUES (?, NULL, ?, ?, 'open')`
         : `INSERT INTO message_topic (teacher_id, title, content, status)
            VALUES (?, ?, ?, 'open')`,
-      schema.topicAdminEnabled ? [viewerId, title, content] : [viewerId, title, content],
+      [viewerId, title, content],
     )
 
     logger.info('discussion_topic_created', {
       viewerRole,
       viewerId,
       authorName: teacher.name,
+      topicId: result.insertId,
+    })
+
+    return {
+      id: Number(result.insertId),
+      title,
+    }
+  }
+
+  if (viewerRole === 'student') {
+    const student = await getStudentIdentity(viewerId)
+
+    if (!schema.topicStudentEnabled) {
+      throw badRequest('当前数据库未启用学生发帖字段，请先升级 message_topic 表结构')
+    }
+
+    const [result] = await pool.query(
+      schema.topicAdminEnabled
+        ? `INSERT INTO message_topic (teacher_id, admin_id, student_id, title, content, status)
+           VALUES (NULL, NULL, ?, ?, ?, 'open')`
+        : `INSERT INTO message_topic (teacher_id, student_id, title, content, status)
+           VALUES (NULL, ?, ?, ?, 'open')`,
+      [viewerId, title, content],
+    )
+
+    logger.info('discussion_topic_created', {
+      viewerRole,
+      viewerId,
+      authorName: student.name,
       topicId: result.insertId,
     })
 
@@ -516,11 +640,7 @@ export async function createDiscussionTopic({ viewerRole, viewerId, payload }) {
 }
 
 export async function getDiscussionMessageDetail({ viewerRole, viewerId, messageId }) {
-  if (viewerRole === 'teacher') {
-    await getTeacherIdentity(viewerId)
-  } else {
-    await getAdminIdentity(viewerId)
-  }
+  await ensureViewerIdentity(viewerRole, viewerId)
 
   const schema = await getDiscussionSchemaSupport()
   const normalizedMessageId = normalizeMessageId(messageId)
@@ -530,6 +650,7 @@ export async function getDiscussionMessageDetail({ viewerRole, viewerId, message
     `SELECT r.reply_id AS id,
             r.teacher_id AS teacherId,
             ${schema.replyAdminEnabled ? 'r.admin_id AS adminId,' : 'NULL AS adminId,'}
+            ${schema.replyStudentEnabled ? 'r.student_id AS studentId,' : 'NULL AS studentId,'}
             ${schema.replyParentEnabled ? 'r.parent_reply_id AS parentReplyId,' : 'NULL AS parentReplyId,'}
             r.content AS content,
             ${buildReplyAuthorNameExpression(schema)} AS authorName,
@@ -544,8 +665,8 @@ export async function getDiscussionMessageDetail({ viewerRole, viewerId, message
      ${schema.replyParentEnabled ? buildParentReplyAuthorJoin(schema) : ''}
      WHERE r.topic_id = ?
      ORDER BY ${schema.replyParentEnabled ? 'COALESCE(r.parent_reply_id, r.reply_id)' : 'r.reply_id'} ASC, r.reply_time ASC, r.reply_id ASC`,
-     [normalizedMessageId],
-   )
+    [normalizedMessageId],
+  )
 
   logger.info('discussion_message_detail_loaded', {
     viewerRole,
@@ -561,6 +682,7 @@ export async function getDiscussionMessageDetail({ viewerRole, viewerId, message
       content: topic.content,
       teacherId: topic.teacherId === null || topic.teacherId === undefined ? null : Number(topic.teacherId),
       adminId: topic.adminId === null || topic.adminId === undefined ? null : Number(topic.adminId),
+      studentId: topic.studentId === null || topic.studentId === undefined ? null : Number(topic.studentId),
       authorName: topic.authorName,
       authorRole: topic.authorRole,
       publishDate: formatDate(topic.createTime),
@@ -569,8 +691,14 @@ export async function getDiscussionMessageDetail({ viewerRole, viewerId, message
     },
     replies: replies.map((item) => mapReplyItem(item, viewerRole, viewerId)),
     capabilities: {
-      canCreateTopic: viewerRole === 'teacher' || schema.topicAdminEnabled,
-      canReply: viewerRole === 'teacher' || schema.replyAdminEnabled,
+      canCreateTopic:
+        viewerRole === 'teacher' ||
+        (viewerRole === 'student' && schema.topicStudentEnabled) ||
+        (viewerRole === 'admin' && schema.topicAdminEnabled),
+      canReply:
+        viewerRole === 'teacher' ||
+        (viewerRole === 'student' && schema.replyStudentEnabled) ||
+        (viewerRole === 'admin' && schema.replyAdminEnabled),
       canReplyToReply: schema.replyParentEnabled,
     },
   }
@@ -582,12 +710,7 @@ export async function createDiscussionReply({ viewerRole, viewerId, messageId, p
   const parentReplyId = normalizeParentReplyId(payload.parentReplyId)
   const schema = await getDiscussionSchemaSupport()
 
-  if (viewerRole === 'teacher') {
-    await getTeacherIdentity(viewerId)
-  } else {
-    await getAdminIdentity(viewerId)
-  }
-
+  await ensureViewerIdentity(viewerRole, viewerId)
   await getTopicRow(normalizedMessageId, schema)
 
   if (parentReplyId) {
@@ -602,26 +725,66 @@ export async function createDiscussionReply({ viewerRole, viewerId, messageId, p
     throw badRequest('当前数据库未启用管理员回复字段，请先升级 message_topic_reply 表结构')
   }
 
-  const sql = schema.replyParentEnabled
-    ? viewerRole === 'teacher'
-      ? `INSERT INTO message_topic_reply (topic_id, teacher_id, ${schema.replyAdminEnabled ? 'admin_id, ' : ''}parent_reply_id, content)
-         VALUES (?, ?, ${schema.replyAdminEnabled ? 'NULL, ' : ''}?, ?)`
-      : `INSERT INTO message_topic_reply (topic_id, teacher_id, admin_id, parent_reply_id, content)
-         VALUES (?, NULL, ?, ?, ?)`
-    : viewerRole === 'teacher'
-      ? `INSERT INTO message_topic_reply (topic_id, teacher_id, ${schema.replyAdminEnabled ? 'admin_id, ' : ''}content)
-         VALUES (?, ?, ${schema.replyAdminEnabled ? 'NULL, ' : ''}?)`
-      : `INSERT INTO message_topic_reply (topic_id, teacher_id, admin_id, content)
-         VALUES (?, NULL, ?, ?)`
+  if (viewerRole === 'student' && !schema.replyStudentEnabled) {
+    throw badRequest('当前数据库未启用学生回复字段，请先升级 message_topic_reply 表结构')
+  }
 
-  const params =
-    viewerRole === 'teacher'
-      ? schema.replyParentEnabled
-        ? [normalizedMessageId, viewerId, parentReplyId, content]
-        : [normalizedMessageId, viewerId, content]
-      : schema.replyParentEnabled
-        ? [normalizedMessageId, viewerId, parentReplyId, content]
-        : [normalizedMessageId, viewerId, content]
+  let sql = ''
+  let params = []
+
+  if (viewerRole === 'teacher') {
+    if (schema.replyParentEnabled) {
+      sql = `INSERT INTO message_topic_reply (topic_id, teacher_id, ${schema.replyAdminEnabled ? 'admin_id, ' : ''}content, parent_reply_id)
+             VALUES (?, ?, ${schema.replyAdminEnabled ? 'NULL, ' : ''}?, ?)`
+      params = [normalizedMessageId, viewerId, content, parentReplyId]
+    } else {
+      sql = `INSERT INTO message_topic_reply (topic_id, teacher_id, ${schema.replyAdminEnabled ? 'admin_id, ' : ''}content)
+             VALUES (?, ?, ${schema.replyAdminEnabled ? 'NULL, ' : ''}?)`
+      params = [normalizedMessageId, viewerId, content]
+    }
+  } else if (viewerRole === 'student') {
+    if (schema.replyParentEnabled) {
+      sql = `INSERT INTO message_topic_reply (
+               topic_id,
+               teacher_id,
+               ${schema.replyAdminEnabled ? 'admin_id,' : ''}
+               ${schema.replyStudentEnabled ? 'student_id,' : ''}
+               content,
+               parent_reply_id
+             ) VALUES (
+               ?,
+               NULL,
+               ${schema.replyAdminEnabled ? 'NULL,' : ''}
+               ${schema.replyStudentEnabled ? '?,' : ''}
+               ?,
+               ?
+             )`
+      params = [normalizedMessageId, viewerId, content, parentReplyId]
+    } else {
+      sql = `INSERT INTO message_topic_reply (
+               topic_id,
+               teacher_id,
+               ${schema.replyAdminEnabled ? 'admin_id,' : ''}
+               ${schema.replyStudentEnabled ? 'student_id,' : ''}
+               content
+             ) VALUES (
+               ?,
+               NULL,
+               ${schema.replyAdminEnabled ? 'NULL,' : ''}
+               ${schema.replyStudentEnabled ? '?,' : ''}
+               ?
+             )`
+      params = [normalizedMessageId, viewerId, content]
+    }
+  } else if (schema.replyParentEnabled) {
+    sql = `INSERT INTO message_topic_reply (topic_id, teacher_id, admin_id, content, parent_reply_id)
+           VALUES (?, NULL, ?, ?, ?)`
+    params = [normalizedMessageId, viewerId, content, parentReplyId]
+  } else {
+    sql = `INSERT INTO message_topic_reply (topic_id, teacher_id, admin_id, content)
+           VALUES (?, NULL, ?, ?)`
+    params = [normalizedMessageId, viewerId, content]
+  }
 
   const [result] = await pool.query(sql, params)
 
@@ -641,11 +804,7 @@ export async function createDiscussionReply({ viewerRole, viewerId, messageId, p
 }
 
 export async function deleteDiscussionTopic({ viewerRole, viewerId, messageId }) {
-  if (viewerRole === 'teacher') {
-    await getTeacherIdentity(viewerId)
-  } else {
-    await getAdminIdentity(viewerId)
-  }
+  await ensureViewerIdentity(viewerRole, viewerId)
 
   const schema = await getDiscussionSchemaSupport()
   const normalizedMessageId = normalizeMessageId(messageId)
@@ -675,11 +834,7 @@ export async function deleteDiscussionTopic({ viewerRole, viewerId, messageId })
 }
 
 export async function deleteDiscussionReply({ viewerRole, viewerId, messageId, replyId }) {
-  if (viewerRole === 'teacher') {
-    await getTeacherIdentity(viewerId)
-  } else {
-    await getAdminIdentity(viewerId)
-  }
+  await ensureViewerIdentity(viewerRole, viewerId)
 
   const schema = await getDiscussionSchemaSupport()
   const normalizedMessageId = normalizeMessageId(messageId)

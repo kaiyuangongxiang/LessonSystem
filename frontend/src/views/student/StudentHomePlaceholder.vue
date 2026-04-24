@@ -8,6 +8,7 @@
 
       <nav class="teacher-dashboard-nav">
         <button type="button" class="teacher-dashboard-nav__item is-active">首页概览</button>
+        <button type="button" class="teacher-dashboard-nav__item" @click="router.push('/student/messages')">教学交流</button>
       </nav>
     </aside>
 
@@ -36,7 +37,7 @@
         <article class="teacher-dashboard-panel teacher-dashboard-panel--uploads">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">PHASE ONE</div>
+              <div class="teacher-dashboard-panel__eyebrow">READY NOW</div>
               <h3>当前已开放</h3>
             </div>
           </div>
@@ -44,14 +45,14 @@
           <div class="teacher-dashboard-upload-list">
             <article class="teacher-dashboard-upload-item">
               <div class="teacher-dashboard-upload-item__main">
-                <strong>学生账号登录</strong>
-                <p>支持学生自助注册、登录并进入学生中心。</p>
+                <strong>学生账号体系</strong>
+                <p>支持学生自助注册、登录并进入学生工作台。</p>
               </div>
             </article>
             <article class="teacher-dashboard-upload-item">
               <div class="teacher-dashboard-upload-item__main">
-                <strong>管理员统一管理</strong>
-                <p>管理员可在后台维护学生基础信息和账号状态。</p>
+                <strong>教学交流入口</strong>
+                <p>现在可以进入教学交流页，查看主题、回帖并参与课程讨论。</p>
               </div>
             </article>
           </div>
@@ -60,14 +61,19 @@
         <article class="teacher-dashboard-panel teacher-dashboard-panel--actions">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">NEXT STEP</div>
-              <h3>后续接入</h3>
+              <div class="teacher-dashboard-panel__eyebrow">QUICK ACTION</div>
+              <h3>继续参与</h3>
             </div>
           </div>
 
-          <div class="teacher-dashboard-note">
-            <strong>补齐计划正在推进</strong>
-            <p>接下来会逐步接入课程学习、统一论坛、留言板和在线课件浏览等学生端能力。</p>
+          <div class="teacher-dashboard-note student-dashboard-note--action">
+            <div>
+              <strong>前往教学交流</strong>
+              <p>围绕课程问题、资源体验和课堂反馈，和教师、管理员、同学持续互动。</p>
+            </div>
+            <div class="teacher-message-actions student-dashboard-note__actions">
+              <button type="button" class="auth-btn" @click="router.push('/student/messages')">进入教学交流</button>
+            </div>
           </div>
         </article>
       </section>
@@ -84,12 +90,12 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '学生用户')
-const welcomeText = computed(() => `${studentName.value}，这里是学生端第一阶段入口，后续会逐步接入课程学习与互动功能。`)
+const welcomeText = computed(() => `${studentName.value}，这里是学生端入口，当前已接入教学交流能力。`)
 
 const metricCards = [
   { label: '账号状态', value: '已开通', tip: '当前学生账号可正常登录使用' },
   { label: '角色类型', value: '学生', tip: '已完成学生角色接入' },
-  { label: '功能阶段', value: '第一期', tip: '当前优先完成注册登录与后台管理' },
+  { label: '交流能力', value: '已接入', tip: '支持查看、回复，并在条件满足时发布主题' },
 ]
 
 function handleLogout() {

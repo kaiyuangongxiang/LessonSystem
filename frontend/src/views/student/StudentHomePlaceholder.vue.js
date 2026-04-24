@@ -4,11 +4,11 @@ import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const authStore = useAuthStore();
 const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '学生用户');
-const welcomeText = computed(() => `${studentName.value}，这里是学生端第一阶段入口，后续会逐步接入课程学习与互动功能。`);
+const welcomeText = computed(() => `${studentName.value}，这里是学生端入口，当前已接入教学交流能力。`);
 const metricCards = [
     { label: '账号状态', value: '已开通', tip: '当前学生账号可正常登录使用' },
     { label: '角色类型', value: '学生', tip: '已完成学生角色接入' },
-    { label: '功能阶段', value: '第一期', tip: '当前优先完成注册登录与后台管理' },
+    { label: '交流能力', value: '已接入', tip: '支持查看、回复，并在条件满足时发布主题' },
 ];
 function handleLogout() {
     authStore.logout();
@@ -35,6 +35,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.nav, __VLS_intrinsicElements.n
 __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
     type: "button",
     ...{ class: "teacher-dashboard-nav__item is-active" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/student/messages');
+        } },
+    type: "button",
+    ...{ class: "teacher-dashboard-nav__item" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
     ...{ class: "teacher-dashboard-main" },
@@ -124,16 +131,28 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "teacher-dashboard-note" },
+    ...{ class: "teacher-dashboard-note student-dashboard-note--action" },
 });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "teacher-message-actions student-dashboard-note__actions" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.router.push('/student/messages');
+        } },
+    type: "button",
+    ...{ class: "auth-btn" },
+});
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-sidebar__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-active']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-dashboard-nav__item']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-head__eyebrow']} */ ;
@@ -159,6 +178,10 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-panel__head']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-panel__eyebrow']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-dashboard-note']} */ ;
+/** @type {__VLS_StyleScopedClasses['student-dashboard-note--action']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['student-dashboard-note__actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {

@@ -122,6 +122,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'student' },
     },
     {
+      path: '/student/messages',
+      name: 'student-messages',
+      component: () => import('@/views/student/StudentMessagePage.vue'),
+      meta: { requiresAuth: true, role: 'student' },
+    },
+    {
       path: '/admin',
       name: 'admin-home',
       component: () => import('@/views/admin/AdminHomePlaceholder.vue'),

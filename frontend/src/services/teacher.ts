@@ -777,9 +777,10 @@ export interface TeacherMessageItem {
   title: string
   summary: string
   authorName: string
-  authorRole: 'teacher' | 'admin'
+  authorRole: 'teacher' | 'admin' | 'student'
   teacherId: number | null
   adminId: number | null
+  studentId: number | null
   publishDate: string
   lastReplyAt: string
   status: string
@@ -792,9 +793,10 @@ export interface TeacherMessageReplyItem {
   id: number
   content: string
   authorName: string
-  authorRole: 'teacher' | 'admin'
+  authorRole: 'teacher' | 'admin' | 'student'
   teacherId: number | null
   adminId: number | null
+  studentId: number | null
   replyTime: string
   parentReplyId: number | null
   parentAuthorName: string
@@ -808,8 +810,9 @@ export interface TeacherMessageDetailData {
     content: string
     teacherId: number | null
     adminId: number | null
+    studentId: number | null
     authorName: string
-    authorRole: 'teacher' | 'admin'
+    authorRole: 'teacher' | 'admin' | 'student'
     publishDate: string
     statusLabel: string
     canDelete: boolean

@@ -1,7 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue';
-import { createTeacherMessage, createTeacherMessageReply, deleteTeacherMessage, deleteTeacherMessageReply, getTeacherMessageDetail, getTeacherMessageList, } from '@/services/teacher';
+import { createStudentMessage, createStudentMessageReply, deleteStudentMessage, deleteStudentMessageReply, getStudentMessageDetail, getStudentMessageList, } from '@/services/student';
 import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const route = useRoute();
@@ -9,11 +9,13 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const submittingTopic = ref(false);
 const showTopicEditor = ref(false);
+const showReplyEditor = ref(false);
 const replyingId = ref(null);
 const deletingTopicId = ref(null);
 const deletingReplyId = ref(null);
 const loadingDetailId = ref(null);
 const expandedMessageId = ref(null);
+const activeReplyMessageId = ref(null);
 const errorMessage = ref('');
 const successMessage = ref('');
 const messageList = ref([]);
@@ -34,19 +36,46 @@ const pagination = reactive({
     total: 0,
     totalPages: 0,
 });
-const teacherName = computed(() => authStore.profile?.name || authStore.profile?.username || '教师用户');
-const headerText = computed(() => `${teacherName.value}，这里用于浏览交流话题、发布评论，并持续跟进教学讨论。`);
+const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '同学');
+const headerText = computed(() => `${studentName.value}，这里可以查看教师发布的教学讨论，也可以补充自己的学习问题和课程反馈。`);
 const pageSummary = computed(() => {
     if (form.keyword) {
         return `当前正在筛选与“${form.keyword}”相关的话题内容。`;
     }
-    return '围绕课程资源、课堂问题与教学经验进行有组织的交流，让后续协作更容易追踪与沉淀。';
+    return '把零散的问题、资源体验和课堂疑问整理成可追踪的交流线索，让学习反馈更容易被看到和回应。';
 });
 const currentDetail = computed(() => {
     if (!expandedMessageId.value) {
         return null;
     }
     return detailMap[expandedMessageId.value] || null;
+});
+const activeReplyDetail = computed(() => {
+    if (activeReplyMessageId.value === null) {
+        return null;
+    }
+    return detailMap[activeReplyMessageId.value] || null;
+});
+const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true);
+const activeReplyTarget = computed(() => {
+    if (activeReplyMessageId.value === null) {
+        return null;
+    }
+    return replyTargets[activeReplyMessageId.value] || { replyId: null, authorName: '' };
+});
+const activeReplyDraft = computed({
+    get() {
+        if (activeReplyMessageId.value === null) {
+            return '';
+        }
+        return replyDrafts[activeReplyMessageId.value] || '';
+    },
+    set(value) {
+        if (activeReplyMessageId.value === null) {
+            return;
+        }
+        replyDrafts[activeReplyMessageId.value] = value;
+    },
 });
 const rootReplies = computed(() => {
     const detail = currentDetail.value;
@@ -57,19 +86,19 @@ const rootReplies = computed(() => {
     return detail.replies.filter((item) => !item.parentReplyId || !replyIdSet.has(item.parentReplyId));
 });
 const totalReplyCount = computed(() => messageList.value.reduce((sum, item) => sum + item.replyCount, 0));
+const studentTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'student').length);
 const teacherTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'teacher').length);
-const adminTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'admin').length);
 const heroMetrics = computed(() => [
-    { label: '全部主题', value: String(pagination.total).padStart(2, '0'), note: '系统内当前可浏览的讨论主题数' },
-    { label: '本页回复', value: String(totalReplyCount.value).padStart(2, '0'), note: '当前页主题累计产生的回复数' },
-    { label: '教师发起', value: String(teacherTopicCount.value).padStart(2, '0'), note: '本页由教师发布的主题数量' },
-    { label: '管理员发起', value: String(adminTopicCount.value).padStart(2, '0'), note: '本页由管理员发起的协同话题' },
+    { label: '全部主题', value: String(pagination.total).padStart(2, '0'), note: '当前可浏览的交流主题数量' },
+    { label: '本页回复', value: String(totalReplyCount.value).padStart(2, '0'), note: '本页主题累计产生的回复数' },
+    { label: '学生发起', value: String(studentTopicCount.value).padStart(2, '0'), note: '本页由学生发起的交流主题数' },
+    { label: '教师发起', value: String(teacherTopicCount.value).padStart(2, '0'), note: '本页由教师发起的教学讨论数' },
 ]);
 const boardSummary = computed(() => {
     if (expandedMessageId.value) {
-        return '已展开当前主题详情，你可以继续查看楼中回复，或在底部直接补充反馈。';
+        return '当前主题已展开，你可以继续浏览回复，或通过弹窗补充自己的问题和反馈。';
     }
-    return '点击任意主题卡片即可展开完整讨论内容，查看主贴、回复与楼中交流。';
+    return '点击任意主题卡片即可展开完整讨论内容，查看主帖、评论和楼中回复。';
 });
 function getRoleLabel(role) {
     if (role === 'admin') {
@@ -102,12 +131,30 @@ function openTopicEditor() {
 function closeTopicEditor() {
     showTopicEditor.value = false;
 }
+function openReplyEditor(messageId, reply) {
+    clearMessages();
+    activeReplyMessageId.value = messageId;
+    if (reply) {
+        setReplyTarget(messageId, reply);
+    }
+    else {
+        clearReplyTarget(messageId);
+    }
+    if (replyDrafts[messageId] === undefined) {
+        replyDrafts[messageId] = '';
+    }
+    showReplyEditor.value = true;
+}
+function closeReplyEditor() {
+    showReplyEditor.value = false;
+    activeReplyMessageId.value = null;
+}
 function syncFormWithRoute() {
     form.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
 }
 function updateRoute(page = 1) {
     router.push({
-        path: '/teacher/messages',
+        path: '/student/messages',
         query: {
             page: String(page),
             ...(form.keyword ? { keyword: form.keyword } : {}),
@@ -156,7 +203,7 @@ function clearReplyDraft(messageId) {
 async function loadMessageDetail(messageId) {
     loadingDetailId.value = messageId;
     try {
-        detailMap[messageId] = await getTeacherMessageDetail(messageId);
+        detailMap[messageId] = await getStudentMessageDetail(messageId);
     }
     finally {
         loadingDetailId.value = null;
@@ -183,7 +230,7 @@ async function loadMessages() {
     clearMessages();
     syncFormWithRoute();
     try {
-        const data = await getTeacherMessageList({
+        const data = await getStudentMessageList({
             page: normalizePage(route.query.page),
             pageSize: 4,
             keyword: form.keyword,
@@ -214,7 +261,7 @@ async function submitTopic() {
     submittingTopic.value = true;
     clearMessages();
     try {
-        await createTeacherMessage({
+        await createStudentMessage({
             title: topicForm.title,
             content: topicForm.content,
         });
@@ -241,11 +288,12 @@ async function submitReply(messageId) {
     replyingId.value = messageId;
     clearMessages();
     try {
-        await createTeacherMessageReply(messageId, {
+        await createStudentMessageReply(messageId, {
             content,
             parentReplyId: replyTargets[messageId]?.replyId || null,
         });
         clearReplyDraft(messageId);
+        closeReplyEditor();
         successMessage.value = '回复已发布。';
         await Promise.all([loadMessageDetail(messageId), loadMessages()]);
         expandedMessageId.value = messageId;
@@ -264,7 +312,7 @@ async function removeTopic(item) {
     }
     deletingTopicId.value = item.id;
     try {
-        await deleteTeacherMessage(item.id);
+        await deleteStudentMessage(item.id);
         successMessage.value = `交流主题《${item.title}》已删除。`;
         if (expandedMessageId.value === item.id) {
             expandedMessageId.value = null;
@@ -286,7 +334,7 @@ async function removeReply(messageId, reply) {
     }
     deletingReplyId.value = reply.id;
     try {
-        await deleteTeacherMessageReply(messageId, reply.id);
+        await deleteStudentMessageReply(messageId, reply.id);
         successMessage.value = '回复已删除。';
         await Promise.all([loadMessageDetail(messageId), loadMessages()]);
     }
@@ -354,6 +402,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ onClick: (__VLS_ctx.openTopicEditor) },
     type: "button",
     ...{ class: "auth-btn" },
+    disabled: (!__VLS_ctx.canCreateTopic),
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "teacher-message-hero__spotlight-note" },
@@ -496,7 +545,7 @@ if (__VLS_ctx.messageList.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
             ...{ class: "teacher-message-topic__tip-dot" },
         });
-        (__VLS_ctx.expandedMessageId === item.id ? '讨论详情已展开，可继续查看回复与楼中交流。' : '点击展开后可查看完整主题内容和楼层回复。');
+        (__VLS_ctx.expandedMessageId === item.id ? '讨论详情已展开，可以继续查看回复或参与交流。' : '点击展开后可查看完整主题内容和楼层回复。');
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "teacher-message-topic__actions" },
         });
@@ -614,7 +663,7 @@ if (__VLS_ctx.messageList.length) {
                                             return;
                                         if (!(__VLS_ctx.currentDetail.capabilities.canReply && __VLS_ctx.currentDetail.capabilities.canReplyToReply))
                                             return;
-                                        __VLS_ctx.setReplyTarget(item.id, reply);
+                                        __VLS_ctx.openReplyEditor(item.id, reply);
                                     } },
                                 type: "button",
                                 ...{ class: "course-chip course-chip--soft" },
@@ -640,7 +689,7 @@ if (__VLS_ctx.messageList.length) {
                                 type: "button",
                                 ...{ class: "course-chip course-chip--soft" },
                             });
-                            (__VLS_ctx.isReplyChildrenExpanded(reply.id) ? '收起楼中回复' : `展开楼中回复（${__VLS_ctx.getChildReplies(reply.id).length}）`);
+                            (__VLS_ctx.isReplyChildrenExpanded(reply.id) ? '收起楼中回复' : `展开楼中回复 (${__VLS_ctx.getChildReplies(reply.id).length})`);
                         }
                         if (reply.canDelete) {
                             __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
@@ -714,7 +763,7 @@ if (__VLS_ctx.messageList.length) {
                                                     return;
                                                 if (!(__VLS_ctx.currentDetail.capabilities.canReply && __VLS_ctx.currentDetail.capabilities.canReplyToReply))
                                                     return;
-                                                __VLS_ctx.setReplyTarget(item.id, childReply);
+                                                __VLS_ctx.openReplyEditor(item.id, childReply);
                                             } },
                                         type: "button",
                                         ...{ class: "course-chip course-chip--soft" },
@@ -755,72 +804,25 @@ if (__VLS_ctx.messageList.length) {
                     });
                 }
             }
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-                ...{ onSubmit: (...[$event]) => {
-                        if (!(__VLS_ctx.messageList.length))
-                            return;
-                        if (!(__VLS_ctx.expandedMessageId === item.id))
-                            return;
-                        __VLS_ctx.submitReply(item.id);
-                    } },
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "teacher-message-reply-form" },
-            });
-            if (__VLS_ctx.replyTargets[item.id]?.replyId) {
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-                    ...{ class: "teacher-message-reply-target" },
-                });
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-                (__VLS_ctx.replyTargets[item.id]?.authorName);
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-                    ...{ onClick: (...[$event]) => {
-                            if (!(__VLS_ctx.messageList.length))
-                                return;
-                            if (!(__VLS_ctx.expandedMessageId === item.id))
-                                return;
-                            if (!(__VLS_ctx.replyTargets[item.id]?.replyId))
-                                return;
-                            __VLS_ctx.clearReplyTarget(item.id);
-                        } },
-                    type: "button",
-                    ...{ class: "course-chip course-chip--soft" },
-                });
-            }
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-                ...{ class: "teacher-message-field" },
-            });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-            (__VLS_ctx.replyTargets[item.id]?.replyId ? '楼中回复' : '发表评论');
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-                value: (__VLS_ctx.replyDrafts[item.id]),
-                maxlength: "5000",
-                rows: "5",
-                placeholder: (__VLS_ctx.currentDetail?.capabilities.canReply === false
-                    ? '当前数据库结构尚未升级，暂不支持当前角色回复'
-                    : '请输入你的补充说明、教学建议或资源经验'),
-                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === item.id),
             });
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "teacher-message-actions" },
             });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-                type: "submit",
-                ...{ class: "auth-btn" },
-                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === item.id),
-            });
-            (__VLS_ctx.replyingId === item.id ? '发布中...' : __VLS_ctx.replyTargets[item.id]?.replyId ? '发布回复' : '发布评论');
             __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
                 ...{ onClick: (...[$event]) => {
                         if (!(__VLS_ctx.messageList.length))
                             return;
                         if (!(__VLS_ctx.expandedMessageId === item.id))
                             return;
-                        __VLS_ctx.clearReplyDraft(item.id);
+                        __VLS_ctx.openReplyEditor(item.id);
                     } },
                 type: "button",
-                ...{ class: "auth-btn auth-btn--secondary" },
-                disabled: (__VLS_ctx.replyingId === item.id),
+                ...{ class: "auth-btn" },
+                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false),
             });
+            (__VLS_ctx.currentDetail?.capabilities.canReply === false ? '当前暂不支持回复' : '发表评论');
         }
     }
 }
@@ -910,7 +912,7 @@ if (__VLS_ctx.showTopicEditor) {
         value: (__VLS_ctx.topicForm.content),
         maxlength: "5000",
         rows: "9",
-        placeholder: "请输入课程资源、教学问题或备课经验内容",
+        placeholder: "请输入课程问题、学习反馈或希望获得帮助的内容",
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "teacher-message-dialog__hint" },
@@ -934,6 +936,97 @@ if (__VLS_ctx.showTopicEditor) {
         disabled: (__VLS_ctx.submittingTopic),
     });
     (__VLS_ctx.submittingTopic ? '发布中...' : '发布主题');
+}
+if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ onClick: (__VLS_ctx.closeReplyEditor) },
+        ...{ class: "teacher-message-dialog" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+        ...{ class: "teacher-message-dialog__panel" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-dialog__head" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-kicker" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
+    (__VLS_ctx.activeReplyTarget?.replyId ? '发布回复' : '发表评论');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (__VLS_ctx.closeReplyEditor) },
+        type: "button",
+        ...{ class: "course-chip course-chip--soft" },
+        disabled: (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+        ...{ onSubmit: (...[$event]) => {
+                if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
+                    return;
+                __VLS_ctx.submitReply(__VLS_ctx.activeReplyMessageId);
+            } },
+        ...{ class: "teacher-message-dialog__form" },
+    });
+    if (__VLS_ctx.activeReplyTarget?.replyId) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "teacher-message-reply-target" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+        (__VLS_ctx.activeReplyTarget.authorName);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
+                        return;
+                    if (!(__VLS_ctx.activeReplyTarget?.replyId))
+                        return;
+                    __VLS_ctx.clearReplyTarget(__VLS_ctx.activeReplyMessageId);
+                } },
+            type: "button",
+            ...{ class: "course-chip course-chip--soft" },
+        });
+    }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+        ...{ class: "teacher-message-field" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.activeReplyTarget?.replyId ? '楼中回复' : '发表评论');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
+        value: (__VLS_ctx.activeReplyDraft),
+        maxlength: "5000",
+        rows: "6",
+        placeholder: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false
+            ? '当前数据库结构尚未升级，暂不支持学生回帖'
+            : '请输入你的问题、学习反馈或补充说明'),
+        disabled: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+        ...{ class: "teacher-message-dialog__hint" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-dialog__footer" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-actions" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
+                    return;
+                __VLS_ctx.clearReplyDraft(__VLS_ctx.activeReplyMessageId);
+            } },
+        type: "button",
+        ...{ class: "auth-btn auth-btn--secondary" },
+        disabled: (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        type: "submit",
+        ...{ class: "auth-btn" },
+        disabled: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId ? '发布中...' : __VLS_ctx.activeReplyTarget?.replyId ? '发布回复' : '发布评论');
 }
 /** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page']} */ ;
@@ -1020,14 +1113,8 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['teacher-message-delete-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-reply-form']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-message-reply-target']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
-/** @type {__VLS_StyleScopedClasses['teacher-message-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-empty--large']} */ ;
 /** @type {__VLS_StyleScopedClasses['course-pagination']} */ ;
@@ -1055,6 +1142,23 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-kicker']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__form']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-reply-target']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__hint']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__footer']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -1063,22 +1167,26 @@ const __VLS_self = (await import('vue')).defineComponent({
             loading: loading,
             submittingTopic: submittingTopic,
             showTopicEditor: showTopicEditor,
+            showReplyEditor: showReplyEditor,
             replyingId: replyingId,
             deletingTopicId: deletingTopicId,
             deletingReplyId: deletingReplyId,
             loadingDetailId: loadingDetailId,
             expandedMessageId: expandedMessageId,
+            activeReplyMessageId: activeReplyMessageId,
             errorMessage: errorMessage,
             successMessage: successMessage,
             messageList: messageList,
-            replyDrafts: replyDrafts,
-            replyTargets: replyTargets,
             form: form,
             topicForm: topicForm,
             pagination: pagination,
             headerText: headerText,
             pageSummary: pageSummary,
             currentDetail: currentDetail,
+            activeReplyDetail: activeReplyDetail,
+            canCreateTopic: canCreateTopic,
+            activeReplyTarget: activeReplyTarget,
+            activeReplyDraft: activeReplyDraft,
             rootReplies: rootReplies,
             heroMetrics: heroMetrics,
             boardSummary: boardSummary,
@@ -1087,13 +1195,14 @@ const __VLS_self = (await import('vue')).defineComponent({
             resetTopicForm: resetTopicForm,
             openTopicEditor: openTopicEditor,
             closeTopicEditor: closeTopicEditor,
+            openReplyEditor: openReplyEditor,
+            closeReplyEditor: closeReplyEditor,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,
             getChildReplies: getChildReplies,
             isReplyChildrenExpanded: isReplyChildrenExpanded,
             toggleReplyChildren: toggleReplyChildren,
-            setReplyTarget: setReplyTarget,
             clearReplyTarget: clearReplyTarget,
             clearReplyDraft: clearReplyDraft,
             toggleDiscussion: toggleDiscussion,

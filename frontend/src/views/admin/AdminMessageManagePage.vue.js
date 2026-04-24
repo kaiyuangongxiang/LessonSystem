@@ -57,6 +57,15 @@ const rootReplies = computed(() => {
     return detail.replies.filter((item) => !item.parentReplyId || !replyIdSet.has(item.parentReplyId));
 });
 const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true);
+function getRoleLabel(role) {
+    if (role === 'admin') {
+        return '管理员';
+    }
+    if (role === 'student') {
+        return '学生';
+    }
+    return '教师';
+}
 function normalizePage(value) {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? page : 1;
@@ -530,7 +539,7 @@ if (__VLS_ctx.messageList.length) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
             ...{ class: (['online-message-role-badge', `is-${item.authorRole}`]) },
         });
-        (item.authorRole === 'admin' ? '管理员' : '教师');
+        (__VLS_ctx.getRoleLabel(item.authorRole));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "admin-message-item__meta" },
         });
@@ -581,7 +590,7 @@ if (__VLS_ctx.messageList.length) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
                 ...{ class: (['online-message-role-badge', `is-${__VLS_ctx.currentDetail?.topic.authorRole || item.authorRole}`]) },
             });
-            ((__VLS_ctx.currentDetail?.topic.authorRole || item.authorRole) === 'admin' ? '管理员' : '教师');
+            (__VLS_ctx.getRoleLabel(__VLS_ctx.currentDetail?.topic.authorRole || item.authorRole));
             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
             (__VLS_ctx.currentDetail?.topic.content || '正在加载主题内容...');
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
@@ -609,7 +618,7 @@ if (__VLS_ctx.messageList.length) {
                     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
                         ...{ class: (['online-message-role-badge', `is-${reply.authorRole}`]) },
                     });
-                    (reply.authorRole === 'admin' ? '管理员' : '教师');
+                    (__VLS_ctx.getRoleLabel(reply.authorRole));
                     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
                     (reply.content);
                     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
@@ -694,7 +703,7 @@ if (__VLS_ctx.messageList.length) {
                             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
                                 ...{ class: (['online-message-role-badge', `is-${childReply.authorRole}`]) },
                             });
-                            (childReply.authorRole === 'admin' ? '管理员' : '教师');
+                            (__VLS_ctx.getRoleLabel(childReply.authorRole));
                             __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
                             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
                                 ...{ class: "admin-message-reply-item__mention" },
@@ -1097,6 +1106,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             currentDetail: currentDetail,
             rootReplies: rootReplies,
             canCreateTopic: canCreateTopic,
+            getRoleLabel: getRoleLabel,
             resetTopicForm: resetTopicForm,
             openTopicEditor: openTopicEditor,
             closeTopicEditor: closeTopicEditor,

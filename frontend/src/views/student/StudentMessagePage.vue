@@ -10,17 +10,17 @@
 
     <header class="teacher-message-hero">
       <section class="teacher-message-hero__intro">
-        <div class="teacher-message-kicker">Teaching Exchange</div>
+        <div class="teacher-message-kicker">Learning Exchange</div>
         <h1>教学交流</h1>
         <p class="teacher-message-hero__lead">{{ headerText }}</p>
         <p class="teacher-message-hero__desc">{{ pageSummary }}</p>
       </section>
 
       <section class="teacher-message-hero__spotlight">
-        <div class="teacher-message-kicker teacher-message-kicker--light">Discussion Studio</div>
-        <strong>把零散问题整理成一条清晰、持续、可追踪的教学讨论线索</strong>
-        <p>支持教师与管理员围绕课程资源、课堂问题和教学经验展开主题讨论，并在楼层回复中沉淀可回看的协作记录。</p>
-        <button type="button" class="auth-btn" @click="openTopicEditor">发布新主题</button>
+        <div class="teacher-message-kicker teacher-message-kicker--light">Student Forum</div>
+        <strong>围绕课程学习问题、资源体验和课堂反馈，与教师、管理员持续交流</strong>
+        <p>你可以查看已有讨论、补充自己的想法，也可以在系统支持时发起新的学习主题。</p>
+        <button type="button" class="auth-btn" :disabled="!canCreateTopic" @click="openTopicEditor">发起交流主题</button>
         <span class="teacher-message-hero__spotlight-note">当前共有 {{ pagination.total }} 个主题正在讨论中</span>
       </section>
     </header>
@@ -49,7 +49,7 @@
         <div class="teacher-message-board__meta">
           <span>第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</span>
           <span v-if="form.keyword">关键词：{{ form.keyword }}</span>
-          <span v-else>当前展示最近更新的话题</span>
+          <span v-else>当前展示最近更新的交流主题</span>
         </div>
       </div>
 
@@ -69,7 +69,7 @@
           <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
         </div>
 
-        <p class="teacher-message-search__hint">支持按标题、正文与发布人快速筛选，便于定位正在推进的教学讨论。</p>
+        <p class="teacher-message-search__hint">支持按主题、正文和发布人快速定位讨论内容，方便跟进课程中的具体问题。</p>
       </form>
 
       <div v-if="messageList.length" class="teacher-message-list">
@@ -104,7 +104,7 @@
           <div class="teacher-message-topic__footer">
             <div class="teacher-message-topic__tip">
               <span class="teacher-message-topic__tip-dot"></span>
-              {{ expandedMessageId === item.id ? '讨论详情已展开，可继续查看回复与楼中交流。' : '点击展开后可查看完整主题内容和楼层回复。' }}
+              {{ expandedMessageId === item.id ? '讨论详情已展开，可以继续查看回复或参与交流。' : '点击展开后可查看完整主题内容和楼层回复。' }}
             </div>
 
             <div class="teacher-message-topic__actions">
@@ -171,7 +171,7 @@
                       v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                       type="button"
                       class="course-chip course-chip--soft"
-                      @click="setReplyTarget(item.id, reply)"
+                      @click="openReplyEditor(item.id, reply)"
                     >
                       回复
                     </button>
@@ -181,7 +181,7 @@
                       class="course-chip course-chip--soft"
                       @click="toggleReplyChildren(reply.id)"
                     >
-                      {{ isReplyChildrenExpanded(reply.id) ? '收起楼中回复' : `展开楼中回复（${getChildReplies(reply.id).length}）` }}
+                      {{ isReplyChildrenExpanded(reply.id) ? '收起楼中回复' : `展开楼中回复 (${getChildReplies(reply.id).length})` }}
                     </button>
                     <button
                       v-if="reply.canDelete"
@@ -220,7 +220,7 @@
                           v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                           type="button"
                           class="course-chip course-chip--soft"
-                          @click="setReplyTarget(item.id, childReply)"
+                          @click="openReplyEditor(item.id, childReply)"
                         >
                           回复
                         </button>
@@ -239,44 +239,26 @@
                 </article>
               </div>
 
-              <div v-else class="teacher-message-empty">当前还没有回复，欢迎在下方留下第一条反馈。</div>
+              <div v-else class="teacher-message-empty">当前还没有回复，欢迎留下第一条学习反馈。</div>
             </div>
 
-            <form class="teacher-message-reply-form" @submit.prevent="submitReply(item.id)">
-              <div v-if="replyTargets[item.id]?.replyId" class="teacher-message-reply-target">
-                <span>正在回复 <strong>{{ replyTargets[item.id]?.authorName }}</strong></span>
-                <button type="button" class="course-chip course-chip--soft" @click="clearReplyTarget(item.id)">取消</button>
-              </div>
-
-              <label class="teacher-message-field">
-                <span>{{ replyTargets[item.id]?.replyId ? '楼中回复' : '发表评论' }}</span>
-                <textarea
-                  v-model.trim="replyDrafts[item.id]"
-                  maxlength="5000"
-                  rows="5"
-                  :placeholder="
-                    currentDetail?.capabilities.canReply === false
-                      ? '当前数据库结构尚未升级，暂不支持当前角色回复'
-                      : '请输入你的补充说明、教学建议或资源经验'
-                  "
-                  :disabled="currentDetail?.capabilities.canReply === false || replyingId === item.id"
-                ></textarea>
-              </label>
-
+            <div class="teacher-message-reply-form">
               <div class="teacher-message-actions">
-                <button type="submit" class="auth-btn" :disabled="currentDetail?.capabilities.canReply === false || replyingId === item.id">
-                  {{ replyingId === item.id ? '发布中...' : replyTargets[item.id]?.replyId ? '发布回复' : '发布评论' }}
-                </button>
-                <button type="button" class="auth-btn auth-btn--secondary" :disabled="replyingId === item.id" @click="clearReplyDraft(item.id)">
-                  清空内容
+                <button
+                  type="button"
+                  class="auth-btn"
+                  :disabled="currentDetail?.capabilities.canReply === false"
+                  @click="openReplyEditor(item.id)"
+                >
+                  {{ currentDetail?.capabilities.canReply === false ? '当前暂不支持回复' : '发表评论' }}
                 </button>
               </div>
-            </form>
+            </div>
           </section>
         </article>
       </div>
 
-      <div v-else-if="!loading" class="teacher-message-empty teacher-message-empty--large">当前还没有交流主题，先发布一个新话题吧。</div>
+      <div v-else-if="!loading" class="teacher-message-empty teacher-message-empty--large">当前还没有交流主题，可以先看看已有课程内容或发起一个学习问题。</div>
 
       <section class="course-pagination teacher-message-pagination">
         <div class="course-pagination__desc">
@@ -313,19 +295,85 @@
               v-model.trim="topicForm.content"
               maxlength="5000"
               rows="9"
-              placeholder="请输入课程资源、教学问题或备课经验内容"
+              placeholder="请输入课程问题、学习反馈或希望获得帮助的内容"
             ></textarea>
           </label>
 
           <p class="teacher-message-dialog__hint">
-            话题发布后，教师和管理员都可以继续评论回复。如果点击某条评论的“回复”，系统会以楼中回复的形式挂载在该评论下方。
+            主题发布后，教师、管理员和学生都可以继续参与讨论；如果数据库还未升级学生发帖字段，提交时会给出明确提示。
           </p>
 
           <div class="teacher-message-dialog__footer">
-            <p>建议标题直接点出问题，正文写清资源场景、当前困惑和期望反馈，方便其他老师更快参与讨论。</p>
+            <p>建议标题直接点出问题场景，正文补充课程、资源和遇到的具体困难，方便他人更快参与。</p>
             <div class="teacher-message-actions">
               <button type="button" class="auth-btn auth-btn--secondary" :disabled="submittingTopic" @click="resetTopicForm">清空内容</button>
               <button type="submit" class="auth-btn" :disabled="submittingTopic">{{ submittingTopic ? '发布中...' : '发布主题' }}</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div v-if="showReplyEditor && activeReplyMessageId !== null" class="teacher-message-dialog" @click.self="closeReplyEditor">
+      <section class="teacher-message-dialog__panel">
+        <div class="teacher-message-dialog__head">
+          <div>
+            <div class="teacher-message-kicker">Reply Editor</div>
+            <h3>{{ activeReplyTarget?.replyId ? '发布回复' : '发表评论' }}</h3>
+          </div>
+          <button
+            type="button"
+            class="course-chip course-chip--soft"
+            :disabled="replyingId === activeReplyMessageId"
+            @click="closeReplyEditor"
+          >
+            关闭
+          </button>
+        </div>
+
+        <form class="teacher-message-dialog__form" @submit.prevent="submitReply(activeReplyMessageId)">
+          <div v-if="activeReplyTarget?.replyId" class="teacher-message-reply-target">
+            <span>正在回复 <strong>{{ activeReplyTarget.authorName }}</strong></span>
+            <button type="button" class="course-chip course-chip--soft" @click="clearReplyTarget(activeReplyMessageId)">取消</button>
+          </div>
+
+          <label class="teacher-message-field">
+            <span>{{ activeReplyTarget?.replyId ? '楼中回复' : '发表评论' }}</span>
+            <textarea
+              v-model.trim="activeReplyDraft"
+              maxlength="5000"
+              rows="6"
+              :placeholder="
+                activeReplyDetail?.capabilities.canReply === false
+                  ? '当前数据库结构尚未升级，暂不支持学生回帖'
+                  : '请输入你的问题、学习反馈或补充说明'
+              "
+              :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+            ></textarea>
+          </label>
+
+          <p class="teacher-message-dialog__hint">
+            可以在这里统一编辑对主帖的评论，或对某条回复的楼中回复。
+          </p>
+
+          <div class="teacher-message-dialog__footer">
+            <p>建议把问题背景、自己已经尝试的方法和希望得到的帮助写清楚，方便老师或其他同学快速回应。</p>
+            <div class="teacher-message-actions">
+              <button
+                type="button"
+                class="auth-btn auth-btn--secondary"
+                :disabled="replyingId === activeReplyMessageId"
+                @click="clearReplyDraft(activeReplyMessageId)"
+              >
+                清空内容
+              </button>
+              <button
+                type="submit"
+                class="auth-btn"
+                :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+              >
+                {{ replyingId === activeReplyMessageId ? '发布中...' : activeReplyTarget?.replyId ? '发布回复' : '发布评论' }}
+              </button>
             </div>
           </div>
         </form>
@@ -339,16 +387,17 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import {
-  createTeacherMessage,
-  createTeacherMessageReply,
-  deleteTeacherMessage,
-  deleteTeacherMessageReply,
-  getTeacherMessageDetail,
-  getTeacherMessageList,
-  type TeacherMessageDetailData,
-  type TeacherMessageItem,
-  type TeacherMessageReplyItem,
-} from '@/services/teacher'
+  createStudentMessage,
+  createStudentMessageReply,
+  deleteStudentMessage,
+  deleteStudentMessageReply,
+  getStudentMessageDetail,
+  getStudentMessageList,
+  type StudentMessageAuthorRole,
+  type StudentMessageDetailData,
+  type StudentMessageItem,
+  type StudentMessageReplyItem,
+} from '@/services/student'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -358,15 +407,17 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const submittingTopic = ref(false)
 const showTopicEditor = ref(false)
+const showReplyEditor = ref(false)
 const replyingId = ref<number | null>(null)
 const deletingTopicId = ref<number | null>(null)
 const deletingReplyId = ref<number | null>(null)
 const loadingDetailId = ref<number | null>(null)
 const expandedMessageId = ref<number | null>(null)
+const activeReplyMessageId = ref<number | null>(null)
 const errorMessage = ref('')
 const successMessage = ref('')
-const messageList = ref<TeacherMessageItem[]>([])
-const detailMap = reactive<Record<number, TeacherMessageDetailData>>({})
+const messageList = ref<StudentMessageItem[]>([])
+const detailMap = reactive<Record<number, StudentMessageDetailData>>({})
 const replyDrafts = reactive<Record<number, string>>({})
 const replyTargets = reactive<Record<number, { replyId: number | null; authorName: string }>>({})
 const expandedReplyChildren = reactive<Record<number, boolean>>({})
@@ -387,16 +438,15 @@ const pagination = reactive({
   totalPages: 0,
 })
 
-const teacherName = computed(() => authStore.profile?.name || authStore.profile?.username || '教师用户')
-
-const headerText = computed(() => `${teacherName.value}，这里用于浏览交流话题、发布评论，并持续跟进教学讨论。`)
+const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '同学')
+const headerText = computed(() => `${studentName.value}，这里可以查看教师发布的教学讨论，也可以补充自己的学习问题和课程反馈。`)
 
 const pageSummary = computed(() => {
   if (form.keyword) {
     return `当前正在筛选与“${form.keyword}”相关的话题内容。`
   }
 
-  return '围绕课程资源、课堂问题与教学经验进行有组织的交流，让后续协作更容易追踪与沉淀。'
+  return '把零散的问题、资源体验和课堂疑问整理成可追踪的交流线索，让学习反馈更容易被看到和回应。'
 })
 
 const currentDetail = computed(() => {
@@ -405,6 +455,41 @@ const currentDetail = computed(() => {
   }
 
   return detailMap[expandedMessageId.value] || null
+})
+
+const activeReplyDetail = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return detailMap[activeReplyMessageId.value] || null
+})
+
+const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true)
+
+const activeReplyTarget = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return replyTargets[activeReplyMessageId.value] || { replyId: null, authorName: '' }
+})
+
+const activeReplyDraft = computed({
+  get() {
+    if (activeReplyMessageId.value === null) {
+      return ''
+    }
+
+    return replyDrafts[activeReplyMessageId.value] || ''
+  },
+  set(value: string) {
+    if (activeReplyMessageId.value === null) {
+      return
+    }
+
+    replyDrafts[activeReplyMessageId.value] = value
+  },
 })
 
 const rootReplies = computed(() => {
@@ -418,27 +503,25 @@ const rootReplies = computed(() => {
 })
 
 const totalReplyCount = computed(() => messageList.value.reduce((sum, item) => sum + item.replyCount, 0))
+const studentTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'student').length)
 const teacherTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'teacher').length)
-const adminTopicCount = computed(() => messageList.value.filter((item) => item.authorRole === 'admin').length)
 
 const heroMetrics = computed(() => [
-  { label: '全部主题', value: String(pagination.total).padStart(2, '0'), note: '系统内当前可浏览的讨论主题数' },
-  { label: '本页回复', value: String(totalReplyCount.value).padStart(2, '0'), note: '当前页主题累计产生的回复数' },
-  { label: '教师发起', value: String(teacherTopicCount.value).padStart(2, '0'), note: '本页由教师发布的主题数量' },
-  { label: '管理员发起', value: String(adminTopicCount.value).padStart(2, '0'), note: '本页由管理员发起的协同话题' },
+  { label: '全部主题', value: String(pagination.total).padStart(2, '0'), note: '当前可浏览的交流主题数量' },
+  { label: '本页回复', value: String(totalReplyCount.value).padStart(2, '0'), note: '本页主题累计产生的回复数' },
+  { label: '学生发起', value: String(studentTopicCount.value).padStart(2, '0'), note: '本页由学生发起的交流主题数' },
+  { label: '教师发起', value: String(teacherTopicCount.value).padStart(2, '0'), note: '本页由教师发起的教学讨论数' },
 ])
 
 const boardSummary = computed(() => {
   if (expandedMessageId.value) {
-    return '已展开当前主题详情，你可以继续查看楼中回复，或在底部直接补充反馈。'
+    return '当前主题已展开，你可以继续浏览回复，或通过弹窗补充自己的问题和反馈。'
   }
 
-  return '点击任意主题卡片即可展开完整讨论内容，查看主贴、回复与楼中交流。'
+  return '点击任意主题卡片即可展开完整讨论内容，查看主帖、评论和楼中回复。'
 })
 
-
-
-function getRoleLabel(role: 'teacher' | 'admin' | 'student') {
+function getRoleLabel(role: StudentMessageAuthorRole) {
   if (role === 'admin') {
     return '管理员'
   }
@@ -478,13 +561,35 @@ function closeTopicEditor() {
   showTopicEditor.value = false
 }
 
+function openReplyEditor(messageId: number, reply?: StudentMessageReplyItem) {
+  clearMessages()
+  activeReplyMessageId.value = messageId
+
+  if (reply) {
+    setReplyTarget(messageId, reply)
+  } else {
+    clearReplyTarget(messageId)
+  }
+
+  if (replyDrafts[messageId] === undefined) {
+    replyDrafts[messageId] = ''
+  }
+
+  showReplyEditor.value = true
+}
+
+function closeReplyEditor() {
+  showReplyEditor.value = false
+  activeReplyMessageId.value = null
+}
+
 function syncFormWithRoute() {
   form.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
 }
 
 function updateRoute(page = 1) {
   router.push({
-    path: '/teacher/messages',
+    path: '/student/messages',
     query: {
       page: String(page),
       ...(form.keyword ? { keyword: form.keyword } : {}),
@@ -521,7 +626,7 @@ function toggleReplyChildren(replyId: number) {
   expandedReplyChildren[replyId] = !isReplyChildrenExpanded(replyId)
 }
 
-function setReplyTarget(messageId: number, reply: TeacherMessageReplyItem) {
+function setReplyTarget(messageId: number, reply: StudentMessageReplyItem) {
   replyTargets[messageId] = {
     replyId: reply.id,
     authorName: reply.authorName,
@@ -544,7 +649,7 @@ async function loadMessageDetail(messageId: number) {
   loadingDetailId.value = messageId
 
   try {
-    detailMap[messageId] = await getTeacherMessageDetail(messageId)
+    detailMap[messageId] = await getStudentMessageDetail(messageId)
   } finally {
     loadingDetailId.value = null
   }
@@ -574,7 +679,7 @@ async function loadMessages() {
   syncFormWithRoute()
 
   try {
-    const data = await getTeacherMessageList({
+    const data = await getStudentMessageList({
       page: normalizePage(route.query.page),
       pageSize: 4,
       keyword: form.keyword,
@@ -607,7 +712,7 @@ async function submitTopic() {
   clearMessages()
 
   try {
-    await createTeacherMessage({
+    await createStudentMessage({
       title: topicForm.title,
       content: topicForm.content,
     })
@@ -635,11 +740,12 @@ async function submitReply(messageId: number) {
   clearMessages()
 
   try {
-    await createTeacherMessageReply(messageId, {
+    await createStudentMessageReply(messageId, {
       content,
       parentReplyId: replyTargets[messageId]?.replyId || null,
     })
     clearReplyDraft(messageId)
+    closeReplyEditor()
     successMessage.value = '回复已发布。'
     await Promise.all([loadMessageDetail(messageId), loadMessages()])
     expandedMessageId.value = messageId
@@ -650,7 +756,7 @@ async function submitReply(messageId: number) {
   }
 }
 
-async function removeTopic(item: TeacherMessageItem) {
+async function removeTopic(item: StudentMessageItem) {
   clearMessages()
 
   if (!window.confirm(`确认删除交流主题《${item.title}》吗？`)) {
@@ -660,7 +766,7 @@ async function removeTopic(item: TeacherMessageItem) {
   deletingTopicId.value = item.id
 
   try {
-    await deleteTeacherMessage(item.id)
+    await deleteStudentMessage(item.id)
     successMessage.value = `交流主题《${item.title}》已删除。`
     if (expandedMessageId.value === item.id) {
       expandedMessageId.value = null
@@ -674,7 +780,7 @@ async function removeTopic(item: TeacherMessageItem) {
   }
 }
 
-async function removeReply(messageId: number, reply: TeacherMessageReplyItem) {
+async function removeReply(messageId: number, reply: StudentMessageReplyItem) {
   clearMessages()
 
   if (!window.confirm('确认删除这条回复吗？')) {
@@ -684,7 +790,7 @@ async function removeReply(messageId: number, reply: TeacherMessageReplyItem) {
   deletingReplyId.value = reply.id
 
   try {
-    await deleteTeacherMessageReply(messageId, reply.id)
+    await deleteStudentMessageReply(messageId, reply.id)
     successMessage.value = '回复已删除。'
     await Promise.all([loadMessageDetail(messageId), loadMessages()])
   } catch (error: any) {

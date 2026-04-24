@@ -98,7 +98,7 @@
                 <p>{{ item.summary }}</p>
               </div>
               <span :class="['online-message-role-badge', `is-${item.authorRole}`]">
-                {{ item.authorRole === 'admin' ? '管理员' : '教师' }}
+                {{ getRoleLabel(item.authorRole) }}
               </span>
             </div>
 
@@ -123,7 +123,7 @@
                 <div class="admin-message-thread__topic-head">
                   <strong>{{ currentDetail?.topic.title || item.title }}</strong>
                   <span :class="['online-message-role-badge', `is-${currentDetail?.topic.authorRole || item.authorRole}`]">
-                    {{ (currentDetail?.topic.authorRole || item.authorRole) === 'admin' ? '管理员' : '教师' }}
+                    {{ getRoleLabel(currentDetail?.topic.authorRole || item.authorRole) }}
                   </span>
                 </div>
                 <p>{{ currentDetail?.topic.content || '正在加载主题内容...' }}</p>
@@ -136,7 +136,7 @@
                   <div class="admin-message-reply-item__head">
                     <strong>{{ reply.authorName }}</strong>
                     <span :class="['online-message-role-badge', `is-${reply.authorRole}`]">
-                      {{ reply.authorRole === 'admin' ? '管理员' : '教师' }}
+                      {{ getRoleLabel(reply.authorRole) }}
                     </span>
                   </div>
                   <p>{{ reply.content }}</p>
@@ -175,7 +175,7 @@
                       <div class="admin-message-reply-item__head">
                         <strong>{{ childReply.authorName }}</strong>
                         <span :class="['online-message-role-badge', `is-${childReply.authorRole}`]">
-                          {{ childReply.authorRole === 'admin' ? '管理员' : '教师' }}
+                          {{ getRoleLabel(childReply.authorRole) }}
                         </span>
                       </div>
                       <p><span class="admin-message-reply-item__mention">@{{ childReply.parentAuthorName }}</span>{{ childReply.content }}</p>
@@ -387,6 +387,18 @@ const rootReplies = computed(() => {
 })
 
 const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true)
+
+function getRoleLabel(role: 'teacher' | 'admin' | 'student') {
+  if (role === 'admin') {
+    return '管理员'
+  }
+
+  if (role === 'student') {
+    return '学生'
+  }
+
+  return '教师'
+}
 
 
 

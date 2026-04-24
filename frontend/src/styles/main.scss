@@ -3076,6 +3076,11 @@ body.body-teacher-locked #app {
   background: rgba(13, 123, 104, 0.12);
 }
 
+.online-message-role-badge.is-student {
+  color: #9a4d12;
+  background: rgba(198, 121, 35, 0.14);
+}
+
 .online-message-reply-card__mention {
   margin-right: 6px;
   color: #2464c7;
@@ -3717,6 +3722,11 @@ body.body-teacher-locked #app {
   background: rgba(13, 123, 104, 0.12);
 }
 
+.teacher-message-role-badge.is-student {
+  color: #9a4d12;
+  background: rgba(198, 121, 35, 0.14);
+}
+
 .teacher-message-delete-btn {
   color: #b3433b;
 }
@@ -4163,6 +4173,23 @@ body.body-teacher-locked #app {
   padding: 18px 20px;
   border-radius: 22px;
   background: #f5f8fc;
+}
+
+.student-dashboard-note--action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.student-dashboard-note__actions {
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: auto;
+}
+
+.student-dashboard-note__actions .auth-btn {
+  white-space: nowrap;
 }
 
 .teacher-dashboard-status {
@@ -6252,6 +6279,16 @@ body.body-teacher-locked #app {
   .teacher-dashboard-grid--middle,
   .teacher-dashboard-grid--bottom {
     grid-template-columns: 1fr;
+  }
+
+  .student-dashboard-note--action {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .student-dashboard-note__actions {
+    justify-content: start;
+    margin-left: 0;
   }
 
   .teacher-dashboard-head,

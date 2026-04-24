@@ -21,7 +21,7 @@ const activeItem = computed(() => {
     if (route.name === 'portal-assets') {
         return 'assets';
     }
-    if (route.name === 'teacher-messages' || route.name === 'admin-messages') {
+    if (route.name === 'teacher-messages' || route.name === 'admin-messages' || route.name === 'student-messages') {
         return 'messages';
     }
     return '';
@@ -86,6 +86,10 @@ function goTeachingMessages() {
     }
     if (authStore.role === 'admin') {
         void router.push('/admin/messages');
+        return;
+    }
+    if (authStore.role === 'student') {
+        void router.push('/student/messages');
         return;
     }
     void router.push('/student');
