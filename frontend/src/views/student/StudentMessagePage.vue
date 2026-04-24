@@ -305,8 +305,7 @@
 
           <div class="teacher-message-dialog__footer">
             <p>建议标题直接点出问题场景，正文补充课程、资源和遇到的具体困难，方便他人更快参与。</p>
-            <div class="teacher-message-actions">
-              <button type="button" class="auth-btn auth-btn--secondary" :disabled="submittingTopic" @click="resetTopicForm">清空内容</button>
+            <div class="teacher-message-actions teacher-message-actions--end">
               <button type="submit" class="auth-btn" :disabled="submittingTopic">{{ submittingTopic ? '发布中...' : '发布主题' }}</button>
             </div>
           </div>
@@ -334,7 +333,6 @@
         <form class="teacher-message-dialog__form" @submit.prevent="submitReply(activeReplyMessageId)">
           <div v-if="activeReplyTarget?.replyId" class="teacher-message-reply-target">
             <span>正在回复 <strong>{{ activeReplyTarget.authorName }}</strong></span>
-            <button type="button" class="course-chip course-chip--soft" @click="clearReplyTarget(activeReplyMessageId)">取消</button>
           </div>
 
           <label class="teacher-message-field">
@@ -358,15 +356,7 @@
 
           <div class="teacher-message-dialog__footer">
             <p>建议把问题背景、自己已经尝试的方法和希望得到的帮助写清楚，方便老师或其他同学快速回应。</p>
-            <div class="teacher-message-actions">
-              <button
-                type="button"
-                class="auth-btn auth-btn--secondary"
-                :disabled="replyingId === activeReplyMessageId"
-                @click="clearReplyDraft(activeReplyMessageId)"
-              >
-                清空内容
-              </button>
+            <div class="teacher-message-actions teacher-message-actions--end">
               <button
                 type="submit"
                 class="auth-btn"

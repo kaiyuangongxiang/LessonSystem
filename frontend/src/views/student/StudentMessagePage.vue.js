@@ -922,13 +922,7 @@ if (__VLS_ctx.showTopicEditor) {
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-message-actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.resetTopicForm) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.submittingTopic),
+        ...{ class: "teacher-message-actions teacher-message-actions--end" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
@@ -975,17 +969,6 @@ if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
         (__VLS_ctx.activeReplyTarget.authorName);
-        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
-                        return;
-                    if (!(__VLS_ctx.activeReplyTarget?.replyId))
-                        return;
-                    __VLS_ctx.clearReplyTarget(__VLS_ctx.activeReplyMessageId);
-                } },
-            type: "button",
-            ...{ class: "course-chip course-chip--soft" },
-        });
     }
     __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
         ...{ class: "teacher-message-field" },
@@ -1009,17 +992,7 @@ if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-message-actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
-                    return;
-                __VLS_ctx.clearReplyDraft(__VLS_ctx.activeReplyMessageId);
-            } },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+        ...{ class: "teacher-message-actions teacher-message-actions--end" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
@@ -1139,8 +1112,7 @@ if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions--end']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__panel']} */ ;
@@ -1150,14 +1122,11 @@ if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
 /** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__form']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-reply-target']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
-/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-field']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions--end']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -1192,7 +1161,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             boardSummary: boardSummary,
             getRoleLabel: getRoleLabel,
             formatTopicNumber: formatTopicNumber,
-            resetTopicForm: resetTopicForm,
             openTopicEditor: openTopicEditor,
             closeTopicEditor: closeTopicEditor,
             openReplyEditor: openReplyEditor,
@@ -1203,8 +1171,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             getChildReplies: getChildReplies,
             isReplyChildrenExpanded: isReplyChildrenExpanded,
             toggleReplyChildren: toggleReplyChildren,
-            clearReplyTarget: clearReplyTarget,
-            clearReplyDraft: clearReplyDraft,
             toggleDiscussion: toggleDiscussion,
             submitTopic: submitTopic,
             submitReply: submitReply,

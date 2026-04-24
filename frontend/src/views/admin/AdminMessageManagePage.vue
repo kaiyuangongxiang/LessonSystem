@@ -292,8 +292,7 @@
 
           <div class="admin-course-editor__footer">
             <p>主题发布后将立即出现在列表中，支持继续评论、楼中回复与删除。</p>
-            <div class="admin-course-editor__actions">
-              <button type="button" class="auth-btn auth-btn--secondary" :disabled="submittingTopic" @click="resetTopicForm">清空内容</button>
+            <div class="admin-course-editor__actions admin-course-editor__actions--end">
               <button type="submit" class="auth-btn" :disabled="!canCreateTopic || submittingTopic">
                 {{ submittingTopic ? '发布中...' : '发布主题' }}
               </button>

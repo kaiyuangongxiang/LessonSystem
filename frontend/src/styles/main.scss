@@ -3298,6 +3298,10 @@ body.body-teacher-locked #app {
   gap: 12px;
 }
 
+.teacher-message-actions--end {
+  justify-content: flex-end;
+}
+
 .teacher-message-hero__spotlight strong {
   font-size: 28px;
   color: $text-main;
@@ -3888,6 +3892,10 @@ body.body-teacher-locked #app {
   .teacher-message-reply-card__actions,
   .teacher-message-actions {
     display: grid;
+  }
+
+  .teacher-message-actions--end {
+    justify-items: end;
   }
 
   .teacher-workspace-dialog {
@@ -5743,6 +5751,10 @@ body.body-teacher-locked #app {
   gap: 14px;
 }
 
+.admin-course-editor__actions--end {
+  justify-content: flex-end;
+}
+
 .admin-course-editor__head h3 {
   margin: 8px 0 0;
 }
@@ -6075,6 +6087,10 @@ body.body-teacher-locked #app {
   .admin-course-editor__actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .admin-course-editor__actions--end {
+    justify-items: end;
   }
 
   .admin-manage-stats {

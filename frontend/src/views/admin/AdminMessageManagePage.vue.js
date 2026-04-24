@@ -934,13 +934,7 @@ if (__VLS_ctx.showTopicEditor) {
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "admin-course-editor__actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.resetTopicForm) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.submittingTopic),
+        ...{ class: "admin-course-editor__actions admin-course-editor__actions--end" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
@@ -1076,8 +1070,7 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['online-message-topic-editor__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['admin-course-editor__actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['admin-course-editor__actions--end']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -1107,7 +1100,6 @@ const __VLS_self = (await import('vue')).defineComponent({
             rootReplies: rootReplies,
             canCreateTopic: canCreateTopic,
             getRoleLabel: getRoleLabel,
-            resetTopicForm: resetTopicForm,
             openTopicEditor: openTopicEditor,
             closeTopicEditor: closeTopicEditor,
             applySearch: applySearch,

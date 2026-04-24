@@ -171,7 +171,7 @@
                       v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                       type="button"
                       class="course-chip course-chip--soft"
-                      @click="setReplyTarget(item.id, reply)"
+                      @click="openReplyEditor(item.id, reply)"
                     >
                       回复
                     </button>
@@ -220,7 +220,7 @@
                           v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                           type="button"
                           class="course-chip course-chip--soft"
-                          @click="setReplyTarget(item.id, childReply)"
+                          @click="openReplyEditor(item.id, childReply)"
                         >
                           回复
                         </button>
@@ -242,16 +242,16 @@
               <div v-else class="teacher-message-empty">当前还没有回复，欢迎在下方留下第一条反馈。</div>
             </div>
 
-            <form class="teacher-message-reply-form" @submit.prevent="submitReply(item.id)">
-              <div v-if="replyTargets[item.id]?.replyId" class="teacher-message-reply-target">
+            <div class="teacher-message-reply-form">
+              <div v-if="false && replyTargets[item.id]?.replyId" class="teacher-message-reply-target">
                 <span>正在回复 <strong>{{ replyTargets[item.id]?.authorName }}</strong></span>
                 <button type="button" class="course-chip course-chip--soft" @click="clearReplyTarget(item.id)">取消</button>
               </div>
 
-              <label class="teacher-message-field">
+              <label v-if="false" class="teacher-message-field">
                 <span>{{ replyTargets[item.id]?.replyId ? '楼中回复' : '发表评论' }}</span>
                 <textarea
-                  v-model.trim="replyDrafts[item.id]"
+                  v-model.trim="activeReplyDraft"
                   maxlength="5000"
                   rows="5"
                   :placeholder="
@@ -264,14 +264,19 @@
               </label>
 
               <div class="teacher-message-actions">
-                <button type="submit" class="auth-btn" :disabled="currentDetail?.capabilities.canReply === false || replyingId === item.id">
+                <button
+                  type="button"
+                  class="auth-btn"
+                  :disabled="currentDetail?.capabilities.canReply === false"
+                  @click="openReplyEditor(item.id)"
+                >
                   {{ replyingId === item.id ? '发布中...' : replyTargets[item.id]?.replyId ? '发布回复' : '发布评论' }}
                 </button>
-                <button type="button" class="auth-btn auth-btn--secondary" :disabled="replyingId === item.id" @click="clearReplyDraft(item.id)">
+                <button v-if="false" type="button" class="auth-btn auth-btn--secondary" :disabled="replyingId === item.id" @click="clearReplyDraft(item.id)">
                   清空内容
                 </button>
               </div>
-            </form>
+            </div>
           </section>
         </article>
       </div>
@@ -323,9 +328,65 @@
 
           <div class="teacher-message-dialog__footer">
             <p>建议标题直接点出问题，正文写清资源场景、当前困惑和期望反馈，方便其他老师更快参与讨论。</p>
-            <div class="teacher-message-actions">
-              <button type="button" class="auth-btn auth-btn--secondary" :disabled="submittingTopic" @click="resetTopicForm">清空内容</button>
+            <div class="teacher-message-actions teacher-message-actions--end">
               <button type="submit" class="auth-btn" :disabled="submittingTopic">{{ submittingTopic ? '发布中...' : '发布主题' }}</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div v-if="showReplyEditor && activeReplyMessageId !== null" class="teacher-message-dialog" @click.self="closeReplyEditor">
+      <section class="teacher-message-dialog__panel">
+        <div class="teacher-message-dialog__head">
+          <div>
+            <div class="teacher-message-kicker">Reply Editor</div>
+            <h3>{{ activeReplyTarget?.replyId ? '发布回复' : '发表评论' }}</h3>
+          </div>
+          <button
+            type="button"
+            class="course-chip course-chip--soft"
+            :disabled="replyingId === activeReplyMessageId"
+            @click="closeReplyEditor"
+          >
+            关闭
+          </button>
+        </div>
+
+        <form class="teacher-message-dialog__form" @submit.prevent="submitReply(activeReplyMessageId)">
+          <div v-if="activeReplyTarget?.replyId" class="teacher-message-reply-target">
+            <span>正在回复 <strong>{{ activeReplyTarget.authorName }}</strong></span>
+          </div>
+
+          <label class="teacher-message-field">
+            <span>{{ activeReplyTarget?.replyId ? '楼中回复' : '发表评论' }}</span>
+            <textarea
+              v-model.trim="activeReplyDraft"
+              maxlength="5000"
+              rows="6"
+              :placeholder="
+                activeReplyDetail?.capabilities.canReply === false
+                  ? '当前数据库结构尚未升级，暂不支持当前角色回复'
+                  : '请输入你的补充说明、教学建议或资源经验'
+              "
+              :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+            ></textarea>
+          </label>
+
+          <p class="teacher-message-dialog__hint">
+            可以在这里统一编辑对主帖的评论，也可以对某条回复继续发起楼中回复。
+          </p>
+
+          <div class="teacher-message-dialog__footer">
+            <p>建议写清问题背景、补充信息和可执行建议，方便后续教师、管理员或学生继续跟进。</p>
+            <div class="teacher-message-actions teacher-message-actions--end">
+              <button
+                type="submit"
+                class="auth-btn"
+                :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+              >
+                {{ replyingId === activeReplyMessageId ? '发布中...' : activeReplyTarget?.replyId ? '发布回复' : '发布评论' }}
+              </button>
             </div>
           </div>
         </form>
@@ -358,11 +419,13 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const submittingTopic = ref(false)
 const showTopicEditor = ref(false)
+const showReplyEditor = ref(false)
 const replyingId = ref<number | null>(null)
 const deletingTopicId = ref<number | null>(null)
 const deletingReplyId = ref<number | null>(null)
 const loadingDetailId = ref<number | null>(null)
 const expandedMessageId = ref<number | null>(null)
+const activeReplyMessageId = ref<number | null>(null)
 const errorMessage = ref('')
 const successMessage = ref('')
 const messageList = ref<TeacherMessageItem[]>([])
@@ -405,6 +468,39 @@ const currentDetail = computed(() => {
   }
 
   return detailMap[expandedMessageId.value] || null
+})
+
+const activeReplyDetail = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return detailMap[activeReplyMessageId.value] || null
+})
+
+const activeReplyTarget = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return replyTargets[activeReplyMessageId.value] || { replyId: null, authorName: '' }
+})
+
+const activeReplyDraft = computed({
+  get() {
+    if (activeReplyMessageId.value === null) {
+      return ''
+    }
+
+    return replyDrafts[activeReplyMessageId.value] || ''
+  },
+  set(value: string) {
+    if (activeReplyMessageId.value === null) {
+      return
+    }
+
+    replyDrafts[activeReplyMessageId.value] = value
+  },
 })
 
 const rootReplies = computed(() => {
@@ -476,6 +572,28 @@ function openTopicEditor() {
 
 function closeTopicEditor() {
   showTopicEditor.value = false
+}
+
+function openReplyEditor(messageId: number, reply?: TeacherMessageReplyItem) {
+  clearMessages()
+  activeReplyMessageId.value = messageId
+
+  if (reply) {
+    setReplyTarget(messageId, reply)
+  } else {
+    clearReplyTarget(messageId)
+  }
+
+  if (replyDrafts[messageId] === undefined) {
+    replyDrafts[messageId] = ''
+  }
+
+  showReplyEditor.value = true
+}
+
+function closeReplyEditor() {
+  showReplyEditor.value = false
+  activeReplyMessageId.value = null
 }
 
 function syncFormWithRoute() {
@@ -640,6 +758,7 @@ async function submitReply(messageId: number) {
       parentReplyId: replyTargets[messageId]?.replyId || null,
     })
     clearReplyDraft(messageId)
+    closeReplyEditor()
     successMessage.value = '回复已发布。'
     await Promise.all([loadMessageDetail(messageId), loadMessages()])
     expandedMessageId.value = messageId

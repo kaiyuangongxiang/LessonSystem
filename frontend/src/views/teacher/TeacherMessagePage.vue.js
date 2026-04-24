@@ -9,11 +9,13 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const submittingTopic = ref(false);
 const showTopicEditor = ref(false);
+const showReplyEditor = ref(false);
 const replyingId = ref(null);
 const deletingTopicId = ref(null);
 const deletingReplyId = ref(null);
 const loadingDetailId = ref(null);
 const expandedMessageId = ref(null);
+const activeReplyMessageId = ref(null);
 const errorMessage = ref('');
 const successMessage = ref('');
 const messageList = ref([]);
@@ -47,6 +49,32 @@ const currentDetail = computed(() => {
         return null;
     }
     return detailMap[expandedMessageId.value] || null;
+});
+const activeReplyDetail = computed(() => {
+    if (activeReplyMessageId.value === null) {
+        return null;
+    }
+    return detailMap[activeReplyMessageId.value] || null;
+});
+const activeReplyTarget = computed(() => {
+    if (activeReplyMessageId.value === null) {
+        return null;
+    }
+    return replyTargets[activeReplyMessageId.value] || { replyId: null, authorName: '' };
+});
+const activeReplyDraft = computed({
+    get() {
+        if (activeReplyMessageId.value === null) {
+            return '';
+        }
+        return replyDrafts[activeReplyMessageId.value] || '';
+    },
+    set(value) {
+        if (activeReplyMessageId.value === null) {
+            return;
+        }
+        replyDrafts[activeReplyMessageId.value] = value;
+    },
 });
 const rootReplies = computed(() => {
     const detail = currentDetail.value;
@@ -101,6 +129,24 @@ function openTopicEditor() {
 }
 function closeTopicEditor() {
     showTopicEditor.value = false;
+}
+function openReplyEditor(messageId, reply) {
+    clearMessages();
+    activeReplyMessageId.value = messageId;
+    if (reply) {
+        setReplyTarget(messageId, reply);
+    }
+    else {
+        clearReplyTarget(messageId);
+    }
+    if (replyDrafts[messageId] === undefined) {
+        replyDrafts[messageId] = '';
+    }
+    showReplyEditor.value = true;
+}
+function closeReplyEditor() {
+    showReplyEditor.value = false;
+    activeReplyMessageId.value = null;
 }
 function syncFormWithRoute() {
     form.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : '';
@@ -246,6 +292,7 @@ async function submitReply(messageId) {
             parentReplyId: replyTargets[messageId]?.replyId || null,
         });
         clearReplyDraft(messageId);
+        closeReplyEditor();
         successMessage.value = '回复已发布。';
         await Promise.all([loadMessageDetail(messageId), loadMessages()]);
         expandedMessageId.value = messageId;
@@ -614,7 +661,7 @@ if (__VLS_ctx.messageList.length) {
                                             return;
                                         if (!(__VLS_ctx.currentDetail.capabilities.canReply && __VLS_ctx.currentDetail.capabilities.canReplyToReply))
                                             return;
-                                        __VLS_ctx.setReplyTarget(item.id, reply);
+                                        __VLS_ctx.openReplyEditor(item.id, reply);
                                     } },
                                 type: "button",
                                 ...{ class: "course-chip course-chip--soft" },
@@ -714,7 +761,7 @@ if (__VLS_ctx.messageList.length) {
                                                     return;
                                                 if (!(__VLS_ctx.currentDetail.capabilities.canReply && __VLS_ctx.currentDetail.capabilities.canReplyToReply))
                                                     return;
-                                                __VLS_ctx.setReplyTarget(item.id, childReply);
+                                                __VLS_ctx.openReplyEditor(item.id, childReply);
                                             } },
                                         type: "button",
                                         ...{ class: "course-chip course-chip--soft" },
@@ -755,17 +802,10 @@ if (__VLS_ctx.messageList.length) {
                     });
                 }
             }
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
-                ...{ onSubmit: (...[$event]) => {
-                        if (!(__VLS_ctx.messageList.length))
-                            return;
-                        if (!(__VLS_ctx.expandedMessageId === item.id))
-                            return;
-                        __VLS_ctx.submitReply(item.id);
-                    } },
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "teacher-message-reply-form" },
             });
-            if (__VLS_ctx.replyTargets[item.id]?.replyId) {
+            if (false && __VLS_ctx.replyTargets[item.id]?.replyId) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                     ...{ class: "teacher-message-reply-target" },
                 });
@@ -778,7 +818,7 @@ if (__VLS_ctx.messageList.length) {
                                 return;
                             if (!(__VLS_ctx.expandedMessageId === item.id))
                                 return;
-                            if (!(__VLS_ctx.replyTargets[item.id]?.replyId))
+                            if (!(false && __VLS_ctx.replyTargets[item.id]?.replyId))
                                 return;
                             __VLS_ctx.clearReplyTarget(item.id);
                         } },
@@ -786,41 +826,54 @@ if (__VLS_ctx.messageList.length) {
                     ...{ class: "course-chip course-chip--soft" },
                 });
             }
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
-                ...{ class: "teacher-message-field" },
-            });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-            (__VLS_ctx.replyTargets[item.id]?.replyId ? '楼中回复' : '发表评论');
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
-                value: (__VLS_ctx.replyDrafts[item.id]),
-                maxlength: "5000",
-                rows: "5",
-                placeholder: (__VLS_ctx.currentDetail?.capabilities.canReply === false
-                    ? '当前数据库结构尚未升级，暂不支持当前角色回复'
-                    : '请输入你的补充说明、教学建议或资源经验'),
-                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === item.id),
-            });
+            if (false) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+                    ...{ class: "teacher-message-field" },
+                });
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+                (__VLS_ctx.replyTargets[item.id]?.replyId ? '楼中回复' : '发表评论');
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
+                    value: (__VLS_ctx.activeReplyDraft),
+                    maxlength: "5000",
+                    rows: "5",
+                    placeholder: (__VLS_ctx.currentDetail?.capabilities.canReply === false
+                        ? '当前数据库结构尚未升级，暂不支持当前角色回复'
+                        : '请输入你的补充说明、教学建议或资源经验'),
+                    disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === item.id),
+                });
+            }
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "teacher-message-actions" },
             });
-            __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-                type: "submit",
-                ...{ class: "auth-btn" },
-                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === item.id),
-            });
-            (__VLS_ctx.replyingId === item.id ? '发布中...' : __VLS_ctx.replyTargets[item.id]?.replyId ? '发布回复' : '发布评论');
             __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
                 ...{ onClick: (...[$event]) => {
                         if (!(__VLS_ctx.messageList.length))
                             return;
                         if (!(__VLS_ctx.expandedMessageId === item.id))
                             return;
-                        __VLS_ctx.clearReplyDraft(item.id);
+                        __VLS_ctx.openReplyEditor(item.id);
                     } },
                 type: "button",
-                ...{ class: "auth-btn auth-btn--secondary" },
-                disabled: (__VLS_ctx.replyingId === item.id),
+                ...{ class: "auth-btn" },
+                disabled: (__VLS_ctx.currentDetail?.capabilities.canReply === false),
             });
+            (__VLS_ctx.replyingId === item.id ? '发布中...' : __VLS_ctx.replyTargets[item.id]?.replyId ? '发布回复' : '发布评论');
+            if (false) {
+                __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+                    ...{ onClick: (...[$event]) => {
+                            if (!(__VLS_ctx.messageList.length))
+                                return;
+                            if (!(__VLS_ctx.expandedMessageId === item.id))
+                                return;
+                            if (!(false))
+                                return;
+                            __VLS_ctx.clearReplyDraft(item.id);
+                        } },
+                    type: "button",
+                    ...{ class: "auth-btn auth-btn--secondary" },
+                    disabled: (__VLS_ctx.replyingId === item.id),
+                });
+            }
         }
     }
 }
@@ -920,13 +973,7 @@ if (__VLS_ctx.showTopicEditor) {
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "teacher-message-actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.resetTopicForm) },
-        type: "button",
-        ...{ class: "auth-btn auth-btn--secondary" },
-        disabled: (__VLS_ctx.submittingTopic),
+        ...{ class: "teacher-message-actions teacher-message-actions--end" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
         type: "submit",
@@ -934,6 +981,76 @@ if (__VLS_ctx.showTopicEditor) {
         disabled: (__VLS_ctx.submittingTopic),
     });
     (__VLS_ctx.submittingTopic ? '发布中...' : '发布主题');
+}
+if (__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ onClick: (__VLS_ctx.closeReplyEditor) },
+        ...{ class: "teacher-message-dialog" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
+        ...{ class: "teacher-message-dialog__panel" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-dialog__head" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-kicker" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
+    (__VLS_ctx.activeReplyTarget?.replyId ? '发布回复' : '发表评论');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (__VLS_ctx.closeReplyEditor) },
+        type: "button",
+        ...{ class: "course-chip course-chip--soft" },
+        disabled: (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.form, __VLS_intrinsicElements.form)({
+        ...{ onSubmit: (...[$event]) => {
+                if (!(__VLS_ctx.showReplyEditor && __VLS_ctx.activeReplyMessageId !== null))
+                    return;
+                __VLS_ctx.submitReply(__VLS_ctx.activeReplyMessageId);
+            } },
+        ...{ class: "teacher-message-dialog__form" },
+    });
+    if (__VLS_ctx.activeReplyTarget?.replyId) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "teacher-message-reply-target" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
+        (__VLS_ctx.activeReplyTarget.authorName);
+    }
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.label, __VLS_intrinsicElements.label)({
+        ...{ class: "teacher-message-field" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.activeReplyTarget?.replyId ? '楼中回复' : '发表评论');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.textarea, __VLS_intrinsicElements.textarea)({
+        value: (__VLS_ctx.activeReplyDraft),
+        maxlength: "5000",
+        rows: "6",
+        placeholder: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false
+            ? '当前数据库结构尚未升级，暂不支持当前角色回复'
+            : '请输入你的补充说明、教学建议或资源经验'),
+        disabled: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+        ...{ class: "teacher-message-dialog__hint" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-dialog__footer" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "teacher-message-actions teacher-message-actions--end" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        type: "submit",
+        ...{ class: "auth-btn" },
+        disabled: (__VLS_ctx.activeReplyDetail?.capabilities.canReply === false || __VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId),
+    });
+    (__VLS_ctx.replyingId === __VLS_ctx.activeReplyMessageId ? '发布中...' : __VLS_ctx.activeReplyTarget?.replyId ? '发布回复' : '发布评论');
 }
 /** @type {__VLS_StyleScopedClasses['portal-home']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-page']} */ ;
@@ -1052,8 +1169,21 @@ if (__VLS_ctx.showTopicEditor) {
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__hint']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-dialog__footer']} */ ;
 /** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions--end']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['auth-btn--secondary']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__panel']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-kicker']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip']} */ ;
+/** @type {__VLS_StyleScopedClasses['course-chip--soft']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__form']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-reply-target']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-field']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__hint']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-dialog__footer']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['teacher-message-actions--end']} */ ;
 /** @type {__VLS_StyleScopedClasses['auth-btn']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
@@ -1063,15 +1193,16 @@ const __VLS_self = (await import('vue')).defineComponent({
             loading: loading,
             submittingTopic: submittingTopic,
             showTopicEditor: showTopicEditor,
+            showReplyEditor: showReplyEditor,
             replyingId: replyingId,
             deletingTopicId: deletingTopicId,
             deletingReplyId: deletingReplyId,
             loadingDetailId: loadingDetailId,
             expandedMessageId: expandedMessageId,
+            activeReplyMessageId: activeReplyMessageId,
             errorMessage: errorMessage,
             successMessage: successMessage,
             messageList: messageList,
-            replyDrafts: replyDrafts,
             replyTargets: replyTargets,
             form: form,
             topicForm: topicForm,
@@ -1079,21 +1210,24 @@ const __VLS_self = (await import('vue')).defineComponent({
             headerText: headerText,
             pageSummary: pageSummary,
             currentDetail: currentDetail,
+            activeReplyDetail: activeReplyDetail,
+            activeReplyTarget: activeReplyTarget,
+            activeReplyDraft: activeReplyDraft,
             rootReplies: rootReplies,
             heroMetrics: heroMetrics,
             boardSummary: boardSummary,
             getRoleLabel: getRoleLabel,
             formatTopicNumber: formatTopicNumber,
-            resetTopicForm: resetTopicForm,
             openTopicEditor: openTopicEditor,
             closeTopicEditor: closeTopicEditor,
+            openReplyEditor: openReplyEditor,
+            closeReplyEditor: closeReplyEditor,
             applySearch: applySearch,
             resetFilters: resetFilters,
             changePage: changePage,
             getChildReplies: getChildReplies,
             isReplyChildrenExpanded: isReplyChildrenExpanded,
             toggleReplyChildren: toggleReplyChildren,
-            setReplyTarget: setReplyTarget,
             clearReplyTarget: clearReplyTarget,
             clearReplyDraft: clearReplyDraft,
             toggleDiscussion: toggleDiscussion,
