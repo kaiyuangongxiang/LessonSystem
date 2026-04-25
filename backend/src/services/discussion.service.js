@@ -466,6 +466,20 @@ function mapReplyItem(reply, viewerRole, viewerId) {
   }
 }
 
+function buildDiscussionCapabilities(schema, viewerRole) {
+  return {
+    canCreateTopic:
+      viewerRole === 'teacher' ||
+      (viewerRole === 'student' && schema.topicStudentEnabled) ||
+      (viewerRole === 'admin' && schema.topicAdminEnabled),
+    canReply:
+      viewerRole === 'teacher' ||
+      (viewerRole === 'student' && schema.replyStudentEnabled) ||
+      (viewerRole === 'admin' && schema.replyAdminEnabled),
+    canReplyToReply: schema.replyParentEnabled,
+  }
+}
+
 export async function getDiscussionMessageList({ viewerRole, viewerId, query }) {
   await ensureViewerIdentity(viewerRole, viewerId)
 
@@ -553,6 +567,7 @@ export async function getDiscussionMessageList({ viewerRole, viewerId, query }) 
       total,
       totalPages,
     },
+    capabilities: buildDiscussionCapabilities(schema, viewerRole),
   }
 }
 
@@ -690,17 +705,7 @@ export async function getDiscussionMessageDetail({ viewerRole, viewerId, message
       canDelete: buildTopicDeleteCapability(topic, viewerRole, viewerId),
     },
     replies: replies.map((item) => mapReplyItem(item, viewerRole, viewerId)),
-    capabilities: {
-      canCreateTopic:
-        viewerRole === 'teacher' ||
-        (viewerRole === 'student' && schema.topicStudentEnabled) ||
-        (viewerRole === 'admin' && schema.topicAdminEnabled),
-      canReply:
-        viewerRole === 'teacher' ||
-        (viewerRole === 'student' && schema.replyStudentEnabled) ||
-        (viewerRole === 'admin' && schema.replyAdminEnabled),
-      canReplyToReply: schema.replyParentEnabled,
-    },
+    capabilities: buildDiscussionCapabilities(schema, viewerRole),
   }
 }
 

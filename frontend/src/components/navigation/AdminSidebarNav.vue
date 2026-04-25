@@ -45,7 +45,7 @@ let restoreAttempts = 0
 
 const MAX_RESTORE_ATTEMPTS = 12
 
-const menuItems: Array<{ key: AdminNavKey; label: string; path: string }> = [
+const menuItems: Array<{ key: Exclude<AdminNavKey, 'materials'>; label: string; path: string }> = [
   { key: 'system', label: '系统管理', path: '/admin/system' },
   { key: 'home', label: '总览首页', path: '/admin' },
   { key: 'teachers', label: '教师用户', path: '/admin/teachers' },
@@ -55,7 +55,6 @@ const menuItems: Array<{ key: AdminNavKey; label: string; path: string }> = [
   { key: 'courses', label: '课程管理', path: '/admin/courses' },
   { key: 'preps', label: '备课单管理', path: '/admin/preps' },
   { key: 'assets', label: '素材库', path: '/admin/assets' },
-  { key: 'materials', label: '资料管理', path: '/admin/materials' },
   { key: 'messages', label: '教学交流', path: '/admin/messages' },
 ]
 

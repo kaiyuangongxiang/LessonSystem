@@ -10,121 +10,146 @@
     </aside>
 
     <section class="admin-manage-main admin-asset-main">
-      <header class="admin-asset-header">
+      <header class="admin-manage-head">
         <div>
-          <div class="admin-asset-header__eyebrow">ASSET MANAGEMENT</div>
-          <h2>素材管理</h2>
-          <p>统一查看教师上传素材，并按公开状态进行筛选、审核和清理。</p>
+          <div class="admin-manage-head__eyebrow">ASSET MANAGEMENT</div>
+          <h2>素材库管理</h2>
+          <p>{{ headerText }}</p>
         </div>
       </header>
 
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="feedback-text feedback-text--success">{{ successMessage }}</p>
+      <p v-if="successMessage" class="feedback-text feedback-text--success admin-manage-feedback">{{ successMessage }}</p>
 
-      <section class="admin-asset-stats">
-        <article class="admin-asset-stat-card">
-          <span>素材总数</span>
-          <strong>{{ stats.total }}</strong>
-        </article>
-        <article class="admin-asset-stat-card">
+      <section class="my-resources-stats">
+        <article class="my-resources-stat-card is-highlight">
           <span>公开素材</span>
-          <strong>{{ stats.publicCount }}</strong>
+          <strong>{{ stats.total }}</strong>
+          <em>当前页面仅展示公开范围素材</em>
         </article>
-        <article class="admin-asset-stat-card">
-          <span>私密素材</span>
-          <strong>{{ stats.privateCount }}</strong>
-        </article>
-        <article class="admin-asset-stat-card">
+        <article class="my-resources-stat-card">
           <span>上传教师</span>
           <strong>{{ stats.teacherCount }}</strong>
+          <em>当前公开素材涉及的教师数量</em>
+        </article>
+        <article class="my-resources-stat-card">
+          <span>文件素材</span>
+          <strong>{{ stats.fileCount }}</strong>
+          <em>图片、音频、视频与文件类素材总数</em>
+        </article>
+        <article class="my-resources-stat-card">
+          <span>公开可预览</span>
+          <strong>{{ stats.publicCount }}</strong>
+          <em>列表中展示的素材默认都为公开状态</em>
         </article>
       </section>
 
-      <section class="admin-asset-card">
-        <form class="admin-asset-filter" @submit.prevent="applySearch">
-          <label>
+      <section class="my-resources-filter-panel">
+        <div class="my-resources-filter-panel__head">
+          <div>
+            <div class="my-resources-filter-panel__eyebrow">FILTER</div>
+            <h3>筛选素材</h3>
+          </div>
+          <div class="my-resources-panel__meta">范围已固定为公开素材，不再区分公开/私密</div>
+        </div>
+
+        <form class="my-resources-filter-form" @submit.prevent="applySearch">
+          <label class="my-resources-field">
             <span>关键词</span>
             <input v-model.trim="filters.keyword" type="text" maxlength="200" placeholder="搜索标题、说明、教师或文件名" />
           </label>
 
-          <label>
-            <span>课程</span>
+          <label class="my-resources-field">
+            <span>所属课程</span>
             <select v-model="filters.courseId">
               <option value="">全部课程</option>
-              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">{{ course.name }}</option>
+              <option v-for="course in courseOptions" :key="course.id" :value="String(course.id)">
+                {{ course.name }}
+              </option>
             </select>
           </label>
 
-          <label>
-            <span>类型</span>
+          <label class="my-resources-field">
+            <span>素材类型</span>
             <select v-model="filters.type">
               <option value="all">全部类型</option>
-              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
             </select>
           </label>
 
-          <label>
-            <span>公开范围</span>
-            <select v-model="filters.visibility">
-              <option value="all">全部范围</option>
-              <option value="public">公开</option>
-              <option value="private">私密</option>
-            </select>
-          </label>
-
-          <div class="admin-asset-filter__actions">
+          <div class="my-resources-filter-actions">
             <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
             <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '应用筛选' }}</button>
           </div>
         </form>
       </section>
 
-      <section class="admin-asset-card">
-        <div class="admin-asset-card__head">
+      <section class="my-resources-panel">
+        <div class="my-resources-panel__head">
           <div>
-            <div class="admin-asset-card__eyebrow">LIST</div>
+            <div class="my-resources-panel__eyebrow">ASSET LIST</div>
             <h3>素材列表</h3>
           </div>
-          <div class="admin-asset-card__meta">共 {{ pagination.total }} 条素材</div>
+          <div class="my-resources-panel__meta">共 {{ pagination.total }} 条公开素材记录</div>
         </div>
 
-        <div v-if="assetList.length" class="admin-asset-list">
-          <article v-for="item in assetList" :key="item.id" class="admin-asset-item">
-            <div class="admin-asset-item__head">
+        <div v-if="assetList.length" class="asset-manage-list">
+          <article v-for="item in assetList" :key="item.id" class="asset-manage-item">
+            <div class="asset-manage-item__head">
               <div>
                 <strong>{{ item.title }}</strong>
-                <p>{{ item.teacherName }} · {{ item.courseName || '未关联课程' }}</p>
+                <span class="teacher-dashboard-tag is-video">{{ assetTypeLabel(item.type) }}</span>
               </div>
-              <div class="admin-asset-item__tags">
-                <span class="teacher-dashboard-tag">{{ assetTypeLabel(item.type) }}</span>
-                <span :class="['admin-asset-badge', item.visibility === 'public' ? 'is-public' : 'is-private']">
-                  {{ item.visibility === 'public' ? '公开' : '私密' }}
-                </span>
-              </div>
+              <span class="asset-manage-item__time">{{ item.uploadTime }}</span>
             </div>
 
-            <p class="admin-asset-item__desc">{{ item.description || renderPlainText(item.content, '暂无素材说明') }}</p>
-            <p v-if="item.fileName" class="admin-asset-item__meta">
-              {{ item.fileName }}
+            <p class="asset-manage-item__meta">{{ item.teacherName }} · {{ item.courseName || '未关联课程' }}</p>
+            <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
+            <p v-if="item.content" class="asset-manage-item__content">{{ renderPlainText(item.content) }}</p>
+            <p v-else class="asset-manage-item__meta">
+              {{ item.fileName || '未记录文件名' }}
               <span v-if="item.fileSize"> · {{ formatFileSize(item.fileSize) }}</span>
             </p>
 
-            <div class="admin-asset-item__actions">
+            <div class="asset-manage-item__actions">
               <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
-              <button type="button" class="course-chip admin-manage-delete-btn" :disabled="deletingId === item.id" @click="removeAsset(item)">
+              <button
+                type="button"
+                class="course-chip my-resources-delete-btn"
+                :disabled="deletingId === item.id"
+                @click="removeAsset(item)"
+              >
                 {{ deletingId === item.id ? '删除中...' : '删除' }}
               </button>
             </div>
           </article>
         </div>
-        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材记录。</div>
+        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的公开素材记录。</div>
 
-        <section class="admin-manage-pagination">
-          <div class="admin-manage-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
-          <div class="admin-manage-pagination__actions">
-            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page <= 1 || loading" @click="changePage(pagination.page - 1)" aria-label="上一页">‹</button>
-            <button type="button" class="admin-manage-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
-            <button type="button" class="course-chip course-pagination__nav" :disabled="pagination.page >= pagination.totalPages || loading" @click="changePage(pagination.page + 1)" aria-label="下一页">›</button>
+        <section class="course-pagination my-resources-pagination">
+          <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
+          <div class="course-pagination__actions">
+            <button
+              type="button"
+              class="course-chip course-pagination__nav"
+              :disabled="pagination.page <= 1 || loading"
+              @click="changePage(pagination.page - 1)"
+              aria-label="上一页"
+            >
+              ‹
+            </button>
+            <button type="button" class="course-page-btn is-active" :disabled="loading" aria-current="page">{{ pagination.page }}</button>
+            <button
+              type="button"
+              class="course-chip course-pagination__nav"
+              :disabled="pagination.page >= pagination.totalPages || loading"
+              @click="changePage(pagination.page + 1)"
+              aria-label="下一页"
+            >
+              ›
+            </button>
           </div>
         </section>
       </section>
@@ -133,10 +158,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebarNav from '@/components/navigation/AdminSidebarNav.vue'
-import { deleteAdminAsset, getAdminAssetList, type AdminAssetItem, type AdminAssetStats, type AdminAssetType, type AdminCourseOption } from '@/services/admin'
+import {
+  deleteAdminAsset,
+  getAdminAssetList,
+  type AdminAssetItem,
+  type AdminAssetStats,
+  type AdminAssetType,
+  type AdminCourseOption,
+} from '@/services/admin'
 
 const router = useRouter()
 const route = useRoute()
@@ -159,7 +191,6 @@ const filters = reactive({
   keyword: '',
   courseId: '',
   type: 'all' as AdminAssetType | 'all',
-  visibility: 'all' as 'all' | 'public' | 'private',
 })
 
 const pagination = reactive({
@@ -169,6 +200,8 @@ const pagination = reactive({
   totalPages: 0,
 })
 
+const headerText = '页面结构参考教师中心素材库，但管理员页只保留公开素材检索与清理能力。'
+
 const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
   { value: 'image', label: '图片' },
   { value: 'audio', label: '音频' },
@@ -176,8 +209,6 @@ const assetTypeOptions: Array<{ value: AdminAssetType; label: string }> = [
   { value: 'text', label: '文本片段' },
   { value: 'file', label: '文件素材' },
 ]
-
-
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -226,8 +257,6 @@ function syncFiltersWithRoute() {
   filters.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
   filters.courseId = typeof route.query.courseId === 'string' ? route.query.courseId : ''
   filters.type = typeof route.query.type === 'string' && route.query.type !== '' ? (route.query.type as AdminAssetType | 'all') : 'all'
-  filters.visibility =
-    route.query.visibility === 'public' || route.query.visibility === 'private' ? route.query.visibility : 'all'
 }
 
 function updateRoute(page = 1) {
@@ -238,7 +267,6 @@ function updateRoute(page = 1) {
       ...(filters.keyword ? { keyword: filters.keyword } : {}),
       ...(filters.courseId ? { courseId: filters.courseId } : {}),
       ...(filters.type !== 'all' ? { type: filters.type } : {}),
-      ...(filters.visibility !== 'all' ? { visibility: filters.visibility } : {}),
     },
   })
 }
@@ -251,7 +279,6 @@ function resetFilters() {
   filters.keyword = ''
   filters.courseId = ''
   filters.type = 'all'
-  filters.visibility = 'all'
   updateRoute(1)
 }
 
@@ -291,7 +318,7 @@ async function loadAssets() {
       keyword: filters.keyword,
       courseId: filters.courseId,
       type: filters.type,
-      visibility: filters.visibility,
+      visibility: 'public',
     })
 
     courseOptions.value = data.filters.courses

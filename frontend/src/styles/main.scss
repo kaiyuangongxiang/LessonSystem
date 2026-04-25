@@ -5002,6 +5002,11 @@ body.body-teacher-locked #app {
 
 .admin-manage-filter-form--message {
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.admin-manage-filter-form--message .admin-manage-filter-actions {
+  align-self: end;
 }
 
 .admin-manage-field {
@@ -5052,6 +5057,14 @@ body.body-teacher-locked #app {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+}
+
+.admin-college-stats {
+  order: -2;
+}
+
+.admin-college-search-panel {
+  order: -1;
 }
 
 .admin-manage-stat-card {
@@ -5575,7 +5588,7 @@ body.body-teacher-locked #app {
 }
 
 .admin-course-list-panel {
-  min-height: 420px;
+  min-height: auto;
 }
 
 .admin-course-crud-list {

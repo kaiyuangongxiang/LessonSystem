@@ -65,6 +65,7 @@ export interface AdminAccountItem {
   createTime: string
   updateTime: string
   isCurrent: boolean
+  isSuper: boolean
 }
 
 export interface AdminAccountListData {
@@ -371,7 +372,7 @@ export interface AdminAssetQuery {
   keyword?: string
   courseId?: string
   type?: AdminAssetType | 'all'
-  visibility?: 'all' | 'public' | 'private'
+  visibility?: 'public'
 }
 
 export interface AdminResourceStats {
@@ -449,6 +450,11 @@ export interface AdminMessageListData {
     pageSize: number
     total: number
     totalPages: number
+  }
+  capabilities: {
+    canCreateTopic: boolean
+    canReply: boolean
+    canReplyToReply: boolean
   }
 }
 
@@ -724,6 +730,13 @@ export interface AdminPrepItem {
   }>
 }
 
+export interface AdminPrepPayload {
+  courseId: string | number
+  title: string
+  status: 'published'
+  teachingContent: string
+}
+
 export interface AdminPrepListData {
   stats: AdminPrepStats
   list: AdminPrepItem[]
@@ -743,7 +756,7 @@ export interface AdminPrepQuery {
   pageSize?: number
   keyword?: string
   courseId?: string
-  status?: 'all' | 'draft' | 'published' | 'archived'
+  status?: 'published'
 }
 
 export async function getAdminPrepList(params: AdminPrepQuery) {
@@ -753,9 +766,30 @@ export async function getAdminPrepList(params: AdminPrepQuery) {
   return response.data.data
 }
 
+export async function updateAdminPrep(prepId: number, payload: AdminPrepPayload) {
+  const response = await http.put<ApiSuccess<AdminPrepItem>>(`/admin/preps/${prepId}`, payload)
+  return response.data.data
+}
+
 export async function deleteAdminPrep(prepId: number) {
   const response = await http.delete<ApiSuccess<{ id: number; title: string }>>(`/admin/preps/${prepId}`)
   return response.data.data
+}
+
+export async function deleteAdminPrepAttachment(prepId: number, attachmentId: number) {
+  const response = await http.delete<ApiSuccess<{ id: number; prepId: number; sourceType: 'upload' | 'asset' }>>(
+    `/admin/preps/${prepId}/attachments/${attachmentId}`,
+  )
+  return response.data.data
+}
+
+export async function previewAdminPrepAttachment(attachmentId: number) {
+  const response = await http.get<Blob>(`/portal/preps/attachments/${attachmentId}/file`, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
 }
 
 export async function getAdminAssetList(params: AdminAssetQuery) {

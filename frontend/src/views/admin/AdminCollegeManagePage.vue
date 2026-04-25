@@ -44,7 +44,7 @@
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>
       <p v-if="successMessage" class="feedback-text feedback-text--success admin-manage-feedback">{{ successMessage }}</p>
 
-      <section class="admin-manage-filter-panel admin-course-toolbar">
+      <section class="admin-manage-filter-panel admin-course-toolbar admin-college-search-panel">
         <div>
           <div class="admin-manage-panel__eyebrow">QUICK SEARCH</div>
           <h3>搜索与列表</h3>
@@ -53,12 +53,12 @@
 
         <form class="admin-course-search" @submit.prevent="applySearch">
           <input v-model.trim="form.keyword" type="text" maxlength="100" placeholder="搜索学院名称或简介" />
-          <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '搜索' }}</button>
-          <button type="button" class="auth-btn auth-btn--secondary" :disabled="loading" @click="resetFilters">重置</button>
+          <button type="submit" class="auth-btn" :disabled="!canApplySearch">{{ loading ? '加载中...' : '搜索' }}</button>
+          <button type="button" class="auth-btn auth-btn--secondary" :disabled="!canResetFilters" @click="resetFilters">重置</button>
         </form>
       </section>
 
-      <section class="admin-manage-stats">
+      <section class="admin-manage-stats admin-college-stats">
         <article class="admin-manage-stat-card">
           <span>学院总数</span>
           <strong>{{ stats.total }}</strong>
@@ -233,21 +233,40 @@ function normalizePage(value: unknown) {
   return Number.isInteger(page) && page > 0 ? page : 1
 }
 
+function normalizeKeyword(value: unknown) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
+}
+
+const normalizedRouteKeyword = computed(() => normalizeKeyword(route.query.keyword))
+const normalizedFormKeyword = computed(() => normalizeKeyword(form.keyword))
+const canApplySearch = computed(() => !loading.value && (normalizedFormKeyword.value !== normalizedRouteKeyword.value || normalizePage(route.query.page) !== 1))
+const canResetFilters = computed(() => !loading.value && (Boolean(normalizedFormKeyword.value) || Boolean(normalizedRouteKeyword.value) || normalizePage(route.query.page) !== 1))
+
 function clearFeedback() {
   errorMessage.value = ''
   successMessage.value = ''
 }
 
 function syncFormWithRoute() {
-  form.keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
+  form.keyword = normalizedRouteKeyword.value
 }
 
-function updateRoute(page = 1) {
+function updateRoute(page = 1, keyword = form.keyword) {
+  const normalizedKeyword = normalizeKeyword(keyword)
+  const currentPage = normalizePage(route.query.page)
+
+  form.keyword = normalizedKeyword
+
+  if (currentPage === page && normalizedRouteKeyword.value === normalizedKeyword) {
+    void loadColleges()
+    return
+  }
+
   router.push({
     path: '/admin/colleges',
     query: {
       page: String(page),
-      ...(form.keyword ? { keyword: form.keyword } : {}),
+      ...(normalizedKeyword ? { keyword: normalizedKeyword } : {}),
     },
   })
 }
@@ -286,13 +305,18 @@ function forceCloseEditor() {
 }
 
 function applySearch() {
-  updateRoute(1)
+  clearFeedback()
+  updateRoute(1, normalizedFormKeyword.value)
 }
 
 function resetFilters() {
+  if (!canResetFilters.value) {
+    return
+  }
+
   clearFeedback()
   form.keyword = ''
-  updateRoute(1)
+  updateRoute(1, '')
 }
 
 function changePage(page: number) {

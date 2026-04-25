@@ -199,7 +199,6 @@
         <div class="admin-course-editor__footer">
           <p>删除学生用户后仅禁用账号，不会影响后续学生端功能扩展的数据接入。</p>
           <div class="admin-course-editor__actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
             <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : editorActionText }}</button>
           </div>
         </div>

@@ -200,7 +200,6 @@
         <div class="admin-course-editor__footer">
           <p>删除教师用户后仅禁用账号，不会清空该教师已发布的课程、资料和视频数据。</p>
           <div class="admin-course-editor__actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
             <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : editorActionText }}</button>
           </div>
         </div>

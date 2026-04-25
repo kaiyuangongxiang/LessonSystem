@@ -178,8 +178,7 @@ const router = createRouter({
     {
       path: '/admin/materials',
       name: 'admin-materials',
-      component: () => import('@/views/admin/AdminMaterialManagePage.vue'),
-      meta: { requiresAuth: true, role: 'admin' },
+      redirect: { name: 'admin-assets' },
     },
     {
       path: '/admin/system',
@@ -190,7 +189,7 @@ const router = createRouter({
     {
       path: '/admin/videos',
       name: 'admin-videos',
-      redirect: { name: 'admin-materials' },
+      redirect: { name: 'admin-assets' },
     },
     {
       path: '/admin/messages',

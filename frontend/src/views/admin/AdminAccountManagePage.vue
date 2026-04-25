@@ -93,8 +93,8 @@
                 <span :class="['admin-course-status-badge', item.realName ? 'is-success' : 'is-warning']">
                   {{ item.realName ? '已设置姓名' : '待补姓名' }}
                 </span>
-                <span :class="['admin-course-status-badge', item.isCurrent ? 'is-success' : 'is-neutral']">
-                  {{ item.isCurrent ? '当前登录账号' : '普通管理员账号' }}
+                <span :class="['admin-course-status-badge', item.isSuper || item.isCurrent ? 'is-success' : 'is-neutral']">
+                  {{ item.isSuper ? '超级管理员账号' : item.isCurrent ? '当前登录账号' : '普通管理员账号' }}
                 </span>
               </div>
 
@@ -106,14 +106,14 @@
             </div>
 
             <div class="admin-course-crud-item__actions">
-              <button type="button" class="course-chip course-chip--soft" @click="openEditEditor(item)">修改</button>
+              <button type="button" class="course-chip course-chip--soft" :disabled="!canManageAccount(item)" @click="openEditEditor(item)">修改</button>
               <button
                 type="button"
                 class="course-chip admin-manage-delete-btn"
-                :disabled="deletingId === item.id || item.isCurrent"
+                :disabled="deletingId === item.id || item.isCurrent || item.isSuper"
                 @click="removeAdmin(item)"
               >
-                {{ item.isCurrent ? '当前账号' : deletingId === item.id ? '删除中...' : '删除' }}
+                {{ item.isSuper ? '超级管理员' : item.isCurrent ? '当前账号' : deletingId === item.id ? '删除中...' : '删除' }}
               </button>
             </div>
           </article>
@@ -146,7 +146,7 @@
       <form class="admin-course-editor__form" @submit.prevent="submitEditor">
         <label class="admin-manage-field">
           <span>管理员账号</span>
-          <input v-model.trim="editorForm.username" type="text" maxlength="50" placeholder="请输入管理员登录账号" />
+          <input v-model.trim="editorForm.username" type="text" maxlength="50" :disabled="saving || editingAccountIsSuper" placeholder="请输入管理员登录账号" />
         </label>
 
         <label class="admin-manage-field">
@@ -165,13 +165,12 @@
         </label>
 
         <p class="admin-course-editor__hint">
-          {{ editingId ? '编辑账号时密码可留空，系统会保留原密码。' : '新增账号后可立即使用新账号登录管理员中心。' }}
+          {{ editorHintText }}
         </p>
 
         <div class="admin-course-editor__footer">
           <p>系统会阻止删除当前登录账号，并至少保留一个管理员账号，避免后台失去管理入口。</p>
           <div class="admin-course-editor__actions">
-            <button type="button" class="auth-btn auth-btn--secondary" :disabled="saving" @click="closeEditor">取消</button>
             <button type="submit" class="auth-btn" :disabled="saving">{{ saving ? '保存中...' : editorActionText }}</button>
           </div>
         </div>
@@ -205,8 +204,10 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const editorVisible = ref(false)
 const editingId = ref<number | null>(null)
+const editingAccountIsSuper = ref(false)
 
 const accountList = ref<AdminAccountItem[]>([])
+const SUPER_ADMIN_USERNAME = 'admin'
 
 const editorForm = reactive({
   username: '',
@@ -227,6 +228,7 @@ const pagination = reactive({
 })
 
 const currentAdminLabel = computed(() => authStore.profile?.name || authStore.profile?.username || '当前管理员')
+const currentAdminIsSuper = computed(() => isSuperAdminUsername(authStore.profile?.username))
 
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '管理员'
@@ -244,10 +246,25 @@ const reminderTexts = computed(() => {
 
 const editorTitle = computed(() => (editingId.value ? '修改管理员账号' : '新增管理员账号'))
 const editorActionText = computed(() => (editingId.value ? '保存修改' : '确认新增'))
+const editorHintText = computed(() => {
+  if (editingAccountIsSuper.value) {
+    return `超级管理员账号的登录名固定为 ${SUPER_ADMIN_USERNAME}，可按需重置密码。`
+  }
+
+  return editingId.value ? '编辑账号时密码可留空，系统会保留原密码。' : '新增账号后可立即使用新账号登录管理员中心。'
+})
 
 function normalizePage(value: unknown) {
   const page = Number(value)
   return Number.isInteger(page) && page > 0 ? page : 1
+}
+
+function isSuperAdminUsername(value?: string | null) {
+  return typeof value === 'string' && value.trim().toLowerCase() === SUPER_ADMIN_USERNAME
+}
+
+function canManageAccount(item: AdminAccountItem) {
+  return !item.isSuper || currentAdminIsSuper.value
 }
 
 function clearFeedback() {
@@ -266,6 +283,7 @@ function updateRoute(page = 1) {
 
 function resetEditorForm() {
   editingId.value = null
+  editingAccountIsSuper.value = false
   editorForm.username = ''
   editorForm.realName = ''
   editorForm.password = ''
@@ -279,7 +297,14 @@ function openCreateEditor() {
 
 function openEditEditor(item: AdminAccountItem) {
   clearFeedback()
+
+  if (!canManageAccount(item)) {
+    errorMessage.value = `超级管理员账号 ${SUPER_ADMIN_USERNAME} 仅允许 admin 操作`
+    return
+  }
+
   editingId.value = item.id
+  editingAccountIsSuper.value = item.isSuper
   editorForm.username = item.username
   editorForm.realName = item.realName
   editorForm.password = ''
@@ -309,6 +334,11 @@ async function submitEditor() {
 
   if (!editingId.value && !editorForm.password) {
     errorMessage.value = '新增管理员时必须填写密码'
+    return
+  }
+
+  if (editingAccountIsSuper.value && !isSuperAdminUsername(editorForm.username)) {
+    errorMessage.value = `超级管理员账号登录名必须保持为 ${SUPER_ADMIN_USERNAME}`
     return
   }
 
@@ -346,6 +376,13 @@ async function submitEditor() {
 
 async function removeAdmin(item: AdminAccountItem) {
   clearFeedback()
+
+  if (item.isSuper) {
+    errorMessage.value = currentAdminIsSuper.value
+      ? `超级管理员账号 ${SUPER_ADMIN_USERNAME} 不允许删除`
+      : `超级管理员账号 ${SUPER_ADMIN_USERNAME} 仅允许 admin 操作`
+    return
+  }
 
   if (item.isCurrent) {
     errorMessage.value = '当前登录的管理员账号不能删除'

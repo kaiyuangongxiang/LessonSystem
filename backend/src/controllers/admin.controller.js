@@ -10,6 +10,7 @@ import {
   deleteAdminCollege,
   deleteAdminCourse,
   deleteAdminPrep,
+  deleteAdminPrepAttachment,
   deleteAdminNotice,
   deleteAdminResource,
   deleteAdminStudentUser,
@@ -28,6 +29,7 @@ import {
   updateAdminAccount,
   updateAdminCollege,
   updateAdminCourse,
+  updateAdminPrep,
   updateAdminStudentUser,
   updateAdminSystemProfile,
   updateAdminTeacherUser,
@@ -502,6 +504,24 @@ export async function getPrepList(req, res, next) {
   }
 }
 
+export async function updatePrep(req, res, next) {
+  try {
+    const result = await updateAdminPrep({
+      adminId: req.auth.userId,
+      prepId: req.params.prepId,
+      payload: req.body,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '更新备课单成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function deletePrep(req, res, next) {
   try {
     const result = await deleteAdminPrep({
@@ -512,6 +532,24 @@ export async function deletePrep(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '删除备课单成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deletePrepAttachment(req, res, next) {
+  try {
+    const result = await deleteAdminPrepAttachment({
+      adminId: req.auth.userId,
+      prepId: req.params.prepId,
+      attachmentId: req.params.attachmentId,
+    })
+
+    res.status(200).json({
+      code: 200,
+      message: '删除备课附件成功',
       data: result,
     })
   } catch (error) {

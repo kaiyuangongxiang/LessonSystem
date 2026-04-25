@@ -16,6 +16,7 @@ import {
   deleteMessage,
   deleteMessageReply,
   deleteNotice,
+  deletePrepAttachment,
   deleteStudentUser,
   deleteTeacherUser,
   deleteVideo,
@@ -37,6 +38,7 @@ import {
   updateAdmin,
   updateCollege,
   updateCourse,
+  updatePrep,
   updateStudentUser,
   updateTeacherUser,
   updateSystemProfile,
@@ -74,7 +76,9 @@ router.post('/courses', createCourse)
 router.put('/courses/:courseId', updateCourse)
 router.delete('/courses/:courseId', deleteCourse)
 router.get('/preps', getPrepList)
+router.put('/preps/:prepId', updatePrep)
 router.delete('/preps/:prepId', deletePrep)
+router.delete('/preps/:prepId/attachments/:attachmentId', deletePrepAttachment)
 router.get('/assets', getAssetList)
 router.delete('/assets/:assetId', deleteAsset)
 router.get('/materials', getMaterialList)

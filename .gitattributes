@@ -1,0 +1,7 @@
+*.js text working-tree-encoding=UTF-8 eol=lf
+*.ts text working-tree-encoding=UTF-8 eol=lf
+*.vue text working-tree-encoding=UTF-8 eol=lf
+*.json text working-tree-encoding=UTF-8 eol=lf
+*.scss text working-tree-encoding=UTF-8 eol=lf
+*.md text working-tree-encoding=UTF-8 eol=lf
+*.sql text working-tree-encoding=UTF-8 eol=lf

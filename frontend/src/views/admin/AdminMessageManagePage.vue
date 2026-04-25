@@ -37,7 +37,7 @@
         </div>
         <div class="admin-manage-head__actions">
           <span class="course-chip course-chip--soft">话题治理</span>
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/admin')">返回总览</button>
+          <button type="button" class="auth-btn" :disabled="!canCreateTopic" @click="openTopicEditor">发布新主题</button>
         </div>
       </header>
 
@@ -64,21 +64,6 @@
             <button type="submit" class="auth-btn" :disabled="loading">{{ loading ? '加载中...' : '搜索主题' }}</button>
           </div>
         </form>
-      </section>
-
-      <section class="admin-manage-panel admin-message-launch-panel">
-        <div class="admin-manage-panel__head">
-          <div>
-            <div class="admin-manage-panel__eyebrow">NEW TOPIC</div>
-            <h3>管理员发布主题</h3>
-          </div>
-          <div class="admin-manage-head__actions">
-            <div class="admin-manage-panel__meta">
-              {{ canCreateTopic ? '管理员可直接发起教学交流主题。' : '当前数据库结构尚未升级，暂不支持管理员发帖。' }}
-            </div>
-            <button type="button" class="auth-btn" :disabled="!canCreateTopic" @click="openTopicEditor">发布新主题</button>
-          </div>
-        </div>
       </section>
 
       <section class="admin-manage-panel">
@@ -147,7 +132,7 @@
                       v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                       type="button"
                       class="course-chip course-chip--soft"
-                      @click="setReplyTarget(item.id, reply)"
+                      @click="openReplyEditor(item.id, reply)"
                     >
                       回复
                     </button>
@@ -186,7 +171,7 @@
                           v-if="currentDetail.capabilities.canReply && currentDetail.capabilities.canReplyToReply"
                           type="button"
                           class="course-chip course-chip--soft"
-                          @click="setReplyTarget(item.id, childReply)"
+                          @click="openReplyEditor(item.id, childReply)"
                         >
                           回复
                         </button>
@@ -207,36 +192,18 @@
                 <div v-if="!rootReplies.length" class="course-detail-empty course-detail-empty--compact">当前还没有回复，可由管理员率先给出引导意见。</div>
               </div>
 
-              <form class="admin-message-form" @submit.prevent="submitReply(item.id)">
-                <div v-if="replyTargets[item.id]?.replyId" class="admin-message-reply-target">
-                  正在回复 <strong>{{ replyTargets[item.id]?.authorName }}</strong>
-                  <button type="button" class="course-chip course-chip--soft" @click="clearReplyTarget(item.id)">取消</button>
-                </div>
-
-                <label class="admin-manage-field admin-manage-field--full">
-                  <span>{{ replyTargets[item.id]?.replyId ? '楼中回复' : '管理员评论' }}</span>
-                  <textarea
-                    v-model.trim="replyDrafts[item.id]"
-                    maxlength="5000"
-                    rows="5"
-                    :placeholder="
-                      currentDetail?.capabilities.canReply === false
-                        ? '当前数据库尚未升级管理员回复字段，请先执行 SQL'
-                        : '请输入处理意见、补充说明或交流回复'
-                    "
-                    :disabled="currentDetail?.capabilities.canReply === false || replyingId === item.id"
-                  ></textarea>
-                </label>
-
+              <div class="admin-message-form">
                 <div class="admin-manage-filter-actions">
-                  <button type="submit" class="auth-btn" :disabled="currentDetail?.capabilities.canReply === false || replyingId === item.id">
-                    {{ replyingId === item.id ? '发布中...' : replyTargets[item.id]?.replyId ? '发布回复' : '发布评论' }}
-                  </button>
-                  <button type="button" class="auth-btn auth-btn--secondary" :disabled="replyingId === item.id" @click="clearReplyDraft(item.id)">
-                    清空内容
+                  <button
+                    type="button"
+                    class="auth-btn"
+                    :disabled="currentDetail?.capabilities.canReply === false"
+                    @click="openReplyEditor(item.id)"
+                  >
+                    {{ currentDetail?.capabilities.canReply === false ? '当前暂不支持回复' : '发表评论' }}
                   </button>
                 </div>
-              </form>
+              </div>
             </section>
           </article>
         </div>
@@ -301,6 +268,63 @@
         </form>
       </section>
     </div>
+
+    <div v-if="showReplyEditor && activeReplyMessageId !== null" class="admin-course-editor-mask" @click.self="closeReplyEditor">
+      <section class="admin-course-editor admin-course-editor--wide">
+        <div class="admin-course-editor__head">
+          <div>
+            <div class="admin-manage-panel__eyebrow">REPLY EDITOR</div>
+            <h3>{{ activeReplyTarget?.replyId ? '发布回复' : '发表评论' }}</h3>
+          </div>
+          <button
+            type="button"
+            class="course-chip course-chip--soft"
+            :disabled="replyingId === activeReplyMessageId"
+            @click="closeReplyEditor"
+          >
+            关闭
+          </button>
+        </div>
+
+        <form class="admin-course-editor__form admin-message-form" @submit.prevent="submitReply(activeReplyMessageId)">
+          <div v-if="activeReplyTarget?.replyId" class="admin-message-reply-target">
+            正在回复 <strong>{{ activeReplyTarget.authorName }}</strong>
+          </div>
+
+          <label class="admin-manage-field admin-manage-field--full">
+            <span>{{ activeReplyTarget?.replyId ? '楼中回复' : '管理员评论' }}</span>
+            <textarea
+              v-model.trim="activeReplyDraft"
+              maxlength="5000"
+              rows="6"
+              :placeholder="
+                activeReplyDetail?.capabilities.canReply === false
+                  ? '当前数据库尚未升级管理员回复字段，请先执行 SQL'
+                  : '请输入处理意见、补充说明或交流回复'
+              "
+              :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+            ></textarea>
+          </label>
+
+          <p class="admin-course-editor__hint">
+            可以在这里统一处理主贴评论，也可以针对某条回复继续补充楼中回复。
+          </p>
+
+          <div class="admin-course-editor__footer">
+            <p>建议写清处理结论、补充说明和后续动作，方便教师与学生继续跟进讨论。</p>
+            <div class="admin-course-editor__actions admin-course-editor__actions--end">
+              <button
+                type="submit"
+                class="auth-btn"
+                :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
+              >
+                {{ replyingId === activeReplyMessageId ? '发布中...' : activeReplyTarget?.replyId ? '发布回复' : '发布评论' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -328,11 +352,13 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const submittingTopic = ref(false)
 const showTopicEditor = ref(false)
+const showReplyEditor = ref(false)
 const replyingId = ref<number | null>(null)
 const deletingTopicId = ref<number | null>(null)
 const deletingReplyId = ref<number | null>(null)
 const loadingDetailId = ref<number | null>(null)
 const expandedMessageId = ref<number | null>(null)
+const activeReplyMessageId = ref<number | null>(null)
 const errorMessage = ref('')
 const successMessage = ref('')
 const messageList = ref<AdminMessageItem[]>([])
@@ -357,6 +383,12 @@ const pagination = reactive({
   totalPages: 0,
 })
 
+const listCapabilities = reactive({
+  canCreateTopic: true,
+  canReply: true,
+  canReplyToReply: true,
+})
+
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '管理员'
   return `${name}，这里统一维护教师与管理员共同参与的教学交流主题。`
@@ -375,6 +407,39 @@ const currentDetail = computed(() => {
   return detailMap[expandedMessageId.value] || null
 })
 
+const activeReplyDetail = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return detailMap[activeReplyMessageId.value] || null
+})
+
+const activeReplyTarget = computed(() => {
+  if (activeReplyMessageId.value === null) {
+    return null
+  }
+
+  return replyTargets[activeReplyMessageId.value] || { replyId: null, authorName: '' }
+})
+
+const activeReplyDraft = computed({
+  get() {
+    if (activeReplyMessageId.value === null) {
+      return ''
+    }
+
+    return replyDrafts[activeReplyMessageId.value] || ''
+  },
+  set(value: string) {
+    if (activeReplyMessageId.value === null) {
+      return
+    }
+
+    replyDrafts[activeReplyMessageId.value] = value
+  },
+})
+
 const rootReplies = computed(() => {
   const detail = currentDetail.value
   if (!detail) {
@@ -385,7 +450,9 @@ const rootReplies = computed(() => {
   return detail.replies.filter((item) => !item.parentReplyId || !replyIdSet.has(item.parentReplyId))
 })
 
-const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true)
+const canCreateTopic = computed(
+  () => currentDetail.value?.capabilities.canCreateTopic ?? listCapabilities.canCreateTopic,
+)
 
 function getRoleLabel(role: 'teacher' | 'admin' | 'student') {
   if (role === 'admin') {
@@ -427,6 +494,28 @@ function openTopicEditor() {
 
 function closeTopicEditor() {
   showTopicEditor.value = false
+}
+
+function openReplyEditor(messageId: number, reply?: AdminMessageReplyItem) {
+  clearMessages()
+  activeReplyMessageId.value = messageId
+
+  if (reply) {
+    setReplyTarget(messageId, reply)
+  } else {
+    clearReplyTarget(messageId)
+  }
+
+  if (replyDrafts[messageId] === undefined) {
+    replyDrafts[messageId] = ''
+  }
+
+  showReplyEditor.value = true
+}
+
+function closeReplyEditor() {
+  showReplyEditor.value = false
+  activeReplyMessageId.value = null
 }
 
 function updateRoute(page = 1) {
@@ -532,12 +621,18 @@ async function loadMessages() {
     pagination.pageSize = data.pagination.pageSize
     pagination.total = data.pagination.total
     pagination.totalPages = data.pagination.totalPages
+    listCapabilities.canCreateTopic = data.capabilities.canCreateTopic
+    listCapabilities.canReply = data.capabilities.canReply
+    listCapabilities.canReplyToReply = data.capabilities.canReplyToReply
   } catch (error: any) {
     messageList.value = []
     pagination.page = 1
     pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
+    listCapabilities.canCreateTopic = true
+    listCapabilities.canReply = true
+    listCapabilities.canReplyToReply = true
     errorMessage.value = error?.response?.data?.message || '教学交流管理列表加载失败'
   } finally {
     loading.value = false
@@ -586,6 +681,7 @@ async function submitReply(messageId: number) {
       parentReplyId: replyTargets[messageId]?.replyId || null,
     })
     clearReplyDraft(messageId)
+    closeReplyEditor()
     successMessage.value = '管理员回复已发布。'
     await Promise.all([loadMessageDetail(messageId), loadMessages()])
     expandedMessageId.value = messageId

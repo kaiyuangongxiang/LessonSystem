@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js'
 
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
+const SUPER_ADMIN_USERNAME = 'admin'
 const ASSET_FILE_TYPES = new Set(['image', 'audio', 'video', 'file'])
 const ASSET_CONTENT_TYPES = new Set(['text'])
 const ASSET_TYPES = [...ASSET_FILE_TYPES, ...ASSET_CONTENT_TYPES]
@@ -16,10 +17,20 @@ function badRequest(message) {
   return error
 }
 
+function forbidden(message) {
+  const error = new Error(message)
+  error.status = 403
+  return error
+}
+
 function notFound(message) {
   const error = new Error(message)
   error.status = 404
   return error
+}
+
+function isSuperAdminUsername(value) {
+  return typeof value === 'string' && value.trim().toLowerCase() === SUPER_ADMIN_USERNAME
 }
 
 function normalizePageNumber(value, fallback = 1) {
@@ -191,6 +202,54 @@ function normalizePrepFilterStatus(value) {
   }
 
   return normalizePrepStatus(value)
+}
+
+function normalizePrepTitle(value) {
+  const title = typeof value === 'string' ? value.trim() : ''
+  if (!title) {
+    throw badRequest('备课单标题不能为空')
+  }
+
+  if (title.length > 200) {
+    throw badRequest('备课单标题不能超过200个字')
+  }
+
+  return title
+}
+
+function normalizePrepText(value, label) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (text.length > 5000) {
+    throw badRequest(`${label}不能超过5000个字`)
+  }
+
+  return text
+}
+
+function normalizeAdminPrepPayload(payload) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+  const rawStatus = body.status === undefined || body.status === null || body.status === '' ? 'published' : body.status
+  const status = normalizePrepStatus(rawStatus)
+
+  if (status !== 'published') {
+    throw badRequest('管理员仅可将备课单保存为已发布')
+  }
+
+  return {
+    courseId: normalizeCourseId(body.courseId),
+    title: normalizePrepTitle(body.title),
+    status: 'published',
+    teachingContent: normalizePrepText(body.teachingContent, '教学内容'),
+  }
+}
+
+function normalizeAttachmentId(value) {
+  const attachmentId = Number(value)
+  if (!Number.isInteger(attachmentId) || attachmentId <= 0) {
+    throw badRequest('附件ID不合法')
+  }
+
+  return attachmentId
 }
 
 function normalizeNoticeId(value) {
@@ -634,6 +693,10 @@ function buildAssetPreviewUrl(assetId) {
   return `/portal/assets/${assetId}/file`
 }
 
+function buildPrepAttachmentPreviewUrl(attachmentId) {
+  return `/portal/preps/attachments/${attachmentId}/file`
+}
+
 function getPrepStatusLabel(status) {
   if (status === 'published') {
     return '已发布'
@@ -721,6 +784,12 @@ async function hasTeachingPrepAttachmentReady() {
   return rows.length > 0
 }
 
+async function ensureTeachingPrepAttachmentReady() {
+  if (!(await hasTeachingPrepAttachmentReady())) {
+    throw badRequest('当前数据库尚未初始化备课附件表，请先执行备课附件升级 SQL')
+  }
+}
+
 function inferPrepAttachmentType(mimeType, fileName) {
   const rawMimeType = String(mimeType || '').toLowerCase()
   const lowerFileName = String(fileName || '').toLowerCase()
@@ -765,7 +834,7 @@ function mapAdminPrepAttachmentItem(item) {
     mimeType,
     visibility: item.visibility || 'private',
     uploadTime: item.createTime,
-    previewUrl: sourceType === 'asset' && assetId ? buildAssetPreviewUrl(assetId) : '',
+    previewUrl: buildPrepAttachmentPreviewUrl(Number(item.id)),
   }
 }
 
@@ -1013,7 +1082,11 @@ async function getManagedAdminRow(adminId) {
     throw notFound('管理员账号不存在')
   }
 
-  return rows[0]
+  return {
+    ...rows[0],
+    id: Number(rows[0].id),
+    isSuper: isSuperAdminUsername(rows[0].username),
+  }
 }
 
 async function getManagedTeacherAccountRow(teacherId) {
@@ -1605,6 +1678,38 @@ async function getAdminPrepRow(prepId) {
   }
 }
 
+function ensureAdminPublishedPrepEditable(prep, actionLabel = '操作') {
+  if (prep.status !== 'published') {
+    throw badRequest(`管理员仅可${actionLabel}已发布的备课单`)
+  }
+}
+
+async function getAdminPrepAttachmentRow(attachmentId) {
+  await ensureTeachingPrepAttachmentReady()
+
+  const [rows] = await pool.query(
+    `SELECT pa.attachment_id AS id,
+            pa.prep_id AS prepId,
+            pa.source_type AS sourceType,
+            pa.asset_id AS assetId,
+            COALESCE(pa.file_path, '') AS filePath,
+            COALESCE(pa.file_name, '') AS fileName,
+            COALESCE(pa.mime_type, '') AS mimeType,
+            p.status AS prepStatus
+     FROM teaching_prep_attachment pa
+     INNER JOIN teaching_prep p ON p.prep_id = pa.prep_id
+     WHERE pa.attachment_id = ? AND pa.status = 1
+     LIMIT 1`,
+    [attachmentId],
+  )
+
+  if (!rows.length) {
+    throw notFound('备课附件不存在或已删除')
+  }
+
+  return rows[0]
+}
+
 async function getAdminAssetRow(assetId) {
   await ensureAssetLibraryVisibilityReady()
 
@@ -2044,6 +2149,7 @@ export async function getAdminAccountList({ adminId, query }) {
       ...item,
       id: Number(item.id),
       isCurrent: Boolean(item.isCurrent),
+      isSuper: isSuperAdminUsername(item.username),
     })),
     pagination: {
       page,
@@ -2055,9 +2161,14 @@ export async function getAdminAccountList({ adminId, query }) {
 }
 
 export async function createAdminAccount({ adminId, payload }) {
-  await getAdminProfile(adminId)
+  const operator = await getAdminProfile(adminId)
 
   const account = normalizeAdminPayload(payload, { requirePassword: true })
+
+  if (isSuperAdminUsername(account.username) && !isSuperAdminUsername(operator.username)) {
+    throw forbidden(`只有超级管理员可以创建 ${SUPER_ADMIN_USERNAME} 账号`)
+  }
+
   await ensureAdminUsernameAvailable(account.username)
   await ensureUsernameAvailableAcrossRoles(account.username)
 
@@ -2078,12 +2189,25 @@ export async function createAdminAccount({ adminId, payload }) {
 }
 
 export async function updateAdminAccount({ adminId, targetAdminId, payload }) {
-  await getAdminProfile(adminId)
+  const operator = await getAdminProfile(adminId)
 
   const normalizedTargetAdminId = normalizeAdminId(targetAdminId)
-  await getManagedAdminRow(normalizedTargetAdminId)
+  const target = await getManagedAdminRow(normalizedTargetAdminId)
 
   const account = normalizeAdminPayload(payload, { requirePassword: false })
+
+  if (target.isSuper && !isSuperAdminUsername(operator.username)) {
+    throw forbidden(`超级管理员账号 ${SUPER_ADMIN_USERNAME} 仅允许超级管理员操作`)
+  }
+
+  if (isSuperAdminUsername(account.username) && !isSuperAdminUsername(operator.username)) {
+    throw forbidden(`只有超级管理员可以设置 ${SUPER_ADMIN_USERNAME} 账号`)
+  }
+
+  if (target.isSuper && !isSuperAdminUsername(account.username)) {
+    throw badRequest(`超级管理员账号登录名必须保持为 ${SUPER_ADMIN_USERNAME}`)
+  }
+
   await ensureAdminUsernameAvailable(account.username, normalizedTargetAdminId)
   await ensureUsernameAvailableAcrossRoles(account.username, { role: 'admin', id: normalizedTargetAdminId })
 
@@ -2118,10 +2242,18 @@ export async function updateAdminAccount({ adminId, targetAdminId, payload }) {
 }
 
 export async function deleteAdminAccount({ adminId, targetAdminId }) {
-  await getAdminProfile(adminId)
+  const operator = await getAdminProfile(adminId)
 
   const normalizedTargetAdminId = normalizeAdminId(targetAdminId)
   const target = await getManagedAdminRow(normalizedTargetAdminId)
+
+  if (target.isSuper && !isSuperAdminUsername(operator.username)) {
+    throw forbidden(`超级管理员账号 ${SUPER_ADMIN_USERNAME} 仅允许超级管理员操作`)
+  }
+
+  if (target.isSuper) {
+    throw badRequest(`超级管理员账号 ${SUPER_ADMIN_USERNAME} 不允许删除`)
+  }
 
   if (normalizedTargetAdminId === Number(adminId)) {
     throw badRequest('不能删除当前登录的管理员账号')
@@ -2993,7 +3125,7 @@ export async function getAdminPrepList({ adminId, query }) {
   const requestedPage = normalizePageNumber(query.page)
   const pageSize = normalizePageSize(query.pageSize)
   const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
-  const status = normalizePrepFilterStatus(query.status)
+  const status = 'published'
   const params = []
   let whereSql = '1 = 1'
 
@@ -3002,10 +3134,8 @@ export async function getAdminPrepList({ adminId, query }) {
     params.push(courseId)
   }
 
-  if (status !== 'all') {
-    whereSql += ' AND p.status = ?'
-    params.push(status)
-  }
+  whereSql += ' AND p.status = ?'
+  params.push(status)
 
   if (keyword) {
     const keywordPattern = `%${keyword}%`
@@ -3121,12 +3251,46 @@ export async function getAdminPrepList({ adminId, query }) {
   }
 }
 
+export async function updateAdminPrep({ adminId, prepId, payload }) {
+  await getAdminProfile(adminId)
+  await ensureTeachingPrepReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  const currentPrep = await getAdminPrepRow(normalizedPrepId)
+  ensureAdminPublishedPrepEditable(currentPrep, '编辑')
+
+  const prep = normalizeAdminPrepPayload(payload)
+  await getAdminCourseRow(prep.courseId)
+
+  await pool.query(
+    `UPDATE teaching_prep
+     SET course_id = ?,
+         prep_title = ?,
+         teaching_content = ?,
+         status = ?,
+         update_time = CURRENT_TIMESTAMP
+     WHERE prep_id = ?`,
+    [prep.courseId, prep.title, prep.teachingContent || null, prep.status, normalizedPrepId],
+  )
+
+  logger.info('admin_prep_updated', {
+    adminId,
+    prepId: normalizedPrepId,
+    teacherId: Number(currentPrep.teacherId || 0),
+    courseId: prep.courseId,
+    status: prep.status,
+  })
+
+  return mapAdminPrepItem(await getAdminPrepRow(normalizedPrepId))
+}
+
 export async function deleteAdminPrep({ adminId, prepId }) {
   await getAdminProfile(adminId)
   await ensureTeachingPrepReady()
 
   const normalizedPrepId = normalizePrepId(prepId)
   const prep = await getAdminPrepRow(normalizedPrepId)
+  ensureAdminPublishedPrepEditable(prep, '删除')
 
   await pool.query(
     `DELETE FROM teaching_prep
@@ -3146,6 +3310,49 @@ export async function deleteAdminPrep({ adminId, prepId }) {
   }
 }
 
+export async function deleteAdminPrepAttachment({ adminId, prepId, attachmentId }) {
+  await getAdminProfile(adminId)
+  await ensureTeachingPrepAttachmentReady()
+
+  const normalizedPrepId = normalizePrepId(prepId)
+  const normalizedAttachmentId = normalizeAttachmentId(attachmentId)
+  const prep = await getAdminPrepRow(normalizedPrepId)
+  ensureAdminPublishedPrepEditable(prep, '移除附件')
+
+  const attachment = await getAdminPrepAttachmentRow(normalizedAttachmentId)
+  if (Number(attachment.prepId || 0) !== normalizedPrepId) {
+    throw notFound('备课附件不存在或已删除')
+  }
+
+  await pool.query(
+    `UPDATE teaching_prep_attachment
+     SET status = 0, update_time = CURRENT_TIMESTAMP
+     WHERE attachment_id = ?`,
+    [normalizedAttachmentId],
+  )
+
+  if (attachment.sourceType === 'upload' && attachment.filePath) {
+    const resolvedPath = await resolveStoredFilePath(attachment.filePath)
+    if (resolvedPath) {
+      await cleanupUploadedFile(resolvedPath)
+    }
+  }
+
+  logger.info('admin_prep_attachment_deleted', {
+    adminId,
+    prepId: normalizedPrepId,
+    attachmentId: normalizedAttachmentId,
+    teacherId: Number(prep.teacherId || 0),
+    sourceType: attachment.sourceType,
+  })
+
+  return {
+    id: normalizedAttachmentId,
+    prepId: normalizedPrepId,
+    sourceType: attachment.sourceType,
+  }
+}
+
 export async function getAdminAssetList({ adminId, query }) {
   await getAdminProfile(adminId)
   await ensureAssetLibraryVisibilityReady()
@@ -3155,7 +3362,7 @@ export async function getAdminAssetList({ adminId, query }) {
   const pageSize = normalizePageSize(query.pageSize)
   const courseId = query.courseId === undefined || query.courseId === null || query.courseId === '' ? null : normalizeCourseId(query.courseId)
   const type = normalizeAssetType(query.type)
-  const visibility = normalizeAssetVisibility(query.visibility)
+  const visibility = 'public'
   const params = []
   let whereSql = 'a.status = 1'
 
@@ -3169,10 +3376,8 @@ export async function getAdminAssetList({ adminId, query }) {
     params.push(type)
   }
 
-  if (visibility !== 'all') {
-    whereSql += ' AND COALESCE(a.visibility, \'private\') = ?'
-    params.push(visibility)
-  }
+  whereSql += ' AND COALESCE(a.visibility, \'private\') = ?'
+  params.push(visibility)
 
   if (keyword) {
     const keywordPattern = `%${keyword}%`
@@ -3231,7 +3436,8 @@ export async function getAdminAssetList({ adminId, query }) {
         COUNT(DISTINCT teacher_id) AS teacherCount,
         SUM(CASE WHEN asset_type IN ('image', 'audio', 'video', 'file') THEN 1 ELSE 0 END) AS fileCount
      FROM asset_library
-     WHERE status = 1`,
+     WHERE status = 1
+       AND COALESCE(visibility, 'private') = 'public'`,
   )
 
   const [courseRows] = await pool.query(
@@ -3292,11 +3498,6 @@ export async function getAdminAssetList({ adminId, query }) {
       totalPages,
     },
     filters: {
-      visibilityOptions: [
-        { value: 'all', label: '全部' },
-        { value: 'public', label: '公开' },
-        { value: 'private', label: '私密' },
-      ],
       courses: courseRows.map((item) => ({
         id: Number(item.id),
         name: item.name,
