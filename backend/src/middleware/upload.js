@@ -354,7 +354,7 @@ export const uploadAssetFile = multer({
 
 function prepAttachmentFileFilter(req, file, callback) {
   if (file.fieldname !== 'files') {
-    const error = new Error('涓嶆敮鎸佺殑涓婁紶瀛楁')
+    const error = new Error('不支持的上传字段')
     error.status = 400
     callback(error)
     return
