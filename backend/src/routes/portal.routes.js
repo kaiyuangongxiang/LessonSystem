@@ -4,6 +4,7 @@ import {
   downloadPortalMaterial,
   downloadPortalPrepAttachment,
   getPortalAssetFile,
+  getPortalMaterialFile,
   getPortalPrepAttachmentFile,
   getPortalCourseAssets,
   getPortalCourseDetail,
@@ -22,6 +23,7 @@ router.get('/assets/:assetId/download', downloadPortalAsset)
 router.get('/courses/:courseId/assets', getPortalCourseAssets)
 router.get('/courses/:courseId', getPortalCourseDetail)
 router.get('/assets/:assetId/file', getPortalAssetFile)
+router.get('/materials/:materialId/file', getPortalMaterialFile)
 router.get('/materials/:materialId/download', downloadPortalMaterial)
 router.get('/preps/attachments/:attachmentId/file', getPortalPrepAttachmentFile)
 router.get('/preps/attachments/:attachmentId/download', downloadPortalPrepAttachment)

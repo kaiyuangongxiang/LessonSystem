@@ -2,10 +2,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pool } from '../config/db.js'
+import { preparePreviewFile } from '../utils/file-preview.js'
 import { logger } from '../utils/logger.js'
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
+const backendRoot = path.resolve(currentDir, '../../')
 const projectRoot = path.resolve(currentDir, '../../../')
+const officePreviewCacheRoot = path.resolve(backendRoot, '.cache/office-preview')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 50
 const MAX_DESCRIPTION_LENGTH = 2000
@@ -352,11 +355,15 @@ function normalizeAssetIdList(value) {
 }
 
 function buildResourcePreviewUrl(type, resourceId) {
-  return type === 'material' ? `/portal/materials/${resourceId}/download` : `/portal/videos/${resourceId}/play`
+  return type === 'material' ? `/portal/materials/${resourceId}/file` : `/portal/videos/${resourceId}/play`
 }
 
 function buildAssetPreviewUrl(assetId) {
   return `/portal/assets/${assetId}/file`
+}
+
+function buildAssetDownloadUrl(assetId) {
+  return `/teacher/assets/${assetId}/download`
 }
 
 function buildPrepAttachmentDownloadUrl(attachmentId) {
@@ -928,6 +935,7 @@ function mapPrepAttachmentItem(item) {
   const fileName = item.fileName || ''
   const mimeType = item.mimeType || ''
   const type = sourceType === 'asset' ? item.assetType || inferAttachmentTypeFromMimeType(mimeType, fileName) : inferAttachmentTypeFromMimeType(mimeType, fileName)
+  const hasPreviewFile = Boolean(fileName) || Boolean(String(item.storedPath || '').trim())
 
   return {
     id: attachmentId,
@@ -942,7 +950,7 @@ function mapPrepAttachmentItem(item) {
     fileSize: Number(item.fileSize || 0),
     mimeType,
     visibility: item.visibility || 'private',
-    downloadUrl: sourceType === 'asset' && assetId ? buildAssetPreviewUrl(assetId) : buildPrepAttachmentDownloadUrl(attachmentId),
+    downloadUrl: hasPreviewFile ? (sourceType === 'asset' && assetId ? buildAssetDownloadUrl(assetId) : buildPrepAttachmentDownloadUrl(attachmentId)) : '',
     uploadTime: item.createTime,
   }
 }
@@ -975,6 +983,7 @@ async function getPrepAttachmentMap(prepIds, teacherId = null) {
             COALESCE(a.asset_description, '') AS description,
             COALESCE(a.asset_content, '') AS content,
             COALESCE(a.visibility, 'private') AS visibility,
+            COALESCE(a.file_path, pa.file_path, '') AS storedPath,
             COALESCE(a.file_name, pa.file_name, '') AS fileName,
             COALESCE(a.file_size, pa.file_size, 0) AS fileSize,
             COALESCE(pa.mime_type, '') AS mimeType,
@@ -1667,6 +1676,41 @@ export async function getTeacherAssetDownloadData({ teacherId, assetId }) {
   }
 }
 
+export async function getTeacherAssetPreviewData({ teacherId, assetId }) {
+  await getTeacherProfile(teacherId)
+
+  const normalizedAssetId = normalizeAssetId(assetId)
+  const asset = await getOwnedAssetRow(normalizedAssetId, teacherId)
+
+  if (!ASSET_FILE_TYPES.has(asset.type)) {
+    throw badRequest('当前素材类型不支持预览')
+  }
+
+  const resolvedPath = await resolveStoredFilePath(asset.filePath)
+  if (!resolvedPath) {
+    logger.warn('teacher_asset_preview_missing', {
+      teacherId,
+      assetId: normalizedAssetId,
+      storedPath: asset.filePath,
+    })
+    throw notFound('素材文件不存在')
+  }
+
+  logger.info('teacher_asset_preview_ready', {
+    teacherId,
+    assetId: normalizedAssetId,
+    type: asset.type,
+    visibility: asset.visibility || 'private',
+  })
+
+  return preparePreviewFile({
+    resolvedPath,
+    fileName: asset.fileName || path.basename(resolvedPath),
+    assetType: asset.type,
+    cacheRoot: officePreviewCacheRoot,
+  })
+}
+
 export async function updateTeacherAsset({ teacherId, assetId, payload }) {
   await getTeacherProfile(teacherId)
 
@@ -1944,10 +1988,12 @@ export async function getTeacherPrepAttachmentFileData({ teacherId, attachmentId
       throw notFound('附件文件不存在')
     }
 
-    return {
-      filePath: resolvedPath,
+    return preparePreviewFile({
+      resolvedPath,
       fileName: asset.fileName || path.basename(resolvedPath),
-    }
+      assetType: asset.type,
+      cacheRoot: officePreviewCacheRoot,
+    })
   }
 
   const resolvedPath = await resolveStoredFilePath(attachment.filePath)
@@ -1955,10 +2001,13 @@ export async function getTeacherPrepAttachmentFileData({ teacherId, attachmentId
     throw notFound('附件文件不存在')
   }
 
-  return {
-    filePath: resolvedPath,
+  return preparePreviewFile({
+    resolvedPath,
     fileName: attachment.fileName || path.basename(resolvedPath),
-  }
+    mimeType: attachment.mimeType || '',
+    assetType: 'file',
+    cacheRoot: officePreviewCacheRoot,
+  })
 }
 
 export async function createTeacherResourceBundle({ teacherId, payload, files }) {

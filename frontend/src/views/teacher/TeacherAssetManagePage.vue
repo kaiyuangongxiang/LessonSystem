@@ -19,7 +19,6 @@
 
         <div class="teacher-dashboard-head__actions">
           <button type="button" class="auth-btn" @click="openCreateDialog">新增素材</button>
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/assets')">查看前台素材库</button>
         </div>
       </header>
 

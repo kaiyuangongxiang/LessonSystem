@@ -1,3 +1,4 @@
+import path from 'node:path'
 import {
   addTeacherPrepAssetAttachments,
   addTeacherPrepUploadAttachments,
@@ -13,6 +14,7 @@ import {
   getTeacherAssetDetail,
   getTeacherAssetDownloadData,
   getTeacherAssetList,
+  getTeacherAssetPreviewData,
   getTeacherCourseOptions,
   getTeacherDashboardData,
   getTeacherPrepAttachmentFileData,
@@ -303,7 +305,8 @@ export async function getPrepAttachmentFile(req, res, next) {
       attachmentId: req.params.attachmentId,
     })
 
-    res.download(result.filePath, result.fileName)
+    res.type(result.contentType || path.extname(result.fileName) || 'application/octet-stream')
+    res.sendFile(result.filePath)
   } catch (error) {
     next(error)
   }
@@ -369,6 +372,20 @@ export async function downloadAsset(req, res, next) {
     })
 
     res.download(result.filePath, result.fileName)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function previewAsset(req, res, next) {
+  try {
+    const result = await getTeacherAssetPreviewData({
+      teacherId: req.auth.userId,
+      assetId: req.params.assetId,
+    })
+
+    res.type(result.contentType || path.extname(result.fileName) || 'application/octet-stream')
+    res.sendFile(result.filePath)
   } catch (error) {
     next(error)
   }

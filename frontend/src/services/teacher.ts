@@ -1,5 +1,14 @@
 import http, { type ApiSuccess } from './http'
 
+async function openPreviewBlob(url: string) {
+  const response = await http.get<Blob>(url, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+}
+
 export interface TeacherDashboardStats {
   courseCount: number
   assetCount: number
@@ -402,12 +411,7 @@ export async function deleteTeacherPrepAttachment(prepId: number, attachmentId: 
 }
 
 export async function previewTeacherPrepAttachment(attachmentId: number) {
-  const response = await http.get<Blob>(`/teacher/preps/attachments/${attachmentId}/file`, {
-    responseType: 'blob',
-  })
-  const blobUrl = URL.createObjectURL(response.data)
-  window.open(blobUrl, '_blank', 'noopener,noreferrer')
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+  await openPreviewBlob(`/teacher/preps/attachments/${attachmentId}/file`)
 }
 
 export async function getTeacherCoursewares(params: TeacherCoursewareQuery) {
@@ -564,12 +568,11 @@ export async function getTeacherAssetDetail(assetId: number) {
 }
 
 export async function previewTeacherAsset(assetId: number) {
-  const response = await http.get<Blob>(`/teacher/assets/${assetId}/download`, {
-    responseType: 'blob',
-  })
-  const blobUrl = URL.createObjectURL(response.data)
-  window.open(blobUrl, '_blank', 'noopener,noreferrer')
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+  await openPreviewBlob(`/teacher/assets/${assetId}/preview`)
+}
+
+export async function previewTeacherResource(previewUrl: string) {
+  await openPreviewBlob(previewUrl)
 }
 
 export async function downloadTeacherAsset(assetId: number, fileName = 'download') {

@@ -1,11 +1,14 @@
 import path from 'node:path'
 import {
+  getPortalAssetDownloadData,
   getPortalAssetFileData,
   getPortalCourseAssetsData,
   getPortalCourseDetailData,
   getPortalCourseListData,
   getPortalHomeData,
   getPortalMaterialDownloadData,
+  getPortalMaterialFileData,
+  getPortalPrepAttachmentDownloadData,
   getPortalPrepAttachmentFileData,
   getPortalPublicAssetListData,
   getPortalVideoPlayData,
@@ -85,6 +88,16 @@ export async function downloadPortalMaterial(req, res, next) {
   }
 }
 
+export async function getPortalMaterialFile(req, res, next) {
+  try {
+    const result = await getPortalMaterialFileData(req.params.materialId)
+    res.type(result.contentType || path.extname(result.fileName) || 'application/octet-stream')
+    res.sendFile(result.filePath)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function getPortalAssetFile(req, res, next) {
   try {
     const result = await getPortalAssetFileData(req.params.assetId)
@@ -97,7 +110,7 @@ export async function getPortalAssetFile(req, res, next) {
 
 export async function downloadPortalAsset(req, res, next) {
   try {
-    const result = await getPortalAssetFileData(req.params.assetId)
+    const result = await getPortalAssetDownloadData(req.params.assetId)
     res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)
@@ -116,7 +129,7 @@ export async function getPortalPrepAttachmentFile(req, res, next) {
 
 export async function downloadPortalPrepAttachment(req, res, next) {
   try {
-    const result = await getPortalPrepAttachmentFileData(req.params.attachmentId)
+    const result = await getPortalPrepAttachmentDownloadData(req.params.attachmentId)
     res.download(result.filePath, result.fileName)
   } catch (error) {
     next(error)

@@ -85,7 +85,7 @@
                 </div>
                 <div class="course-detail-row__meta">
                   <span>{{ attachment.uploadTime }}</span>
-                  <button type="button" v-if="attachment.previewUrl" @click="openAttachmentPreview(attachment)">查看资料</button>
+                  <button type="button" v-if="attachment.previewUrl || (attachment.type === 'text' && attachment.content)" @click="openAttachmentPreview(attachment)">查看资料</button>
                   <a v-if="attachment.downloadUrl" :href="materialHref(attachment.downloadUrl)" target="_blank" rel="noreferrer">下载文件</a>
                 </div>
               </div>
@@ -98,51 +98,11 @@
 
       <div v-else class="course-detail-empty">当前课程暂无已发布备课单。</div>
     </section>
-
-    <div v-if="previewVisible" class="course-detail-preview-mask" @click.self="closeAttachmentPreview">
-      <section class="course-detail-preview-dialog">
-        <div class="course-detail-preview-dialog__head">
-          <div>
-            <div class="course-detail-panel__eyebrow">FILE PREVIEW</div>
-            <h3>{{ previewAttachment?.title || '资料预览' }}</h3>
-            <p>{{ previewAttachment ? `${previewAttachment.sourceLabel} · ${assetTypeLabel(previewAttachment.type)}` : '正在准备预览内容' }}</p>
-          </div>
-          <button type="button" class="course-chip course-chip--soft" @click="closeAttachmentPreview">关闭</button>
-        </div>
-
-        <div class="course-detail-preview-dialog__body">
-          <div v-if="previewLoading" class="course-detail-empty course-detail-empty--compact">资料预览加载中...</div>
-          <div v-else-if="previewError" class="course-detail-empty course-detail-empty--compact">{{ previewError }}</div>
-          <img v-else-if="previewMode === 'image' && previewObjectUrl" class="course-detail-preview-media" :src="previewObjectUrl" :alt="previewAttachment?.title || '图片预览'" />
-          <video v-else-if="previewMode === 'video' && previewObjectUrl" class="course-detail-preview-media" :src="previewObjectUrl" controls preload="metadata"></video>
-          <audio v-else-if="previewMode === 'audio' && previewObjectUrl" class="course-detail-preview-audio" :src="previewObjectUrl" controls preload="metadata"></audio>
-          <pre v-else-if="previewMode === 'text'" class="course-detail-preview-text">{{ previewTextContent }}</pre>
-          <iframe
-            v-else-if="previewObjectUrl"
-            class="course-detail-preview-frame"
-            :src="previewObjectUrl"
-            title="资料预览"
-          ></iframe>
-        </div>
-
-        <div class="course-detail-preview-dialog__actions">
-          <a
-            v-if="previewAttachment?.downloadUrl"
-            class="course-detail-home-btn"
-            :href="materialHref(previewAttachment.downloadUrl)"
-            target="_blank"
-            rel="noreferrer"
-          >
-            下载文件
-          </a>
-        </div>
-      </section>
-    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import http from '@/services/http'
@@ -211,13 +171,6 @@ const route = useRoute()
 const router = useRouter()
 const errorMessage = ref('')
 const expandedPrepId = ref<number | null>(null)
-const previewVisible = ref(false)
-const previewLoading = ref(false)
-const previewError = ref('')
-const previewAttachment = ref<PrepAttachmentItem | null>(null)
-const previewObjectUrl = ref('')
-const previewTextContent = ref('')
-const previewMode = ref<'image' | 'video' | 'audio' | 'text' | 'frame'>('frame')
 
 const detail = reactive<CourseDetailResponse>({
   course: {
@@ -243,122 +196,16 @@ function materialHref(downloadUrl: string) {
   return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}${downloadUrl}`
 }
 
-function inferMimeTypeFromFileName(fileName: string, fallbackType: PrepAttachmentItem['type']) {
-  const extension = (fileName.split('.').pop() || '').toLowerCase()
-  const mimeMap: Record<string, string> = {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    gif: 'image/gif',
-    webp: 'image/webp',
-    bmp: 'image/bmp',
-    svg: 'image/svg+xml',
-    mp4: 'video/mp4',
-    webm: 'video/webm',
-    ogg: 'video/ogg',
-    mov: 'video/quicktime',
-    mp3: 'audio/mpeg',
-    wav: 'audio/wav',
-    m4a: 'audio/mp4',
-    aac: 'audio/aac',
-    flac: 'audio/flac',
-    txt: 'text/plain;charset=utf-8',
-    md: 'text/markdown;charset=utf-8',
-    json: 'application/json;charset=utf-8',
-    pdf: 'application/pdf',
-  }
-
-  if (mimeMap[extension]) {
-    return mimeMap[extension]
-  }
-
-  if (fallbackType === 'image') {
-    return 'image/jpeg'
-  }
-
-  if (fallbackType === 'video') {
-    return 'video/mp4'
-  }
-
-  if (fallbackType === 'audio') {
-    return 'audio/mpeg'
-  }
-
-  if (fallbackType === 'text') {
-    return 'text/plain;charset=utf-8'
-  }
-
-  return 'application/octet-stream'
-}
-
-function normalizeMimeType(value: string) {
-  return value.split(';')[0]?.trim().toLowerCase() || ''
-}
-
-function resolvePreviewMode(
-  attachment: PrepAttachmentItem,
-  mimeType: string,
-): 'image' | 'video' | 'audio' | 'text' | 'frame' {
-  const normalizedMimeType = normalizeMimeType(mimeType)
-  const extension = (attachment.fileName.split('.').pop() || '').toLowerCase()
-
-  if (normalizedMimeType.startsWith('image/')) {
-    return 'image'
-  }
-
-  if (normalizedMimeType.startsWith('video/')) {
-    return 'video'
-  }
-
-  if (normalizedMimeType.startsWith('audio/')) {
-    return 'audio'
-  }
-
-  if (
-    normalizedMimeType.startsWith('text/') ||
-    normalizedMimeType === 'application/json' ||
-    normalizedMimeType === 'application/xml'
-  ) {
-    return 'text'
-  }
-
-  if (normalizedMimeType === 'application/pdf') {
-    return 'frame'
-  }
-
-  if (['txt', 'md', 'json', 'xml', 'csv'].includes(extension)) {
-    return 'text'
-  }
-
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
-    return 'image'
-  }
-
-  if (['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(extension)) {
-    return 'video'
-  }
-
-  if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'].includes(extension)) {
-    return 'audio'
-  }
-
-  if (attachment.type === 'image') {
-    return 'image'
-  }
-
-  if (attachment.type === 'video') {
-    return 'video'
-  }
-
-  if (attachment.type === 'audio') {
-    return 'audio'
-  }
-
-  if (attachment.type === 'text') {
-    return 'text'
-  }
-
-  return 'frame'
+function renderAttachmentText(content: string) {
+  return String(content || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim()
 }
 
 function assetTypeLabel(type: string) {
@@ -377,59 +224,39 @@ function togglePrep(prepId: number) {
   expandedPrepId.value = expandedPrepId.value === prepId ? null : prepId
 }
 
-function resetPreviewResource() {
-  if (previewObjectUrl.value) {
-    URL.revokeObjectURL(previewObjectUrl.value)
-    previewObjectUrl.value = ''
-  }
-  previewTextContent.value = ''
-}
-
-function closeAttachmentPreview() {
-  previewVisible.value = false
-  previewLoading.value = false
-  previewError.value = ''
-  previewAttachment.value = null
-  previewMode.value = 'frame'
-  resetPreviewResource()
+async function openPreviewBlob(url: string) {
+  const response = await http.get<Blob>(url, {
+    responseType: 'blob',
+  })
+  const blobUrl = URL.createObjectURL(response.data)
+  window.open(blobUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
 }
 
 async function openAttachmentPreview(attachment: PrepAttachmentItem) {
-  previewVisible.value = true
-  previewLoading.value = true
-  previewError.value = ''
-  previewAttachment.value = attachment
-  previewMode.value = 'frame'
-  resetPreviewResource()
+  errorMessage.value = ''
 
   try {
-    const response = await http.get<Blob>(attachment.previewUrl, {
-      responseType: 'blob',
-    })
-    if (!response.data) {
-      throw new Error('预览文件获取失败')
+    if (!attachment.previewUrl && attachment.type === 'text' && attachment.content) {
+      const textBlob = new Blob([renderAttachmentText(attachment.content)], {
+        type: 'text/plain;charset=utf-8',
+      })
+      const blobUrl = URL.createObjectURL(textBlob)
+      window.open(blobUrl, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+      return
     }
 
-    const responseMimeType = normalizeMimeType(String(response.headers['content-type'] || ''))
-    const sourceBlob = response.data
-    const blobMimeType = normalizeMimeType(sourceBlob.type || '')
-    const fallbackMimeType = inferMimeTypeFromFileName(attachment.fileName, attachment.type)
-    const resolvedMimeType = responseMimeType || blobMimeType || fallbackMimeType
-    const resolvedPreviewMode = resolvePreviewMode(attachment, resolvedMimeType)
-    const normalizedBlob = new Blob([sourceBlob], {
-      type: resolvedMimeType || fallbackMimeType,
-    })
-    previewMode.value = resolvedPreviewMode
-
-    if (resolvedPreviewMode === 'text') {
-      previewTextContent.value = await normalizedBlob.text()
-    } else {
-      previewObjectUrl.value = URL.createObjectURL(normalizedBlob)
+    if (!attachment.previewUrl) {
+      throw new Error('当前资料暂不支持在线查看')
     }
+
+    await openPreviewBlob(attachment.previewUrl)
   } catch (error: any) {
-    previewError.value = error instanceof Error ? error.message : '当前资料暂时无法在线预览'
-  } finally {
-    previewLoading.value = false
+    errorMessage.value =
+      error?.response?.data?.message ||
+      error?.message ||
+      '当前资料暂时无法在线预览'
   }
 }
 
@@ -444,9 +271,6 @@ async function loadDetail() {
     detail.materials = data.materials
     detail.videos = data.videos
     detail.preps = data.preps
-    if (data.preps.length > 0) {
-      expandedPrepId.value = data.preps[0].id
-    }
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '课程详情加载失败'
     detail.materials = []
@@ -462,8 +286,4 @@ watch(
   },
   { immediate: true },
 )
-
-onBeforeUnmount(() => {
-  resetPreviewResource()
-})
 </script>

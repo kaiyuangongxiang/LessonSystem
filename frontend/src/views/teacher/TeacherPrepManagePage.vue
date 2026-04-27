@@ -265,10 +265,10 @@
 
               <div class="prep-manage-attachment-item__actions">
                 <button
-                  v-if="attachment.downloadUrl"
+                  v-if="canPreviewAttachment(attachment)"
                   type="button"
                   class="course-chip course-chip--soft"
-                  @click="previewAttachment(attachment.id)"
+                  @click="previewAttachment(attachment)"
                 >
                   查看
                 </button>
@@ -386,12 +386,26 @@ const canAttachAssets = computed(
   () => Boolean(editorForm.title.trim()) && Boolean(editorForm.courseId) && Boolean(editorForm.teachingContent.trim()),
 )
 
-const filteredPersonalAssetOptions = computed(() => {
-  if (assetTypeFilter.value === 'all') {
-    return personalAssetOptions.value
-  }
+const mountedAssetIds = computed(() => {
+  return new Set(
+    editorAttachments.value
+      .filter((item) => item.sourceType === 'asset' && item.assetId !== null)
+      .map((item) => Number(item.assetId)),
+  )
+})
 
-  return personalAssetOptions.value.filter((item) => item.type === assetTypeFilter.value)
+const filteredPersonalAssetOptions = computed(() => {
+  return personalAssetOptions.value.filter((item) => {
+    if (mountedAssetIds.value.has(item.id)) {
+      return false
+    }
+
+    if (assetTypeFilter.value === 'all') {
+      return true
+    }
+
+    return item.type === assetTypeFilter.value
+  })
 })
 
 const dialogBusy = computed(
@@ -414,6 +428,18 @@ function renderExcerpt(content: string, fallback = '暂无内容') {
   return text.length > 140 ? `${text.slice(0, 140)}...` : text
 }
 
+function renderAttachmentText(content: string) {
+  return String(content || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim()
+}
+
 function assetTypeLabel(type: string) {
   const labels: Record<string, string> = {
     image: '图片',
@@ -424,6 +450,10 @@ function assetTypeLabel(type: string) {
   }
 
   return labels[type] || type
+}
+
+function canPreviewAttachment(attachment: TeacherPrepAttachmentItem) {
+  return Boolean(attachment.downloadUrl) || (attachment.type === 'text' && Boolean(attachment.content))
 }
 
 function fillEditor(item: TeacherPrepItem) {
@@ -530,9 +560,19 @@ function startEdit(item: TeacherPrepItem) {
   showEditorDialog.value = true
 }
 
-async function previewAttachment(attachmentId: number) {
+async function previewAttachment(attachment: TeacherPrepAttachmentItem) {
   try {
-    await previewTeacherPrepAttachment(attachmentId)
+    if (!attachment.downloadUrl && attachment.type === 'text' && attachment.content) {
+      const textBlob = new Blob([renderAttachmentText(attachment.content)], {
+        type: 'text/plain;charset=utf-8',
+      })
+      const blobUrl = URL.createObjectURL(textBlob)
+      window.open(blobUrl, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+      return
+    }
+
+    await previewTeacherPrepAttachment(attachment.id)
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '备课附件预览失败'
   }
@@ -775,4 +815,9 @@ watch(
   },
   { immediate: true },
 )
+
+watch(filteredPersonalAssetOptions, (options) => {
+  const availableIds = new Set(options.map((item) => item.id))
+  selectedAssetIds.value = selectedAssetIds.value.filter((id) => availableIds.has(id))
+})
 </script>

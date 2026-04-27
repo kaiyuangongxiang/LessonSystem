@@ -197,6 +197,7 @@ import {
   deleteTeacherResource,
   getTeacherResourceDetail,
   getTeacherResources,
+  previewTeacherResource,
   updateTeacherResource,
   type TeacherCourseOption,
   type TeacherOwnedResourceItem,
@@ -262,14 +263,6 @@ function formatFileSize(size: number) {
   return `${(size / 1024).toFixed(2)} KB`
 }
 
-function buildApiUrl(path: string) {
-  if (!path) {
-    return '#'
-  }
-
-  return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}${path}`
-}
-
 function clearMessages() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -317,8 +310,17 @@ function cancelEdit() {
   editForm.description = ''
 }
 
-function viewResource(item: TeacherOwnedResourceItem) {
-  window.open(buildApiUrl(item.previewUrl), '_blank', 'noopener,noreferrer')
+async function viewResource(item: TeacherOwnedResourceItem) {
+  if (!item.previewUrl) {
+    errorMessage.value = '当前资源暂不支持在线预览'
+    return
+  }
+
+  try {
+    await previewTeacherResource(item.previewUrl)
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '资源预览失败'
+  }
 }
 
 async function startEdit(item: TeacherOwnedResourceItem) {

@@ -372,6 +372,7 @@ import {
   getTeacherAssets,
   getTeacherCoursewareDetail,
   getTeacherResources,
+  previewTeacherResource,
   publishTeacherCourseware,
   updateTeacherCourseware,
   type TeacherAssetItem,
@@ -485,13 +486,16 @@ function resolvePreviewUrl(url: string) {
   return `${baseUrl}${url.startsWith('/') ? url : `/${url}`}`
 }
 
-function openPreviewLink(url: string) {
-  const targetUrl = resolvePreviewUrl(url)
-  if (!targetUrl) {
+async function openPreviewLink(url: string) {
+  if (!url) {
     return
   }
 
-  window.open(targetUrl, '_blank', 'noopener,noreferrer')
+  try {
+    await previewTeacherResource(url)
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '资源预览失败'
+  }
 }
 
 function goBack() {

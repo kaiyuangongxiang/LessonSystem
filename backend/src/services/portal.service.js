@@ -3,11 +3,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { env } from '../config/env.js'
 import { pool } from '../config/db.js'
+import { preparePreviewFile } from '../utils/file-preview.js'
 import { logger } from '../utils/logger.js'
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const backendRoot = path.resolve(currentDir, '../../')
 const projectRoot = path.resolve(currentDir, '../../../')
+const officePreviewCacheRoot = path.resolve(backendRoot, '.cache/office-preview')
 const DEFAULT_PAGE_SIZE = 6
 const MAX_PAGE_SIZE = 12
 const PUBLIC_ASSET_TYPES = new Set(['image', 'audio', 'video', 'text', 'file'])
@@ -228,67 +230,6 @@ function inferPrepAttachmentType(mimeType, fileName) {
   }
 
   return 'file'
-}
-
-function buildContentTypeFromExtension(extension) {
-  const normalizedExtension = String(extension || '').toLowerCase()
-  const contentTypeMap = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-    '.svg': 'image/svg+xml',
-    '.mp4': 'video/mp4',
-    '.webm': 'video/webm',
-    '.ogg': 'video/ogg',
-    '.mov': 'video/quicktime',
-    '.mp3': 'audio/mpeg',
-    '.wav': 'audio/wav',
-    '.m4a': 'audio/mp4',
-    '.aac': 'audio/aac',
-    '.flac': 'audio/flac',
-    '.txt': 'text/plain; charset=utf-8',
-    '.md': 'text/markdown; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.pdf': 'application/pdf',
-  }
-
-  return contentTypeMap[normalizedExtension] || ''
-}
-
-function resolvePreviewContentType({ mimeType, assetType, fileName, storedPath }) {
-  const normalizedMimeType = String(mimeType || '').trim().toLowerCase()
-  if (normalizedMimeType) {
-    return normalizedMimeType
-  }
-
-  const extensionContentType =
-    buildContentTypeFromExtension(path.extname(String(fileName || ''))) ||
-    buildContentTypeFromExtension(path.extname(String(storedPath || '')))
-  if (extensionContentType) {
-    return extensionContentType
-  }
-
-  const normalizedAssetType = String(assetType || '').trim().toLowerCase()
-  if (normalizedAssetType === 'image') {
-    return 'image/*'
-  }
-
-  if (normalizedAssetType === 'video') {
-    return 'video/*'
-  }
-
-  if (normalizedAssetType === 'audio') {
-    return 'audio/*'
-  }
-
-  if (normalizedAssetType === 'text') {
-    return 'text/plain; charset=utf-8'
-  }
-
-  return 'application/octet-stream'
 }
 
 function buildPortalPrepAttachmentFileUrl(attachmentId) {
@@ -817,7 +758,7 @@ export async function getPortalCourseAssetsData(courseIdValue) {
   }
 }
 
-export async function getPortalMaterialDownloadData(materialIdValue) {
+async function getPortalMaterialFileSource(materialIdValue) {
   const materialId = normalizeCourseId(materialIdValue, '资料')
 
   const [rows] = await pool.query(
@@ -849,20 +790,172 @@ export async function getPortalMaterialDownloadData(materialIdValue) {
     throw notFound('资料文件不存在')
   }
 
-  await pool.query('UPDATE material SET download_count = download_count + 1 WHERE material_id = ?', [materialId])
+  return {
+    materialId,
+    courseId: material.courseId,
+    filePath: resolvedPath,
+    fileName: material.fileName || path.basename(resolvedPath),
+  }
+}
+
+async function getPortalAssetFileSource(assetIdValue) {
+  const assetId = normalizeCourseId(assetIdValue, '绱犳潗')
+  await ensureAssetLibraryVisibilityReady()
+
+  const [rows] = await pool.query(
+    `SELECT a.asset_id AS id,
+            a.course_id AS courseId,
+            a.asset_type AS type,
+            COALESCE(a.file_name, a.asset_title) AS fileName,
+            a.file_path AS storedPath
+     FROM asset_library a
+     WHERE a.asset_id = ?
+       AND a.status = 1
+       AND COALESCE(a.visibility, 'private') = 'public'
+     LIMIT 1`,
+    [assetId],
+  )
+
+  const asset = rows[0]
+  if (!asset) {
+    logger.warn('portal_asset_missing', { assetId })
+    throw notFound('\u7d20\u6750\u4e0d\u5b58\u5728\u6216\u5df2\u4e0b\u7ebf')
+  }
+
+  const resolvedPath = resolveStoredFilePath(asset.storedPath)
+  if (!resolvedPath) {
+    logger.warn('portal_asset_file_missing', {
+      assetId,
+      courseId: asset.courseId,
+      storedPath: asset.storedPath,
+    })
+    throw notFound('\u7d20\u6750\u6587\u4ef6\u4e0d\u5b58\u5728')
+  }
+
+  return {
+    assetId,
+    courseId: asset.courseId,
+    assetType: asset.type,
+    filePath: resolvedPath,
+    fileName: asset.fileName || path.basename(resolvedPath),
+  }
+}
+
+async function getPortalPrepAttachmentFileSource(attachmentIdValue) {
+  const attachmentId = normalizeCourseId(attachmentIdValue, '澶囪闄勪欢')
+
+  if (!(await hasTeachingPrepAttachmentReady()) || !(await hasTeachingPrepReady())) {
+    throw notFound('澶囪闄勪欢涓嶅瓨鍦ㄦ垨鏈垵濮嬪寲')
+  }
+
+  const [rows] = await pool.query(
+    `SELECT pa.attachment_id AS id,
+            pa.source_type AS sourceType,
+            COALESCE(pa.file_path, '') AS uploadStoredPath,
+            COALESCE(pa.file_name, '') AS uploadFileName,
+            COALESCE(pa.mime_type, '') AS uploadMimeType,
+            p.prep_id AS prepId,
+            p.course_id AS courseId,
+            COALESCE(a.asset_id, 0) AS assetId,
+            COALESCE(a.asset_type, '') AS assetType,
+            COALESCE(a.file_path, '') AS assetStoredPath,
+            COALESCE(a.file_name, '') AS assetFileName
+     FROM teaching_prep_attachment pa
+     INNER JOIN teaching_prep p ON p.prep_id = pa.prep_id
+     LEFT JOIN asset_library a ON a.asset_id = pa.asset_id AND a.status = 1
+     INNER JOIN course_intro c ON c.course_id = p.course_id AND c.status = 1
+     WHERE pa.attachment_id = ?
+       AND pa.status = 1
+       AND p.status = 'published'
+       AND (pa.source_type = 'upload' OR a.asset_id IS NOT NULL)
+     LIMIT 1`,
+    [attachmentId],
+  )
+
+  const attachment = rows[0]
+  if (!attachment) {
+    logger.warn('portal_prep_attachment_missing', { attachmentId })
+    throw notFound('\u5907\u8bfe\u9644\u4ef6\u4e0d\u5b58\u5728\u6216\u5df2\u4e0b\u7ebf')
+  }
+
+  const storedPath =
+    attachment.sourceType === 'asset' ? attachment.assetStoredPath : attachment.uploadStoredPath
+  const fileName =
+    attachment.sourceType === 'asset'
+      ? attachment.assetFileName || attachment.uploadFileName
+      : attachment.uploadFileName
+  const mimeType = attachment.sourceType === 'asset' ? '' : attachment.uploadMimeType
+  const assetType = attachment.sourceType === 'asset' ? attachment.assetType : 'file'
+  const resolvedPath = resolveStoredFilePath(storedPath)
+  if (!resolvedPath) {
+    logger.warn('portal_prep_attachment_file_missing', {
+      attachmentId,
+      prepId: attachment.prepId,
+      courseId: attachment.courseId,
+      storedPath,
+    })
+    throw notFound('\u5907\u8bfe\u9644\u4ef6\u6587\u4ef6\u4e0d\u5b58\u5728')
+  }
+
+  return {
+    attachmentId,
+    prepId: attachment.prepId,
+    courseId: attachment.courseId,
+    sourceType: attachment.sourceType,
+    assetType,
+    mimeType,
+    filePath: resolvedPath,
+    fileName: fileName || path.basename(resolvedPath),
+  }
+}
+
+export async function getPortalMaterialDownloadData(materialIdValue) {
+  const material = await getPortalMaterialFileSource(materialIdValue)
+
+  await pool.query('UPDATE material SET download_count = download_count + 1 WHERE material_id = ?', [material.materialId])
 
   logger.info('portal_material_download_ready', {
-    materialId,
+    materialId: material.materialId,
     courseId: material.courseId,
   })
 
   return {
-    filePath: resolvedPath,
-    downloadName: material.fileName || path.basename(resolvedPath),
+    filePath: material.filePath,
+    downloadName: material.fileName,
   }
 }
 
+export async function getPortalMaterialFileData(materialIdValue) {
+  const material = await getPortalMaterialFileSource(materialIdValue)
+
+  logger.info('portal_material_file_ready', {
+    materialId: material.materialId,
+    courseId: material.courseId,
+  })
+
+  return preparePreviewFile({
+    resolvedPath: material.filePath,
+    fileName: material.fileName,
+    assetType: 'file',
+    cacheRoot: officePreviewCacheRoot,
+  })
+}
+
 export async function getPortalAssetFileData(assetIdValue) {
+  const assetSource = await getPortalAssetFileSource(assetIdValue)
+
+  logger.info('portal_asset_file_ready', {
+    assetId: assetSource.assetId,
+    courseId: assetSource.courseId,
+    type: assetSource.assetType,
+  })
+
+  return preparePreviewFile({
+    resolvedPath: assetSource.filePath,
+    fileName: assetSource.fileName,
+    assetType: assetSource.assetType,
+    cacheRoot: officePreviewCacheRoot,
+  })
   const assetId = normalizeCourseId(assetIdValue, '素材')
   await ensureAssetLibraryVisibilityReady()
 
@@ -902,13 +995,31 @@ export async function getPortalAssetFileData(assetIdValue) {
     type: asset.type,
   })
 
-  return {
-    filePath: resolvedPath,
+  return preparePreviewFile({
+    resolvedPath,
     fileName: asset.fileName || path.basename(resolvedPath),
-  }
+    assetType: asset.type,
+    cacheRoot: officePreviewCacheRoot,
+  })
 }
 
 export async function getPortalPrepAttachmentFileData(attachmentIdValue) {
+  const attachmentSource = await getPortalPrepAttachmentFileSource(attachmentIdValue)
+
+  logger.info('portal_prep_attachment_file_ready', {
+    attachmentId: attachmentSource.attachmentId,
+    prepId: attachmentSource.prepId,
+    courseId: attachmentSource.courseId,
+    sourceType: attachmentSource.sourceType,
+  })
+
+  return preparePreviewFile({
+    resolvedPath: attachmentSource.filePath,
+    fileName: attachmentSource.fileName,
+    mimeType: attachmentSource.mimeType,
+    assetType: attachmentSource.assetType,
+    cacheRoot: officePreviewCacheRoot,
+  })
   const attachmentId = normalizeCourseId(attachmentIdValue, '备课附件')
 
   if (!(await hasTeachingPrepAttachmentReady()) || !(await hasTeachingPrepReady())) {
@@ -952,13 +1063,6 @@ export async function getPortalPrepAttachmentFileData(attachmentIdValue) {
       ? attachment.assetFileName || attachment.uploadFileName
       : attachment.uploadFileName
   const mimeType = attachment.sourceType === 'asset' ? '' : attachment.uploadMimeType
-  const contentType = resolvePreviewContentType({
-    mimeType,
-    assetType: attachment.assetType,
-    fileName,
-    storedPath,
-  })
-
   const resolvedPath = resolveStoredFilePath(storedPath)
   if (!resolvedPath) {
     logger.warn('portal_prep_attachment_file_missing', {
@@ -977,10 +1081,43 @@ export async function getPortalPrepAttachmentFileData(attachmentIdValue) {
     sourceType: attachment.sourceType,
   })
 
-  return {
-    filePath: resolvedPath,
+  return preparePreviewFile({
+    resolvedPath,
     fileName: fileName || path.basename(resolvedPath),
-    contentType,
+    mimeType,
+    assetType: attachment.assetType,
+    cacheRoot: officePreviewCacheRoot,
+  })
+}
+
+export async function getPortalAssetDownloadData(assetIdValue) {
+  const asset = await getPortalAssetFileSource(assetIdValue)
+
+  logger.info('portal_asset_download_ready', {
+    assetId: asset.assetId,
+    courseId: asset.courseId,
+    type: asset.assetType,
+  })
+
+  return {
+    filePath: asset.filePath,
+    fileName: asset.fileName,
+  }
+}
+
+export async function getPortalPrepAttachmentDownloadData(attachmentIdValue) {
+  const attachment = await getPortalPrepAttachmentFileSource(attachmentIdValue)
+
+  logger.info('portal_prep_attachment_download_ready', {
+    attachmentId: attachment.attachmentId,
+    prepId: attachment.prepId,
+    courseId: attachment.courseId,
+    sourceType: attachment.sourceType,
+  })
+
+  return {
+    filePath: attachment.filePath,
+    fileName: attachment.fileName,
   }
 }
 
