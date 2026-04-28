@@ -143,7 +143,7 @@
         v-model="showEditorDialog"
         eyebrow="PREP EDITOR"
         :title="editingId ? '编辑备课单' : '新建备课单'"
-        :description="editingId ? '在弹窗内继续维护教学内容和附件，不再挤占列表区域。' : '先保存基础信息，再继续挂载附件或个人素材。'"
+        :description="editingId ? '在弹窗内继续维护教学内容和附件，不再挤占列表区域。' : '先保存基础信息，再继续挂载附件或我的资料。'"
         size="wide"
         :disabled="dialogBusy"
         @close="closeEditorDialog"
@@ -179,7 +179,7 @@
 
           <div class="prep-manage-form__hint">
             <strong>填写建议</strong>
-            <p>标题、课程和教学内容填写完整后，就可以先挂载素材；后续再继续保存和完善会更顺手。</p>
+            <p>标题、课程和教学内容填写完整后，就可以先挂载资料；后续再继续保存和完善会更顺手。</p>
           </div>
 
           <label class="my-resources-field my-resources-field--full">
@@ -198,17 +198,17 @@
           <div class="my-resources-panel__head">
             <div>
               <div class="my-resources-panel__eyebrow">PREP ATTACHMENTS</div>
-              <h3>素材挂载</h3>
+              <h3>资料挂载</h3>
             </div>
             <div class="my-resources-panel__meta">
-              {{ editingId ? `当前附件 ${editorAttachments.length}` : canAttachAssets ? '必填项已完成，可直接挂载素材' : '请先填写必填项后再挂载素材' }}
+              {{ editingId ? `当前附件 ${editorAttachments.length}` : canAttachAssets ? '必填项已完成，可直接挂载资料' : '请先填写必填项后再挂载资料' }}
             </div>
           </div>
 
           <div class="prep-manage-attachment-grid">
             <article class="prep-manage-attachment-box">
-              <strong>选择个人素材</strong>
-              <p>仅可选择当前教师自己的素材进行挂载。</p>
+              <strong>选择我的资料</strong>
+              <p>仅可选择当前教师自己上传的资料进行挂载。</p>
 
               <div class="prep-manage-asset-toolbar">
                 <label class="prep-manage-asset-filter">
@@ -240,7 +240,7 @@
                 </label>
               </div>
               <div v-else class="course-detail-empty course-detail-empty--compact">
-                {{ personalAssetOptions.length ? '当前筛选条件下没有可挂载的素材。' : '当前还没有可选择的个人素材。' }}
+                {{ personalAssetOptions.length ? '当前筛选条件下没有可挂载的资料。' : '当前还没有可选择的资料。' }}
               </div>
 
               <div class="prep-manage-attachment-box__actions">
@@ -250,7 +250,7 @@
                   :disabled="((!canAttachAssets && !editingId) || attachingAssets || !selectedAssetIds.length)"
                   @click="attachSelectedAssets"
                 >
-                  {{ attachingAssets ? '挂载中...' : `挂载 ${selectedAssetIds.length || 0} 个素材` }}
+                  {{ attachingAssets ? '挂载中...' : `挂载 ${selectedAssetIds.length || 0} 份资料` }}
                 </button>
               </div>
             </article>
@@ -284,7 +284,7 @@
             </article>
           </div>
           <div v-else class="course-detail-empty course-detail-empty--compact">
-            {{ editingId ? '当前备课单还没有挂载素材。' : '' }}
+            {{ editingId ? '当前备课单还没有挂载资料。' : '' }}
           </div>
         </section>
 
@@ -369,7 +369,7 @@ const pagination = reactive({
 
 const headerText = computed(() => {
   const name = authStore.profile?.name || authStore.profile?.username || '教师用户'
-  return `${name}，这里可以维护教学内容，并为备课单挂载个人素材。`
+  return `${name}，这里可以维护教学内容，并为备课单挂载我的资料。`
 })
 
 
@@ -593,7 +593,7 @@ async function ensurePrepForAttachments() {
   }
 
   if (!canAttachAssets.value) {
-    errorMessage.value = '请先填写标题、所属课程和教学内容，再挂载素材'
+    errorMessage.value = '请先填写标题、所属课程和教学内容，再挂载资料'
     return null
   }
 
@@ -603,7 +603,7 @@ async function ensurePrepForAttachments() {
   editorAttachments.value = createdPrep.attachments || []
   await loadPreps()
   syncPrepListItem(createdPrep)
-  successMessage.value = `备课单“${createdPrep.title}”已自动创建，可继续挂载素材`
+  successMessage.value = `备课单“${createdPrep.title}”已自动创建，可继续挂载资料`
   return createdPrep.id
 }
 
@@ -639,8 +639,8 @@ async function submitPrep() {
     await loadPreps()
     syncPrepListItem(syncedPrep)
     successMessage.value = isEditing
-      ? `备课单“${result.title}”已保存${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`
-      : `备课单“${result.title}”已创建${pendingAssetIds.length ? '，所选素材已同步挂载' : ''}`
+      ? `备课单“${result.title}”已保存${pendingAssetIds.length ? '，所选资料已同步挂载' : ''}`
+      : `备课单“${result.title}”已创建${pendingAssetIds.length ? '，所选资料已同步挂载' : ''}`
     closeEditorDialog(true)
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '备课单保存失败'
@@ -674,7 +674,7 @@ async function toggleStatus(item: TeacherPrepItem) {
 
 async function attachSelectedAssets() {
   if (!selectedAssetIds.value.length) {
-    errorMessage.value = '请先勾选要挂载的个人素材'
+    errorMessage.value = '请先勾选要挂载的资料'
     return
   }
 
@@ -692,9 +692,9 @@ async function attachSelectedAssets() {
     syncPrepListAttachments(prepId, result.attachments)
     selectedAssetIds.value = []
     await loadPreps()
-    successMessage.value = '个人素材已挂载到当前备课单'
+    successMessage.value = '已将所选资料挂载到当前备课单'
   } catch (error: any) {
-    errorMessage.value = error?.response?.data?.message || '个人素材挂载失败'
+    errorMessage.value = error?.response?.data?.message || '资料挂载失败'
   } finally {
     attachingAssets.value = false
   }

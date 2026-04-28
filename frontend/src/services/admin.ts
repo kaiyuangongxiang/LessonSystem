@@ -5,7 +5,7 @@ export interface AdminDashboardStats {
   teacherCount: number
   courseCount: number
   materialCount: number
-  videoCount: number
+  prepCount: number
   topicCount: number
 }
 

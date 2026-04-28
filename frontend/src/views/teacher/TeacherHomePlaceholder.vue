@@ -37,8 +37,8 @@
         <article class="teacher-dashboard-panel">
           <div class="teacher-dashboard-panel__head">
             <div>
-              <div class="teacher-dashboard-panel__eyebrow">RECENT ASSETS</div>
-              <h3>最近素材</h3>
+              <div class="teacher-dashboard-panel__eyebrow">RECENT RESOURCES</div>
+              <h3>最近资料</h3>
             </div>
             <button type="button" class="course-chip course-chip--soft" @click="router.push('/teacher/assets')">查看全部</button>
           </div>
@@ -47,14 +47,14 @@
             <article v-for="item in dashboard.recentAssets" :key="item.id" class="teacher-dashboard-upload-item">
               <div class="teacher-dashboard-upload-item__main">
                 <strong>{{ item.title }}</strong>
-                <p>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开素材' : '私密素材' }}</p>
+                <p>{{ assetTypeLabel(item.type) }} · {{ item.visibility === 'public' ? '公开资料' : '私密资料' }}</p>
               </div>
               <div class="teacher-dashboard-upload-item__meta">
                 <span>{{ item.uploadDate }}</span>
               </div>
             </article>
           </div>
-          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有素材记录，可以先去上传第一份素材。</div>
+          <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有资料记录，可以先去上传第一份资料。</div>
         </article>
 
         <article class="teacher-dashboard-panel">
@@ -113,16 +113,16 @@
             <article v-for="item in dashboard.courseCoverage" :key="item.id" class="teacher-dashboard-hot-item">
               <div>
                 <strong>{{ item.name }}</strong>
-                <span>素材 {{ item.assetCount }} · 备课单 {{ item.prepCount }}</span>
+                <span>资料 {{ item.assetCount }} · 备课单 {{ item.prepCount }}</span>
               </div>
             </article>
           </div>
           <div v-else class="course-detail-empty course-detail-empty--compact">当前还没有课程覆盖数据，后续会在这里汇总展示。</div>
 
           <div class="teacher-dashboard-weekly">
-            <p>近 7 天新增素材 {{ dashboard?.weeklyActivity.assetCount ?? 0 }} 份。</p>
+            <p>近 7 天新增资料 {{ dashboard?.weeklyActivity.assetCount ?? 0 }} 份。</p>
             <p>近 7 天新增备课单 {{ dashboard?.weeklyActivity.prepCount ?? 0 }} 条。</p>
-            <p>近 7 天公开素材 {{ dashboard?.weeklyActivity.publicAssetCount ?? 0 }} 份。</p>
+            <p>近 7 天公开资料 {{ dashboard?.weeklyActivity.publicAssetCount ?? 0 }} 份。</p>
             <div class="teacher-dashboard-status">教师中心状态正常</div>
           </div>
         </article>
@@ -145,7 +145,7 @@ const errorMessage = ref('')
 
 const teacherName = computed(() => dashboard.value?.profile.name || authStore.profile?.name || authStore.profile?.username || '老师')
 
-const welcomeText = computed(() => `${teacherName.value}，这里统一查看素材、备课单和个人资料等常用入口。`)
+const welcomeText = computed(() => `${teacherName.value}，这里统一查看资料、备课单和个人资料等常用入口。`)
 
 const metricCards = computed(() => {
   const stats = dashboard.value?.stats || {
@@ -159,7 +159,7 @@ const metricCards = computed(() => {
   return [
     { label: '课程数量', value: stats.courseCount, tip: '当前教师名下课程' },
     { label: '资料总数', value: stats.assetCount, tip: '已上传资料总数' },
-    { label: '公开素材', value: stats.publicAssetCount, tip: '前台可见的公开素材' },
+    { label: '公开资料', value: stats.publicAssetCount, tip: '前台可见的公开资料' },
     { label: '备课单', value: stats.prepCount, tip: `其中已发布 ${stats.publishedPrepCount} 条` },
   ]
 })
@@ -168,9 +168,9 @@ const pendingText = computed(() => {
   const stats = dashboard.value?.stats
   if (!stats) return '正在整理教师中心数据。'
   if (!stats.courseCount) return '当前还没有课程数据，可以先联系管理员补充课程。'
-  if (!stats.assetCount) return '建议先上传几份常用素材，后续备课会更方便。'
-  if (!stats.prepCount) return '已有素材后，可以继续整理备课单，形成完整教学内容。'
-  return '可以继续补充公开素材，并完善备课单与个人资料。'
+  if (!stats.assetCount) return '建议先上传几份常用资料，后续备课会更方便。'
+  if (!stats.prepCount) return '已有资料后，可以继续整理备课单，形成完整教学内容。'
+  return '可以继续补充公开资料，并完善备课单与个人资料。'
 })
 
 function assetTypeLabel(type: string) {

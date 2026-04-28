@@ -14,11 +14,11 @@
         <div>
           <div class="teacher-dashboard-head__eyebrow">RESOURCE MANAGEMENT</div>
           <h2>资料管理</h2>
-          <p>素材上传不再占用主页面布局，创建和编辑都会在独立弹窗内完成，同时保留公开与私密管理。</p>
+          <p>资料上传不再占用主页面布局，创建和编辑都会在独立弹窗内完成，同时保留公开与私密管理。</p>
         </div>
 
         <div class="teacher-dashboard-head__actions">
-          <button type="button" class="auth-btn" @click="openCreateDialog">新增素材</button>
+          <button type="button" class="auth-btn" @click="openCreateDialog">新增资料</button>
         </div>
       </header>
 
@@ -27,24 +27,24 @@
 
       <section class="teacher-dashboard-metrics">
         <article class="teacher-dashboard-metric">
-          <span>素材总数</span>
+          <span>资料总数</span>
           <strong>{{ stats.total }}</strong>
-          <em>当前教师账号下的全部素材</em>
+          <em>当前教师账号下的全部资料</em>
         </article>
         <article class="teacher-dashboard-metric">
-          <span>公开素材</span>
+          <span>公开资料</span>
           <strong>{{ stats.publicCount }}</strong>
-          <em>可在前台素材库中展示</em>
+          <em>可在前台资料库中展示</em>
         </article>
         <article class="teacher-dashboard-metric">
-          <span>私密素材</span>
+          <span>私密资料</span>
           <strong>{{ stats.privateCount }}</strong>
-          <em>仅教师本人和管理员可见</em>
+          <em>仅教师本人可见</em>
         </article>
         <article class="teacher-dashboard-metric">
           <span>图片 / 音视频 / 文本</span>
           <strong>{{ `${stats.imageCount} / ${stats.audioCount + stats.videoCount} / ${stats.contentCount}` }}</strong>
-          <em>文件素材也会计入素材总数</em>
+          <em>文件资料也会计入资料总数</em>
         </article>
       </section>
 
@@ -52,9 +52,9 @@
         <div class="my-resources-filter-panel__head">
           <div>
             <div class="my-resources-filter-panel__eyebrow">FILTER</div>
-            <h3>筛选素材</h3>
+            <h3>筛选资料</h3>
           </div>
-          <div class="my-resources-panel__meta">共 {{ pagination.total }} 条素材</div>
+          <div class="my-resources-panel__meta">共 {{ pagination.total }} 条资料</div>
         </div>
 
         <form class="my-resources-filter-form" @submit.prevent="applySearch">
@@ -64,7 +64,7 @@
           </label>
 
           <label class="my-resources-field">
-            <span>素材类型</span>
+            <span>资料类型</span>
             <select v-model="filters.type">
               <option value="all">全部类型</option>
               <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
@@ -91,13 +91,13 @@
       <section class="my-resources-panel">
         <div class="my-resources-panel__head">
           <div>
-            <div class="my-resources-panel__eyebrow">ASSET LIST</div>
-            <h3>素材列表</h3>
+            <div class="my-resources-panel__eyebrow">RESOURCE LIST</div>
+            <h3>资料列表</h3>
           </div>
           <div class="my-resources-panel__meta">创建入口已收起到页头按钮，编辑在弹窗中完成</div>
         </div>
 
-        <div v-if="filters.scope === 'personal'" class="asset-visibility-tabs" role="tablist" aria-label="个人素材公开范围">
+        <div v-if="filters.scope === 'personal'" class="asset-visibility-tabs" role="tablist" aria-label="个人资料公开范围">
           <button
             v-for="option in visibilityOptions"
             :key="option.value"
@@ -125,7 +125,7 @@
             </div>
 
             <p class="asset-manage-item__meta">{{ assetTypeLabel(item.type) }}</p>
-            <p class="asset-manage-item__meta">{{ item.description || '暂无素材说明' }}</p>
+            <p class="asset-manage-item__meta">{{ item.description || '暂无资料说明' }}</p>
             <p v-if="item.content" class="asset-manage-item__content">{{ renderPlainText(item.content) }}</p>
             <p v-else class="asset-manage-item__meta">
               {{ item.fileName || '未记录文件名' }}
@@ -142,7 +142,7 @@
             </div>
           </article>
         </div>
-        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的素材，可以先新增一条。</div>
+        <div v-else-if="!loading" class="course-detail-empty">当前没有符合条件的资料，可以先新增一条。</div>
 
         <section class="course-pagination my-resources-pagination">
           <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
@@ -156,9 +156,9 @@
 
       <TeacherWorkspaceDialog
         v-model="showEditorDialog"
-        eyebrow="ASSET EDITOR"
-        :title="editingId ? '编辑素材' : '新增素材'"
-        :description="editingId ? '保存后将返回列表，不再占据页面主区域。' : '通过独立弹窗完成素材创建，列表页保持稳定。'"
+        eyebrow="RESOURCE EDITOR"
+        :title="editingId ? '编辑资料' : '新增资料'"
+        :description="editingId ? '保存后将返回列表，不再占据页面主区域。' : '通过独立弹窗完成资料创建，列表页保持稳定。'"
         :disabled="saving"
         @close="closeEditorDialog"
       >
@@ -166,7 +166,7 @@
 
         <form class="asset-manage-form" @submit.prevent="submitAsset">
           <label class="my-resources-field">
-            <span>素材类型</span>
+            <span>资料类型</span>
             <select v-model="editorForm.type" :disabled="Boolean(editingId)">
               <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
@@ -184,17 +184,17 @@
           </label>
 
           <label class="my-resources-field asset-manage-form__full">
-            <span>素材标题</span>
-            <input v-model.trim="editorForm.title" type="text" maxlength="200" placeholder="请输入素材标题" />
+            <span>资料标题</span>
+            <input v-model.trim="editorForm.title" type="text" maxlength="200" placeholder="请输入资料标题" />
           </label>
 
           <label class="my-resources-field asset-manage-form__full">
-            <span>素材说明</span>
-            <textarea v-model.trim="editorForm.description" rows="3" maxlength="2000" placeholder="补充素材用途、使用场景或备注说明"></textarea>
+            <span>资料说明</span>
+            <textarea v-model.trim="editorForm.description" rows="3" maxlength="2000" placeholder="补充资料用途、使用场景或备注说明"></textarea>
           </label>
 
           <div v-if="isContentType" class="my-resources-field asset-manage-form__full">
-            <span>素材内容</span>
+            <span>资料内容</span>
             <div class="asset-rich-editor">
               <div class="asset-rich-editor__toolbar" aria-label="富文本工具栏">
                 <button
@@ -241,13 +241,13 @@
               <span class="asset-upload-picker__name">{{ fileNameText }}</span>
             </div>
             <small class="asset-manage-field-tip">
-              {{ editingId ? '编辑文件类素材时会保留原文件，仅修改标题、说明和公开范围。' : uploadTip }}
+              {{ editingId ? '编辑文件类资料时会保留原文件，仅修改标题、说明和公开范围。' : uploadTip }}
             </small>
           </label>
 
           <div class="my-resources-filter-actions asset-manage-form__actions">
             <button type="submit" class="auth-btn" :disabled="saving">
-              {{ saving ? '提交中...' : editingId ? '保存素材' : '创建素材' }}
+              {{ saving ? '提交中...' : editingId ? '保存资料' : '创建资料' }}
             </button>
           </div>
         </form>
@@ -323,11 +323,11 @@ const pagination = reactive({
 })
 
 const assetTypeOptions: Array<{ value: TeacherAssetType; label: string }> = [
-  { value: 'image', label: '图片素材' },
-  { value: 'audio', label: '音频素材' },
-  { value: 'video', label: '视频素材' },
+  { value: 'image', label: '图片资料' },
+  { value: 'audio', label: '音频资料' },
+  { value: 'video', label: '视频资料' },
   { value: 'text', label: '文本片段' },
-  { value: 'file', label: '文件素材' },
+  { value: 'file', label: '文件资料' },
 ]
 
 const visibilityOptions: Array<{ value: TeacherAssetVisibility; label: string }> = [
@@ -355,7 +355,7 @@ const fileAccept = computed(() => {
 const uploadLabel = computed(() => {
   if (editorForm.type === 'audio') return '上传音频文件'
   if (editorForm.type === 'video') return '上传视频文件'
-  if (editorForm.type === 'file') return '上传文件素材'
+  if (editorForm.type === 'file') return '上传文件资料'
   return '上传图片文件'
 })
 
@@ -557,7 +557,7 @@ async function startEdit(assetId: number) {
     await nextTick()
     syncRichEditor()
   } catch (error: any) {
-    errorMessage.value = error?.response?.data?.message || '素材详情加载失败'
+    errorMessage.value = error?.response?.data?.message || '资料详情加载失败'
   }
 }
 
@@ -566,12 +566,12 @@ async function submitAsset() {
   syncRichTextContent()
 
   if (!editorForm.title) {
-    errorMessage.value = '请先填写素材标题'
+    errorMessage.value = '请先填写资料标题'
     return
   }
 
   if (isContentType.value && !stripHtml(editorForm.content)) {
-    errorMessage.value = '当前素材类型需要填写素材内容'
+    errorMessage.value = '当前资料类型需要填写资料内容'
     return
   }
 
@@ -594,7 +594,7 @@ async function submitAsset() {
       showEditorDialog.value = false
       resetEditor()
       await loadAssets()
-      successMessage.value = `素材“${result.title}”已更新`
+      successMessage.value = `资料“${result.title}”已更新`
     } else {
       const result = await createTeacherAsset({
         type: editorForm.type,
@@ -608,10 +608,10 @@ async function submitAsset() {
       showEditorDialog.value = false
       resetEditor()
       await loadAssets()
-      successMessage.value = `素材“${result.title}”已创建`
+      successMessage.value = `资料“${result.title}”已创建`
     }
   } catch (error: any) {
-    errorMessage.value = error?.response?.data?.message || '素材保存失败'
+    errorMessage.value = error?.response?.data?.message || '资料保存失败'
   } finally {
     saving.value = false
   }
@@ -620,7 +620,7 @@ async function submitAsset() {
 async function removeAsset(item: TeacherAssetItem) {
   clearMessages()
 
-  if (!window.confirm(`确认删除素材“${item.title}”吗？`)) {
+  if (!window.confirm(`确认删除资料“${item.title}”吗？`)) {
     return
   }
 
@@ -632,9 +632,9 @@ async function removeAsset(item: TeacherAssetItem) {
       closeEditorDialog()
     }
     await loadAssets()
-    successMessage.value = `素材“${item.title}”已删除`
+    successMessage.value = `资料“${item.title}”已删除`
   } catch (error: any) {
-    errorMessage.value = error?.response?.data?.message || '素材删除失败'
+    errorMessage.value = error?.response?.data?.message || '资料删除失败'
   } finally {
     deletingId.value = null
   }
@@ -679,7 +679,7 @@ async function loadAssets() {
     pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
-    errorMessage.value = error?.response?.data?.message || '素材列表加载失败'
+    errorMessage.value = error?.response?.data?.message || '资料列表加载失败'
   } finally {
     loading.value = false
   }

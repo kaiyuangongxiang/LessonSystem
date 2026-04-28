@@ -43,7 +43,7 @@
       <article class="course-detail-panel">
         <div class="course-detail-panel__eyebrow">RESOURCE OVERVIEW</div>
         <h3>资源概览</h3>
-        <p>当前课程共关联 {{ detail.materials.length }} 份资料、{{ detail.videos.length }} 个视频，相关教学资料可结合备课单继续查看。</p>
+        <p>当前课程共关联 {{ detail.preps.length }} 份已发布备课单，相关教学资料可在备课单中继续查看。</p>
       </article>
 
       <article class="course-detail-panel">
@@ -86,7 +86,7 @@
                 <div class="course-detail-row__meta">
                   <span>{{ attachment.uploadTime }}</span>
                   <button type="button" v-if="attachment.previewUrl || (attachment.type === 'text' && attachment.content)" @click="openAttachmentPreview(attachment)">查看资料</button>
-                  <a v-if="attachment.downloadUrl" :href="materialHref(attachment.downloadUrl)" target="_blank" rel="noreferrer">下载文件</a>
+                  <a v-if="attachment.downloadUrl && canDownloadFiles" :href="materialHref(attachment.downloadUrl)" target="_blank" rel="noreferrer">下载文件</a>
                 </div>
               </div>
             </div>
@@ -106,6 +106,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import http from '@/services/http'
+import { useAuthStore } from '@/stores/auth'
 
 interface MaterialItem {
   id: number
@@ -169,6 +170,7 @@ interface CourseDetailResponse {
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const errorMessage = ref('')
 const expandedPrepId = ref<number | null>(null)
 
@@ -187,6 +189,7 @@ const detail = reactive<CourseDetailResponse>({
 })
 
 const detailSubtitle = computed(() => `${detail.course.name} · 课程信息、资料与视频统一展示`)
+const canDownloadFiles = computed(() => authStore.role !== 'student')
 
 function materialHref(downloadUrl: string) {
   if (!downloadUrl) {

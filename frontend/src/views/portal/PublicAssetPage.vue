@@ -4,9 +4,9 @@
 
     <header class="portal-hero public-asset-hero">
       <div class="public-asset-hero__content">
-        <div class="portal-hero__eyebrow">PUBLIC ASSET LIBRARY</div>
-        <h1>公共素材库</h1>
-        <p>集中查看教师公开发布的图片、音频、视频、文本片段和文件素材，支持基础筛选、预览和下载。</p>
+        <div class="portal-hero__eyebrow">PUBLIC RESOURCE LIBRARY</div>
+        <h1>公共资料库</h1>
+        <p>{{ pageIntro }}</p>
       </div>
     </header>
 
@@ -14,15 +14,15 @@
 
     <section class="public-asset-stats">
       <article class="public-asset-stat-card">
-        <span>公开素材总数</span>
+        <span>公开资料总数</span>
         <strong>{{ stats.total }}</strong>
       </article>
       <article class="public-asset-stat-card">
-        <span>图片素材</span>
+        <span>图片资料</span>
         <strong>{{ stats.imageCount }}</strong>
       </article>
       <article class="public-asset-stat-card">
-        <span>音视频素材</span>
+        <span>音视频资料</span>
         <strong>{{ stats.mediaCount }}</strong>
       </article>
       <article class="public-asset-stat-card">
@@ -35,7 +35,7 @@
       <div class="portal-section-head">
         <div>
           <div class="portal-section-head__eyebrow">FILTER</div>
-          <h2>筛选素材</h2>
+          <h2>筛选资料</h2>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
         </label>
 
         <label>
-          <span>素材类型</span>
+          <span>资料类型</span>
           <select v-model="filters.type">
             <option value="all">全部类型</option>
             <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
@@ -66,9 +66,9 @@
       <div class="portal-section-head">
         <div>
           <div class="portal-section-head__eyebrow">LIST</div>
-          <h2>素材列表</h2>
+          <h2>资料列表</h2>
         </div>
-        <div class="public-asset-panel__meta">共 {{ pagination.total }} 条公开素材</div>
+        <div class="public-asset-panel__meta">共 {{ pagination.total }} 条公开资料</div>
       </div>
 
       <div v-if="assetList.length" class="public-asset-list">
@@ -81,7 +81,7 @@
             <span>{{ item.uploadTime }}</span>
           </div>
 
-          <p class="public-asset-item__desc">{{ item.description || renderPlainText(item.content, '暂无素材说明') }}</p>
+          <p class="public-asset-item__desc">{{ item.description || renderPlainText(item.content, '暂无资料说明') }}</p>
 
           <p v-if="item.fileName" class="public-asset-item__meta">
             {{ item.fileName }}
@@ -90,11 +90,11 @@
 
           <div class="public-asset-item__actions">
             <button v-if="item.previewUrl" type="button" class="course-chip course-chip--soft" @click="previewAsset(item.previewUrl)">预览</button>
-            <button v-if="item.fileName" type="button" class="course-chip" @click="downloadAsset(item.id)">下载</button>
+            <button v-if="item.fileName && canDownloadFiles" type="button" class="course-chip" @click="downloadAsset(item.id)">下载</button>
           </div>
         </article>
       </div>
-      <div v-else-if="!loading" class="course-detail-empty">当前还没有符合条件的公开素材。</div>
+      <div v-else-if="!loading" class="course-detail-empty">当前还没有符合条件的公开资料。</div>
 
       <section class="course-pagination my-resources-pagination">
         <div class="course-pagination__desc">当前第 {{ pagination.page }} / {{ Math.max(pagination.totalPages, 1) }} 页</div>
@@ -113,9 +113,11 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PortalTopNav from '@/components/navigation/PortalTopNav.vue'
 import { getPortalPublicAssets } from '@/services/portal'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 const loading = ref(false)
 const errorMessage = ref('')
 const assetList = ref<
@@ -157,8 +159,15 @@ const assetTypeOptions = [
   { value: 'audio', label: '音频' },
   { value: 'video', label: '视频' },
   { value: 'text', label: '文本片段' },
-  { value: 'file', label: '文件素材' },
+  { value: 'file', label: '文件资料' },
 ] as const
+
+const canDownloadFiles = computed(() => authStore.role !== 'student')
+const pageIntro = computed(() =>
+  canDownloadFiles.value
+    ? '集中查看教师公开发布的图片、音频、视频、文本片段和文件资料，支持基础筛选、预览和下载。'
+    : '集中查看教师公开发布的图片、音频、视频、文本片段和文件资料，学生账号当前仅支持筛选、查看和预览。',
+)
 
 function normalizePage(value: unknown) {
   const page = Number(value)
@@ -268,7 +277,7 @@ async function loadAssets() {
     pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
-    errorMessage.value = error?.response?.data?.message || '公共素材加载失败'
+    errorMessage.value = error?.response?.data?.message || '公共资料加载失败'
   } finally {
     loading.value = false
   }

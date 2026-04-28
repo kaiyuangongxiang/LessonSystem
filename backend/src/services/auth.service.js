@@ -4,6 +4,8 @@ import { pool } from '../config/db.js'
 import { env } from '../config/env.js'
 import { logger } from '../utils/logger.js'
 
+const TOKEN_EXPIRES_IN_SECONDS = 30 * 60
+
 function badRequest(message) {
   const error = new Error(message)
   error.status = 400
@@ -172,7 +174,16 @@ async function ensureUsernameUnusedAcrossRoles(username, current = {}) {
 }
 
 function signToken(payload) {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: '7d' })
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: TOKEN_EXPIRES_IN_SECONDS })
+}
+
+function buildLoginResult({ token, role, user }) {
+  return {
+    token,
+    role,
+    user,
+    expiresAt: Date.now() + TOKEN_EXPIRES_IN_SECONDS * 1000,
+  }
 }
 
 export async function getRegisterOptions() {
@@ -294,7 +305,7 @@ async function loginTeacher(username, password) {
 
   logger.info('teacher_login_success', { username, teacherId: teacher.teacher_id })
 
-  return {
+  return buildLoginResult({
     token: signToken({ userId: teacher.teacher_id, role: 'teacher' }),
     role: 'teacher',
     user: {
@@ -302,7 +313,7 @@ async function loginTeacher(username, password) {
       username: teacher.username,
       name: teacher.teacher_name,
     },
-  }
+  })
 }
 
 async function loginStudent(username, password) {
@@ -331,7 +342,7 @@ async function loginStudent(username, password) {
 
   logger.info('student_login_success', { username, studentId: student.student_id })
 
-  return {
+  return buildLoginResult({
     token: signToken({ userId: student.student_id, role: 'student' }),
     role: 'student',
     user: {
@@ -339,7 +350,7 @@ async function loginStudent(username, password) {
       username: student.username,
       name: student.student_name,
     },
-  }
+  })
 }
 
 async function loginAdmin(username, password) {
@@ -364,7 +375,7 @@ async function loginAdmin(username, password) {
 
   logger.info('admin_login_success', { username, adminId: admin.admin_id })
 
-  return {
+  return buildLoginResult({
     token: signToken({ userId: admin.admin_id, role: 'admin' }),
     role: 'admin',
     user: {
@@ -372,7 +383,7 @@ async function loginAdmin(username, password) {
       username: admin.admin_name,
       name: admin.real_name,
     },
-  }
+  })
 }
 
 export async function login({ username, password, role }) {

@@ -16,7 +16,7 @@
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/preps')">备课单管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">资料库</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">教学交流</button>
       </nav>
@@ -38,7 +38,7 @@
           <p>{{ welcomeText }}</p>
         </div>
         <div class="admin-dashboard-head__actions">
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回门户</button>
+          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/')">返回首页</button>
           <button type="button" class="auth-btn" @click="handleLogout">退出登录</button>
         </div>
       </header>
@@ -60,6 +60,7 @@
               <div class="admin-dashboard-panel__eyebrow">LATEST TEACHERS</div>
               <h3>最新教师</h3>
             </div>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/admin/teachers')">查看全部</button>
           </div>
 
           <div v-if="dashboard?.latestTeachers.length" class="admin-dashboard-teacher-list">
@@ -80,6 +81,7 @@
               <div class="admin-dashboard-panel__eyebrow">LATEST RESOURCES</div>
               <h3>最新资源</h3>
             </div>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/admin/assets')">查看全部</button>
           </div>
 
           <div v-if="dashboard?.latestResources.length" class="admin-dashboard-resource-list">
@@ -123,6 +125,7 @@
               <div class="admin-dashboard-panel__eyebrow">LATEST TOPICS</div>
               <h3>最新交流</h3>
             </div>
+            <button type="button" class="course-chip course-chip--soft" @click="router.push('/admin/messages')">查看全部</button>
           </div>
 
           <div v-if="dashboard?.latestTopics.length" class="admin-dashboard-topic-list">
@@ -170,7 +173,7 @@ const metricCards = computed(() => {
     teacherCount: 0,
     courseCount: 0,
     materialCount: 0,
-    videoCount: 0,
+    prepCount: 0,
     topicCount: 0,
   }
 
@@ -178,8 +181,8 @@ const metricCards = computed(() => {
     { label: '教师总数', value: stats.teacherCount, tip: '当前可用教师账号数量' },
     { label: '学生总数', value: stats.studentCount, tip: '当前可用学生账号数量' },
     { label: '课程总数', value: stats.courseCount, tip: '系统内已发布课程总览' },
-    { label: '资料总数', value: stats.materialCount, tip: '教师上传资料累计数量' },
-    { label: '视频总数', value: stats.videoCount, tip: '课程视频资源累计数量' },
+    { label: '资料总数', value: stats.materialCount, tip: '公开资料库累计数量' },
+    { label: '备课单数量', value: stats.prepCount, tip: '系统内备课单累计数量' },
     { label: '交流主题数', value: stats.topicCount, tip: '教学交流主题累计数量' },
   ]
 })

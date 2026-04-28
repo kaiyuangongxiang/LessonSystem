@@ -1,6 +1,6 @@
 import {
-  createDiscussionReply,
   createDiscussionTopic,
+  createDiscussionReply,
   deleteDiscussionReply,
   deleteDiscussionTopic,
   getDiscussionMessageDetail,
@@ -25,24 +25,6 @@ export async function getMessages(req, res, next) {
   }
 }
 
-export async function postMessage(req, res, next) {
-  try {
-    const result = await createDiscussionTopic({
-      viewerRole: 'student',
-      viewerId: req.auth.userId,
-      payload: req.body,
-    })
-
-    res.status(201).json({
-      code: 201,
-      message: '发布交流主题成功',
-      data: result,
-    })
-  } catch (error) {
-    next(error)
-  }
-}
-
 export async function getMessageDetail(req, res, next) {
   try {
     const result = await getDiscussionMessageDetail({
@@ -54,6 +36,24 @@ export async function getMessageDetail(req, res, next) {
     res.status(200).json({
       code: 200,
       message: '获取交流详情成功',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function postMessage(req, res, next) {
+  try {
+    const result = await createDiscussionTopic({
+      viewerRole: 'student',
+      viewerId: req.auth.userId,
+      payload: req.body,
+    })
+
+    res.status(201).json({
+      code: 201,
+      message: '发布交流主题成功',
       data: result,
     })
   } catch (error) {

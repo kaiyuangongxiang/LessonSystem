@@ -100,7 +100,7 @@
 
           <div class="prep-manage-form__hint courseware-create-form__hint">
             <strong>创建后可继续完善</strong>
-            <p>系统会先生成一页默认模板，后续可在编辑器中继续新增页面、插入文本、图片素材、资料和视频引用。</p>
+            <p>系统会先生成一页默认模板，后续可在编辑器中继续新增页面、插入文本、图片资料、资料和视频引用。</p>
           </div>
 
           <div class="my-resources-filter-actions">

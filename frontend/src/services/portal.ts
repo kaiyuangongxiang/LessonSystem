@@ -47,6 +47,7 @@ export interface PortalHomeData {
     courseCount: number
     materialCount: number
     videoCount: number
+    messageCount: number
   }
 }
 

@@ -14,7 +14,7 @@
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">资料库</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
@@ -36,7 +36,6 @@
           <p>{{ headerText }}</p>
         </div>
         <div class="admin-manage-head__actions">
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/admin')">返回总览</button>
           <button type="button" class="auth-btn" @click="openCreateEditor">新增教师用户</button>
         </div>
       </header>
@@ -331,8 +330,9 @@ function openEditEditor(item: AdminTeacherItem) {
   editorVisible.value = true
 }
 
-function closeEditor() {
-  if (saving.value) {
+function closeEditor(force: boolean | Event = false) {
+  const shouldForce = force === true
+  if (saving.value && !shouldForce) {
     return
   }
 
@@ -373,12 +373,12 @@ async function submitEditor() {
     if (editingId.value) {
       const result = await updateAdminTeacherUser(editingId.value, payload)
       successMessage.value = `教师用户《${result.name}》已更新。`
-      closeEditor()
+      closeEditor(true)
       await loadTeachers()
     } else {
       const result = await createAdminTeacherUser(payload)
       successMessage.value = `教师用户《${result.name}》已创建。`
-      closeEditor()
+      closeEditor(true)
 
       if (pagination.page !== 1) {
         updateRoute(1)

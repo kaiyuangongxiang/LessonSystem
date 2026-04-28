@@ -643,7 +643,7 @@ function normalizeResourceType(value) {
 function normalizeAssetId(value) {
   const assetId = Number(value)
   if (!Number.isInteger(assetId) || assetId <= 0) {
-    throw badRequest('素材ID不合法')
+    throw badRequest('资料ID不合法')
   }
 
   return assetId
@@ -659,7 +659,7 @@ function normalizeAssetType(value) {
     return assetType
   }
 
-  throw badRequest('素材类型不合法')
+  throw badRequest('资料类型不合法')
 }
 
 function normalizeAssetVisibility(value) {
@@ -672,7 +672,7 @@ function normalizeAssetVisibility(value) {
     return visibility
   }
 
-  throw badRequest('素材公开范围不合法')
+  throw badRequest('资料公开范围不合法')
 }
 
 function formatDate(value) {
@@ -737,7 +737,7 @@ async function ensureAssetLibraryReady() {
   )
 
   if (!rows.length) {
-    throw badRequest('当前数据库尚未初始化素材库表，请先执行素材库升级 SQL')
+    throw badRequest('当前数据库尚未初始化资料库表，请先执行资料库升级 SQL')
   }
 }
 
@@ -768,7 +768,7 @@ async function ensureAssetLibraryVisibilityReady() {
   )
 
   if (!rows.length) {
-    throw badRequest('当前数据库缺少素材公开范围字段，请先执行教师中心简化升级 SQL')
+    throw badRequest('当前数据库缺少资料公开范围字段，请先执行教师中心简化升级 SQL')
   }
 }
 
@@ -825,7 +825,7 @@ function mapAdminPrepAttachmentItem(item) {
   return {
     id: Number(item.id),
     sourceType,
-    sourceLabel: sourceType === 'asset' ? '个人素材' : '本地上传',
+    sourceLabel: sourceType === 'asset' ? '我的资料' : '本地上传',
     assetId,
     type,
     title: item.title || fileName || '未命名附件',
@@ -1736,7 +1736,7 @@ async function getAdminAssetRow(assetId) {
   )
 
   if (!rows.length) {
-    throw notFound('素材不存在或已删除')
+    throw notFound('资料不存在或已删除')
   }
 
   return rows[0]
@@ -1773,8 +1773,11 @@ export async function getAdminDashboardData(adminId) {
         (SELECT COUNT(*) FROM student_user WHERE status = 1) AS studentCount,
         (SELECT COUNT(*) FROM teacher_user WHERE status = 1) AS teacherCount,
         (SELECT COUNT(*) FROM course_intro WHERE status = 1) AS courseCount,
-        (SELECT COUNT(*) FROM material WHERE status = 1) AS materialCount,
-        (SELECT COUNT(*) FROM course_video WHERE status = 1) AS videoCount,
+        (SELECT COUNT(*)
+         FROM asset_library
+         WHERE status = 1
+           AND COALESCE(visibility, 'private') = 'public') AS materialCount,
+        (SELECT COUNT(*) FROM teaching_prep) AS prepCount,
         (SELECT COUNT(*) FROM message_topic WHERE status <> 'archived') AS topicCount`,
   )
 
@@ -1854,7 +1857,7 @@ export async function getAdminDashboardData(adminId) {
     teacherCount: 0,
     courseCount: 0,
     materialCount: 0,
-    videoCount: 0,
+    prepCount: 0,
     topicCount: 0,
   }
   const weeklyRow = weeklyRows[0] || {
@@ -1888,7 +1891,7 @@ export async function getAdminDashboardData(adminId) {
     teacherCount: Number(statsRow.teacherCount || 0),
     courseCount: Number(statsRow.courseCount || 0),
     materialCount: Number(statsRow.materialCount || 0),
-    videoCount: Number(statsRow.videoCount || 0),
+    prepCount: Number(statsRow.prepCount || 0),
     topicCount: Number(statsRow.topicCount || 0),
     latestTeacherCount: latestTeachers.length,
     latestResourceCount: latestResources.length,
@@ -1906,7 +1909,7 @@ export async function getAdminDashboardData(adminId) {
       teacherCount: Number(statsRow.teacherCount || 0),
       courseCount: Number(statsRow.courseCount || 0),
       materialCount: Number(statsRow.materialCount || 0),
-      videoCount: Number(statsRow.videoCount || 0),
+      prepCount: Number(statsRow.prepCount || 0),
       topicCount: Number(statsRow.topicCount || 0),
     },
     latestTeachers,

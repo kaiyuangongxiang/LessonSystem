@@ -13,7 +13,7 @@
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/colleges')">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">资料库</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
         <button type="button" class="admin-dashboard-nav__item admin-dashboard-nav__item--system is-active">系统管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
@@ -34,10 +34,6 @@
           <div class="admin-manage-head__eyebrow">SYSTEM MANAGEMENT</div>
           <h2>系统管理</h2>
           <p>{{ headerText }}</p>
-        </div>
-        <div class="admin-manage-head__actions">
-          <span class="course-chip course-chip--soft">前台门户配置</span>
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/admin')">返回总览</button>
         </div>
       </header>
 
@@ -365,8 +361,9 @@ function openEditNotice(item: AdminSystemNoticeItem) {
   editorVisible.value = true
 }
 
-function closeEditor() {
-  if (savingNotice.value) {
+function closeEditor(force: boolean | Event = false) {
+  const shouldForce = force === true
+  if (savingNotice.value && !shouldForce) {
     return
   }
 
@@ -396,7 +393,7 @@ async function submitNotice() {
       successMessage.value = '公告已创建'
     }
 
-    closeEditor()
+    closeEditor(true)
     await loadSystemData()
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.message || '公告保存失败'

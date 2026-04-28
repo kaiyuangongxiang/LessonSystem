@@ -116,10 +116,10 @@
                   <template v-else-if="block.type === 'image'">
                     <div class="courseware-block__preview">
                       <img v-if="block.previewUrl" :src="resolvePreviewUrl(block.previewUrl)" :alt="block.title" />
-                      <span v-else>图片素材</span>
+                      <span v-else>图片资料</span>
                     </div>
                     <strong>{{ block.title }}</strong>
-                    <p>{{ block.caption || block.description || '图片素材引用块' }}</p>
+                    <p>{{ block.caption || block.description || '图片资料引用块' }}</p>
                   </template>
 
                   <template v-else-if="block.type === 'resource'">
@@ -224,8 +224,8 @@
           <section class="courseware-editor-panel">
             <div class="courseware-editor-panel__head">
               <div>
-                <div class="courseware-editor-panel__eyebrow">ASSET INSERT</div>
-                <h3>插入图片素材</h3>
+                <div class="courseware-editor-panel__eyebrow">RESOURCE INSERT</div>
+                <h3>插入图片资料</h3>
               </div>
               <button type="button" class="course-chip course-chip--soft" :disabled="libraryLoading" @click="loadLibraries">
                 {{ libraryLoading ? '加载中...' : '刷新' }}
@@ -233,7 +233,7 @@
             </div>
 
             <div class="courseware-editor-search">
-              <input v-model.trim="libraryFilters.assetKeyword" type="text" maxlength="100" placeholder="搜索图片素材" @keyup.enter="loadLibraries" />
+              <input v-model.trim="libraryFilters.assetKeyword" type="text" maxlength="100" placeholder="搜索图片资料" @keyup.enter="loadLibraries" />
             </div>
 
             <div class="courseware-library-list">
@@ -244,7 +244,7 @@
                 </div>
                 <button type="button" class="course-chip" @click="insertImageBlock(asset)">插入</button>
               </article>
-              <div v-if="!imageAssets.length" class="course-detail-empty course-detail-empty--compact">暂无可用图片素材</div>
+              <div v-if="!imageAssets.length" class="course-detail-empty course-detail-empty--compact">暂无可用图片资料</div>
             </div>
           </section>
 

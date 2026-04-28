@@ -6,9 +6,9 @@
         <span class="portal-brand__title">{{ systemName }}</span>
       </button>
 
-      <form class="portal-search" @submit.prevent="submitSearch">
-        <input v-model.trim="searchKeyword" type="text" placeholder="搜索课程 / 资料 / 视频" />
-        <button type="submit" class="portal-search__button" aria-label="搜索">
+      <form class="portal-search" @submit.prevent.stop="submitSearch">
+        <input v-model.trim="searchKeyword" type="text" placeholder="搜索课程 / 资料" @keydown.enter.prevent="submitSearch" />
+        <button type="submit" class="portal-search__button" aria-label="搜索" @click.prevent.stop="submitSearch">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M10.5 18a7.5 7.5 0 1 1 5.303-12.803A7.5 7.5 0 0 1 10.5 18Zm0-13.2a5.7 5.7 0 1 0 0 11.4 5.7 5.7 0 0 0 0-11.4Zm10.064 14.791-4.076-4.075"
@@ -24,7 +24,7 @@
       <nav class="portal-links" aria-label="前台主导航">
         <button type="button" :class="{ 'is-active': activeItem === 'home' }" @click="goHome">首页</button>
         <button type="button" :class="{ 'is-active': activeItem === 'courses' }" @click="goCourses">课程中心</button>
-        <button type="button" :class="{ 'is-active': activeItem === 'assets' }" @click="goAssets">素材库</button>
+        <button type="button" :class="{ 'is-active': activeItem === 'assets' }" @click="goAssets">资料库</button>
         <button type="button" :class="{ 'is-active': activeItem === 'messages' }" @click="goTeachingMessages">教学交流</button>
       </nav>
 
@@ -115,10 +115,11 @@ function goAssets() {
 }
 
 function submitSearch() {
+  const keyword = searchKeyword.value.trim()
   void router.push({
     path: searchTargetPath.value,
     query: {
-      keyword: searchKeyword.value || undefined,
+      keyword: keyword || undefined,
     },
   })
 }

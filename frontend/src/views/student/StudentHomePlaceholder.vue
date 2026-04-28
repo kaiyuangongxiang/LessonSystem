@@ -52,7 +52,7 @@
             <article class="teacher-dashboard-upload-item">
               <div class="teacher-dashboard-upload-item__main">
                 <strong>教学交流入口</strong>
-                <p>现在可以进入教学交流页，查看主题、回帖并参与课程讨论。</p>
+                <p>现在可以进入教学交流页，查看主题和回复内容，了解课程讨论动态。</p>
               </div>
             </article>
           </div>
@@ -69,10 +69,10 @@
           <div class="teacher-dashboard-note student-dashboard-note--action">
             <div>
               <strong>前往教学交流</strong>
-              <p>围绕课程问题、资源体验和课堂反馈，和教师、管理员、同学持续互动。</p>
+              <p>围绕课程问题、资源体验和课堂反馈，查看教师、管理员和同学的讨论内容。</p>
             </div>
             <div class="teacher-message-actions student-dashboard-note__actions">
-              <button type="button" class="auth-btn" @click="router.push('/student/messages')">进入教学交流</button>
+              <button type="button" class="auth-btn" @click="router.push('/student/messages')">查看教学交流</button>
             </div>
           </div>
         </article>
@@ -90,12 +90,12 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '学生用户')
-const welcomeText = computed(() => `${studentName.value}，这里是学生端入口，当前已接入教学交流能力。`)
+const welcomeText = computed(() => `${studentName.value}，这里是学生端入口，当前以查看课程交流内容为主。`)
 
 const metricCards = [
   { label: '账号状态', value: '已开通', tip: '当前学生账号可正常登录使用' },
   { label: '角色类型', value: '学生', tip: '已完成学生角色接入' },
-  { label: '交流能力', value: '已接入', tip: '支持查看、回复，并在条件满足时发布主题' },
+  { label: '交流权限', value: '查看中', tip: '当前学生账号仅支持查看交流内容' },
 ]
 
 function handleLogout() {

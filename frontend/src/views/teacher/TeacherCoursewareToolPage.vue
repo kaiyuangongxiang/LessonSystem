@@ -35,7 +35,7 @@
             <article class="teacher-courseware-tool-item">
               <div>
                 <strong>1. 先准备教学内容</strong>
-                <span>建议先在备课单中整理好授课目标、讲解结构、课堂案例和需要引用的附件素材，再进入课件制作。</span>
+                <span>建议先在备课单中整理好授课目标、讲解结构、课堂案例和需要引用的附件资料，再进入课件制作。</span>
               </div>
             </article>
             <article class="teacher-courseware-tool-item">
@@ -69,7 +69,7 @@
 
           <div class="teacher-courseware-tool-note">
             <strong>当前能力边界</strong>
-            <p>现在支持从教师中心一键跳转到课件工具，但暂不支持课件内容自动回传、与备课单绑定保存、素材库直接拖入或课件成品统一归档。</p>
+            <p>现在支持从教师中心一键跳转到课件工具，但暂不支持课件内容自动回传、与备课单绑定保存、资料库直接拖入或课件成品统一归档。</p>
           </div>
 
           <div class="teacher-courseware-tool-note teacher-courseware-tool-note--soft">

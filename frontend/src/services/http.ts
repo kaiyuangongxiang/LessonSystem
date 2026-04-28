@@ -14,10 +14,33 @@ const http = axios.create({
 
 http.interceptors.request.use((config) => {
   const authStore = useAuthStore()
+  if (authStore.token && !authStore.ensureValidSession()) {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.assign('/login')
+    }
+    return Promise.reject(new Error('登录已过期，请重新登录'))
+  }
+
   if (authStore.token) {
     config.headers.Authorization = `Bearer ${authStore.token}`
   }
   return config
 })
+
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      const authStore = useAuthStore()
+      authStore.logout()
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.assign('/login')
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export default http

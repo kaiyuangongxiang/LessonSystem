@@ -19,8 +19,8 @@
       <section class="teacher-message-hero__spotlight">
         <div class="teacher-message-kicker teacher-message-kicker--light">Student Forum</div>
         <strong>围绕课程学习问题、资源体验和课堂反馈，与教师、管理员持续交流</strong>
-        <p>你可以查看已有讨论、补充自己的想法，也可以在系统支持时发起新的学习主题。</p>
-        <button type="button" class="auth-btn" :disabled="!canCreateTopic" @click="openTopicEditor">发起交流主题</button>
+        <p>支持学生发起主题、继续回复讨论，并管理自己发布的主题和回复。</p>
+        <button type="button" class="auth-btn" :disabled="!canCreateTopic" @click="openTopicEditor">发布新主题</button>
         <span class="teacher-message-hero__spotlight-note">当前共有 {{ pagination.total }} 个主题正在讨论中</span>
       </section>
     </header>
@@ -37,7 +37,6 @@
     <p v-if="successMessage" class="feedback-text feedback-text--success teacher-message-feedback teacher-message-feedback--success">
       {{ successMessage }}
     </p>
-
     <section class="teacher-message-board">
       <div class="teacher-message-board__head">
         <div>
@@ -104,7 +103,7 @@
           <div class="teacher-message-topic__footer">
             <div class="teacher-message-topic__tip">
               <span class="teacher-message-topic__tip-dot"></span>
-              {{ expandedMessageId === item.id ? '讨论详情已展开，可以继续查看回复或参与交流。' : '点击展开后可查看完整主题内容和楼层回复。' }}
+              {{ expandedMessageId === item.id ? '讨论详情已展开，可以继续查看完整回复内容。' : '点击展开后可查看完整主题内容和楼层回复。' }}
             </div>
 
             <div class="teacher-message-topic__actions">
@@ -258,7 +257,7 @@
         </article>
       </div>
 
-      <div v-else-if="!loading" class="teacher-message-empty teacher-message-empty--large">当前还没有交流主题，可以先看看已有课程内容或发起一个学习问题。</div>
+      <div v-else-if="!loading" class="teacher-message-empty teacher-message-empty--large">当前还没有交流主题，可以先发布一个学习问题或反馈。</div>
 
       <section class="course-pagination teacher-message-pagination">
         <div class="course-pagination__desc">
@@ -286,7 +285,13 @@
         <form class="teacher-message-dialog__form" @submit.prevent="submitTopic">
           <label class="teacher-message-field">
             <span>主题标题</span>
-            <input v-model.trim="topicForm.title" type="text" maxlength="100" placeholder="请输入交流主题标题" />
+            <input
+              v-model.trim="topicForm.title"
+              type="text"
+              maxlength="100"
+              placeholder="请输入交流主题标题"
+              :disabled="!canCreateTopic || submittingTopic"
+            />
           </label>
 
           <label class="teacher-message-field">
@@ -295,18 +300,21 @@
               v-model.trim="topicForm.content"
               maxlength="5000"
               rows="9"
-              placeholder="请输入课程问题、学习反馈或希望获得帮助的内容"
+              placeholder="请输入你的问题、学习反馈或资源使用体验"
+              :disabled="!canCreateTopic || submittingTopic"
             ></textarea>
           </label>
 
           <p class="teacher-message-dialog__hint">
-            主题发布后，教师、管理员和学生都可以继续参与讨论；如果数据库还未升级学生发帖字段，提交时会给出明确提示。
+            主题发布后，教师、管理员和学生都可以继续评论回复；如果对某条评论点击“回复”，会以楼中回复形式显示。
           </p>
 
           <div class="teacher-message-dialog__footer">
-            <p>建议标题直接点出问题场景，正文补充课程、资源和遇到的具体困难，方便他人更快参与。</p>
+            <p>建议标题直接概括问题，正文写清课程背景、已尝试的方法和希望获得的帮助，方便老师更快跟进。</p>
             <div class="teacher-message-actions teacher-message-actions--end">
-              <button type="submit" class="auth-btn" :disabled="submittingTopic">{{ submittingTopic ? '发布中...' : '发布主题' }}</button>
+              <button type="submit" class="auth-btn" :disabled="!canCreateTopic || submittingTopic">
+                {{ submittingTopic ? '发布中...' : '发布主题' }}
+              </button>
             </div>
           </div>
         </form>
@@ -343,7 +351,7 @@
               rows="6"
               :placeholder="
                 activeReplyDetail?.capabilities.canReply === false
-                  ? '当前数据库结构尚未升级，暂不支持学生回帖'
+                  ? '当前暂不支持学生回帖'
                   : '请输入你的问题、学习反馈或补充说明'
               "
               :disabled="activeReplyDetail?.capabilities.canReply === false || replyingId === activeReplyMessageId"
@@ -428,15 +436,21 @@ const pagination = reactive({
   totalPages: 0,
 })
 
+const listCapabilities = reactive({
+  canCreateTopic: true,
+  canReply: true,
+  canReplyToReply: true,
+})
+
 const studentName = computed(() => authStore.profile?.name || authStore.profile?.username || '同学')
-const headerText = computed(() => `${studentName.value}，这里可以查看教师发布的教学讨论，也可以补充自己的学习问题和课程反馈。`)
+const headerText = computed(() => `${studentName.value}，这里可以查看、发布并继续跟进教学交流内容。`)
 
 const pageSummary = computed(() => {
   if (form.keyword) {
     return `当前正在筛选与“${form.keyword}”相关的话题内容。`
   }
 
-  return '把零散的问题、资源体验和课堂疑问整理成可追踪的交流线索，让学习反馈更容易被看到和回应。'
+  return '围绕课程学习问题、资料体验和课堂反馈进行交流，可以发起主题、回复讨论，并管理自己发布的内容。'
 })
 
 const currentDetail = computed(() => {
@@ -454,8 +468,6 @@ const activeReplyDetail = computed(() => {
 
   return detailMap[activeReplyMessageId.value] || null
 })
-
-const canCreateTopic = computed(() => currentDetail.value?.capabilities.canCreateTopic ?? true)
 
 const activeReplyTarget = computed(() => {
   if (activeReplyMessageId.value === null) {
@@ -503,9 +515,13 @@ const heroMetrics = computed(() => [
   { label: '教师发起', value: String(teacherTopicCount.value).padStart(2, '0'), note: '本页由教师发起的教学讨论数' },
 ])
 
+const canCreateTopic = computed(
+  () => currentDetail.value?.capabilities.canCreateTopic ?? listCapabilities.canCreateTopic,
+)
+
 const boardSummary = computed(() => {
   if (expandedMessageId.value) {
-    return '当前主题已展开，你可以继续浏览回复，或通过弹窗补充自己的问题和反馈。'
+    return '当前主题已展开，你可以继续浏览回复内容，或直接补充新的评论。'
   }
 
   return '点击任意主题卡片即可展开完整讨论内容，查看主帖、评论和楼中回复。'
@@ -549,28 +565,6 @@ function openTopicEditor() {
 
 function closeTopicEditor() {
   showTopicEditor.value = false
-}
-
-function openReplyEditor(messageId: number, reply?: StudentMessageReplyItem) {
-  clearMessages()
-  activeReplyMessageId.value = messageId
-
-  if (reply) {
-    setReplyTarget(messageId, reply)
-  } else {
-    clearReplyTarget(messageId)
-  }
-
-  if (replyDrafts[messageId] === undefined) {
-    replyDrafts[messageId] = ''
-  }
-
-  showReplyEditor.value = true
-}
-
-function closeReplyEditor() {
-  showReplyEditor.value = false
-  activeReplyMessageId.value = null
 }
 
 function syncFormWithRoute() {
@@ -635,6 +629,28 @@ function clearReplyDraft(messageId: number) {
   clearReplyTarget(messageId)
 }
 
+function openReplyEditor(messageId: number, reply?: StudentMessageReplyItem) {
+  clearMessages()
+  activeReplyMessageId.value = messageId
+
+  if (reply) {
+    setReplyTarget(messageId, reply)
+  } else {
+    clearReplyTarget(messageId)
+  }
+
+  if (replyDrafts[messageId] === undefined) {
+    replyDrafts[messageId] = ''
+  }
+
+  showReplyEditor.value = true
+}
+
+function closeReplyEditor() {
+  showReplyEditor.value = false
+  activeReplyMessageId.value = null
+}
+
 async function loadMessageDetail(messageId: number) {
   loadingDetailId.value = messageId
 
@@ -680,12 +696,18 @@ async function loadMessages() {
     pagination.pageSize = data.pagination.pageSize
     pagination.total = data.pagination.total
     pagination.totalPages = data.pagination.totalPages
+    listCapabilities.canCreateTopic = data.capabilities.canCreateTopic
+    listCapabilities.canReply = data.capabilities.canReply
+    listCapabilities.canReplyToReply = data.capabilities.canReplyToReply
   } catch (error: any) {
     messageList.value = []
     pagination.page = 1
     pagination.pageSize = 4
     pagination.total = 0
     pagination.totalPages = 0
+    listCapabilities.canCreateTopic = true
+    listCapabilities.canReply = true
+    listCapabilities.canReplyToReply = true
     errorMessage.value = error?.response?.data?.message || '教学交流列表加载失败'
   } finally {
     loading.value = false

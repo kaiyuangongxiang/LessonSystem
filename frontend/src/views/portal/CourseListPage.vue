@@ -74,8 +74,7 @@
         <p>{{ course.summary }}</p>
         <div class="course-card__footer">
           <div class="course-card__stats">
-            <span>{{ course.materialCount }} 份资料</span>
-            <span>{{ course.videoCount }} 个视频</span>
+            <span>{{ course.prepCount }} 份备课单</span>
           </div>
           <button type="button" @click="goCourseDetail(course.id)">查看详情</button>
         </div>
@@ -105,6 +104,7 @@ interface CourseItem {
   summary: string
   collegeName: string
   teacherName: string
+  prepCount: number
   videoCount: number
   materialCount: number
   updateDate: string
@@ -179,9 +179,10 @@ const visibleCourses = computed(() => {
     {
       id: 0,
       name: '课程内容待接入',
-      summary: '后续将展示课程简介、资料数量与视频数量。',
+      summary: '后续将展示课程简介与关联备课单数量。',
       collegeName: '系统预留',
       teacherName: '系统预留',
+      prepCount: 0,
       videoCount: 0,
       materialCount: 0,
       updateDate: '待更新',
@@ -192,6 +193,7 @@ const visibleCourses = computed(() => {
       summary: '课程列表接口接通后，这里会展示真实课程筛选结果。',
       collegeName: '系统预留',
       teacherName: '系统预留',
+      prepCount: 0,
       videoCount: 0,
       materialCount: 0,
       updateDate: '待更新',
@@ -199,9 +201,10 @@ const visibleCourses = computed(() => {
     {
       id: 2,
       name: '课程详情入口待开放',
-      summary: '点击课程卡片即可进入课程详情页查看关联资料与视频。',
+      summary: '点击课程卡片即可进入课程详情页查看关联备课单。',
       collegeName: '系统预留',
       teacherName: '系统预留',
+      prepCount: 0,
       videoCount: 0,
       materialCount: 0,
       updateDate: '待更新',

@@ -21,12 +21,12 @@
           <strong>{{ home.stats.courseCount }}</strong>
         </article>
         <article class="portal-stat-card">
-          <span>最新资料</span>
-          <strong>{{ home.stats.materialCount }}</strong>
+          <span>资料数量</span>
+          <strong>{{ publicAssetTotal }}</strong>
         </article>
         <article class="portal-stat-card">
-          <span>新增视频</span>
-          <strong>{{ home.stats.videoCount }}</strong>
+          <span>主题数量</span>
+          <strong>{{ home.stats.messageCount }}</strong>
         </article>
       </div>
     </section>
@@ -111,7 +111,7 @@
             <div class="portal-section-head__eyebrow">LATEST MATERIALS</div>
             <h2>最新资料</h2>
           </div>
-          <button class="portal-section-head__link" type="button" @click="router.push('/assets')">进入素材库</button>
+          <button class="portal-section-head__link" type="button" @click="router.push('/assets')">进入资料库</button>
         </div>
 
         <ul class="portal-resource-list">
@@ -186,6 +186,7 @@ interface HomeResponse {
     courseCount: number
     materialCount: number
     videoCount: number
+    messageCount: number
   }
 }
 
@@ -211,9 +212,11 @@ const home = reactive<HomeResponse>({
     courseCount: 0,
     materialCount: 0,
     videoCount: 0,
+    messageCount: 0,
   },
 })
 const latestAssets = ref<PortalPublicAssetItem[]>([])
+const publicAssetTotal = ref(0)
 const heroTitleText = computed(() => home.profile.heroTitle || DEFAULT_HERO_TITLE)
 const activeNoticeIndex = ref(0)
 const activeNotice = computed(() => visibleNotices.value[activeNoticeIndex.value] || visibleNotices.value[0])
@@ -293,8 +296,8 @@ const visibleMaterials = computed(() => {
         id: 0,
         type: 'file' as PortalAssetType,
         visibility: 'public' as const,
-        title: '公开素材待更新',
-        description: '教师公开发布的素材会展示在这里',
+        title: '公开资料待更新',
+        description: '教师公开发布的资料会展示在这里',
         content: '',
         fileName: '',
         fileSize: 0,
@@ -376,11 +379,11 @@ function goTeachingMessages() {
 
 function assetTypeLabel(type: string) {
   const labels: Record<PortalAssetType, string> = {
-    image: '图片素材',
-    audio: '音频素材',
-    video: '视频素材',
+    image: '图片资料',
+    audio: '音频资料',
+    video: '视频资料',
     text: '文本片段',
-    file: '文件素材',
+    file: '文件资料',
   }
 
   return labels[type as PortalAssetType] || type
@@ -412,8 +415,9 @@ async function loadLatestAssets() {
     })
 
     latestAssets.value = data.list
-    home.stats.materialCount = data.stats.total
+    publicAssetTotal.value = data.stats.total
   } catch (error: any) {
+    publicAssetTotal.value = 0
     if (!errorMessage.value) {
       errorMessage.value = error?.response?.data?.message || '最新资料加载失败，当前展示默认内容'
     }

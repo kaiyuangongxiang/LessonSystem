@@ -71,10 +71,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import http from '@/services/http'
+import { getPortalHome, getPortalPublicAssets } from '@/services/portal'
 import { useAuthStore } from '@/stores/auth'
 
 type LoginRole = 'teacher' | 'student' | 'admin'
@@ -91,11 +92,11 @@ const form = reactive({
   password: '',
 })
 
-const stats = [
-  { label: '课程总量', value: '128' },
-  { label: '资料总量', value: '2860' },
-  { label: '交流主题', value: '96' },
-]
+const stats = ref([
+  { label: '课程总量', value: '0' },
+  { label: '资料总量', value: '0' },
+  { label: '交流主题', value: '0' },
+])
 
 const notes = ['教师、学生、管理员统一入口', '教学资源与交流逐步联通', '支持多角色登录跳转']
 
@@ -189,6 +190,7 @@ async function handleSubmit() {
       token: payload.token,
       role: payload.role,
       profile: payload.user,
+      expiresAt: Number(payload.expiresAt || 0),
     })
 
     if (payload.role === 'admin') {
@@ -204,4 +206,33 @@ async function handleSubmit() {
     loading.value = false
   }
 }
+
+async function loadStats() {
+  try {
+    const [homeData, publicAssetData] = await Promise.all([
+      getPortalHome(),
+      getPortalPublicAssets({
+        page: 1,
+        pageSize: 1,
+        type: 'all',
+      }),
+    ])
+
+    stats.value = [
+      { label: '课程总量', value: String(homeData.stats.courseCount || 0) },
+      { label: '资料总量', value: String(publicAssetData.stats.total || 0) },
+      { label: '交流主题', value: String(homeData.stats.messageCount || 0) },
+    ]
+  } catch {
+    stats.value = [
+      { label: '课程总量', value: '0' },
+      { label: '资料总量', value: '0' },
+      { label: '交流主题', value: '0' },
+    ]
+  }
+}
+
+onMounted(() => {
+  loadStats()
+})
 </script>

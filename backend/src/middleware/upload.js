@@ -267,7 +267,7 @@ function assetFileFilter(req, file, callback) {
 
   if (assetType === 'image') {
     if (!assetImageExtensions.has(extension) || !assetImageMimeTypes.has(mimeType)) {
-      const error = new Error('图片素材仅支持 JPG、JPEG、PNG、WEBP、GIF 格式')
+      const error = new Error('图片资料仅支持 JPG、JPEG、PNG、WEBP、GIF 格式')
       error.status = 400
       callback(error)
       return
@@ -279,7 +279,7 @@ function assetFileFilter(req, file, callback) {
 
   if (assetType === 'audio') {
     if (!assetAudioExtensions.has(extension) || !assetAudioMimeTypes.has(mimeType)) {
-      const error = new Error('音频素材仅支持 MP3、WAV、OGG、M4A 格式')
+      const error = new Error('音频资料仅支持 MP3、WAV、OGG、M4A 格式')
       error.status = 400
       callback(error)
       return
@@ -291,7 +291,7 @@ function assetFileFilter(req, file, callback) {
 
   if (assetType === 'video') {
     if (!videoExtensions.has(extension) || !videoMimeTypes.has(mimeType)) {
-      const error = new Error('视频素材仅支持 MP4、MOV 格式')
+      const error = new Error('视频资料仅支持 MP4、MOV 格式')
       error.status = 400
       callback(error)
       return
@@ -303,7 +303,7 @@ function assetFileFilter(req, file, callback) {
 
   if (assetType === 'file') {
     if (!assetFileExtensions.has(extension) || !assetFileMimeTypes.has(mimeType)) {
-      const error = new Error('文件素材仅支持 PDF、Word、PPT、Excel、TXT、ZIP、RAR、7Z 格式')
+      const error = new Error('文件资料仅支持 PDF、Word、PPT、Excel、TXT、ZIP、RAR、7Z 格式')
       error.status = 400
       callback(error)
       return
@@ -313,7 +313,7 @@ function assetFileFilter(req, file, callback) {
     return
   }
 
-  const error = new Error('当前素材类型不支持文件上传')
+  const error = new Error('当前资料类型不支持文件上传')
   error.status = 400
   callback(error)
 }

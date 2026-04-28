@@ -345,8 +345,9 @@ function fillEditor(item: AdminPrepItem) {
   editorAttachments.value = item.attachments || []
 }
 
-function closeEditorDialog(force = false) {
-  if (dialogBusy.value && !force) {
+function closeEditorDialog(force: boolean | Event = false) {
+  const shouldForce = force === true
+  if (dialogBusy.value && !shouldForce) {
     return
   }
 

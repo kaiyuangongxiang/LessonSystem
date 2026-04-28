@@ -14,7 +14,7 @@
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/accounts')">账号管理</button>
         <button type="button" class="admin-dashboard-nav__item is-active">学院管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/courses')">课程管理</button>
-        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">素材库</button>
+        <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/assets')">资料库</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/materials')">资料管理</button>
         <button type="button" class="admin-dashboard-nav__item" @click="router.push('/admin/messages')">留言管理</button>
       </nav>
@@ -36,7 +36,6 @@
           <p>{{ headerText }}</p>
         </div>
         <div class="admin-manage-head__actions">
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/admin')">返回总览</button>
           <button type="button" class="auth-btn" @click="openCreateEditor">新增学院</button>
         </div>
       </header>

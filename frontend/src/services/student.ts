@@ -63,6 +63,11 @@ export interface StudentMessageListData {
     total: number
     totalPages: number
   }
+  capabilities: {
+    canCreateTopic: boolean
+    canReply: boolean
+    canReplyToReply: boolean
+  }
 }
 
 export interface StudentMessageQuery {

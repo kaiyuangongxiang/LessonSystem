@@ -202,16 +202,17 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const authStore = useAuthStore()
+  const hasValidSession = authStore.ensureValidSession()
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  if (to.meta.requiresAuth && !hasValidSession) {
     return { name: 'login' }
   }
 
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
+  if (to.meta.guestOnly && hasValidSession) {
     return resolveHomeByRole(authStore.role)
   }
 
-  if (to.meta.role && to.meta.role !== authStore.role) {
+  if (hasValidSession && to.meta.role && to.meta.role !== authStore.role) {
     return resolveHomeByRole(authStore.role)
   }
 

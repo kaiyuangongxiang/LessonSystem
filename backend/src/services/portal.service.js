@@ -373,7 +373,8 @@ export async function getPortalHomeData() {
     `SELECT
         (SELECT COUNT(*) FROM course_intro WHERE status = 1) AS courseCount,
         (SELECT COUNT(*) FROM material WHERE status = 1) AS materialCount,
-        (SELECT COUNT(*) FROM course_video WHERE status = 1) AS videoCount`,
+        (SELECT COUNT(*) FROM course_video WHERE status = 1) AS videoCount,
+        (SELECT COUNT(*) FROM message_topic WHERE status <> 'archived') AS messageCount`,
   )
 
   const profileRow = profiles[0]
@@ -381,6 +382,7 @@ export async function getPortalHomeData() {
     courseCount: 0,
     materialCount: 0,
     videoCount: 0,
+    messageCount: 0,
   }
 
   logger.info('portal_home_loaded', {
@@ -388,6 +390,7 @@ export async function getPortalHomeData() {
     courseCount: Number(statsRow.courseCount || 0),
     materialCount: Number(statsRow.materialCount || 0),
     videoCount: Number(statsRow.videoCount || 0),
+    messageCount: Number(statsRow.messageCount || 0),
   })
 
   return {
@@ -404,6 +407,7 @@ export async function getPortalHomeData() {
       courseCount: Number(statsRow.courseCount || 0),
       materialCount: Number(statsRow.materialCount || 0),
       videoCount: Number(statsRow.videoCount || 0),
+      messageCount: Number(statsRow.messageCount || 0),
     },
   }
 }
@@ -415,6 +419,7 @@ export async function getPortalCourseListData(query) {
   const requestedPage = normalizePageNumber(query.page)
   const pageSize = normalizePageSize(query.pageSize)
   const { whereSql, params } = buildCourseWhereClause({ keyword, collegeId })
+  const prepReady = await hasTeachingPrepReady()
 
   const [countRows] = await pool.query(
     `SELECT COUNT(*) AS total
@@ -440,17 +445,28 @@ export async function getPortalCourseListData(query) {
             COALESCE(c.course_summary, '暂无课程简介') AS summary,
             COALESCE(col.college_name, '未关联学院') AS collegeName,
             COALESCE(t.teacher_name, t.username, '未署名教师') AS teacherName,
+            ${prepReady ? 'COALESCE(prep_stats.prepCount, 0) AS prepCount,' : '0 AS prepCount,'}
             COALESCE(video_stats.videoCount, 0) AS videoCount,
             COALESCE(material_stats.materialCount, 0) AS materialCount,
             DATE_FORMAT(c.update_time, '%Y-%m-%d') AS updateDate
      FROM course_intro c
      LEFT JOIN college col ON col.college_id = c.college_id
      LEFT JOIN teacher_user t ON t.teacher_id = c.teacher_id
+     ${
+       prepReady
+         ? `LEFT JOIN (
+        SELECT course_id, COUNT(*) AS prepCount
+        FROM teaching_prep
+        WHERE status = 'published'
+        GROUP BY course_id
+      ) prep_stats ON prep_stats.course_id = c.course_id`
+         : ''
+     }
      LEFT JOIN (
-       SELECT course_id, COUNT(*) AS videoCount
-       FROM course_video
-       WHERE status = 1
-       GROUP BY course_id
+        SELECT course_id, COUNT(*) AS videoCount
+        FROM course_video
+        WHERE status = 1
+        GROUP BY course_id
      ) video_stats ON video_stats.course_id = c.course_id
      LEFT JOIN (
        SELECT course_id, COUNT(*) AS materialCount

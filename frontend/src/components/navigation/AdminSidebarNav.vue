@@ -54,7 +54,7 @@ const menuItems: Array<{ key: Exclude<AdminNavKey, 'materials'>; label: string; 
   { key: 'colleges', label: '学院管理', path: '/admin/colleges' },
   { key: 'courses', label: '课程管理', path: '/admin/courses' },
   { key: 'preps', label: '备课单管理', path: '/admin/preps' },
-  { key: 'assets', label: '素材库', path: '/admin/assets' },
+  { key: 'assets', label: '资料库', path: '/admin/assets' },
   { key: 'messages', label: '教学交流', path: '/admin/messages' },
 ]
 

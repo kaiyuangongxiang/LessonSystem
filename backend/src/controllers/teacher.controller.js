@@ -254,7 +254,7 @@ export async function postPrepAssetAttachments(req, res, next) {
 
     res.status(201).json({
       code: 201,
-      message: '关联个人素材成功',
+      message: '关联资料成功',
       data: result,
     })
   } catch (error) {
@@ -321,7 +321,7 @@ export async function getAssets(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '获取教师素材库成功',
+      message: '获取教师资料库成功',
       data: result,
     })
   } catch (error) {
@@ -339,7 +339,7 @@ export async function postAsset(req, res, next) {
 
     res.status(201).json({
       code: 201,
-      message: '创建素材成功',
+      message: '创建资料成功',
       data: result,
     })
   } catch (error) {
@@ -356,7 +356,7 @@ export async function getAssetDetail(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '获取素材详情成功',
+      message: '获取资料详情成功',
       data: result,
     })
   } catch (error) {
@@ -401,7 +401,7 @@ export async function updateAsset(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '更新素材成功',
+      message: '更新资料成功',
       data: result,
     })
   } catch (error) {
@@ -418,7 +418,7 @@ export async function deleteAsset(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '删除素材成功',
+      message: '删除资料成功',
       data: result,
     })
   } catch (error) {

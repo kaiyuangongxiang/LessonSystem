@@ -33,10 +33,6 @@
           <h2>管理员视频管理</h2>
           <p>{{ headerText }}</p>
         </div>
-        <div class="admin-manage-head__actions">
-          <span class="course-chip course-chip--soft">视频治理</span>
-          <button type="button" class="auth-btn auth-btn--secondary" @click="router.push('/admin')">返回总览</button>
-        </div>
       </header>
 
       <p v-if="errorMessage" class="course-feedback">{{ errorMessage }}</p>

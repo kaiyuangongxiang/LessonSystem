@@ -566,7 +566,7 @@ export async function getAssetList(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '获取素材库管理列表成功',
+      message: '获取资料库管理列表成功',
       data: result,
     })
   } catch (error) {
@@ -583,7 +583,7 @@ export async function deleteAsset(req, res, next) {
 
     res.status(200).json({
       code: 200,
-      message: '删除素材成功',
+      message: '删除资料成功',
       data: result,
     })
   } catch (error) {

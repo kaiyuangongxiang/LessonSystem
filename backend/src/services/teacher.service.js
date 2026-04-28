@@ -169,7 +169,7 @@ function normalizeResourceFilterType(value) {
 function normalizeAssetId(value) {
   const assetId = Number(value)
   if (!Number.isInteger(assetId) || assetId <= 0) {
-    throw badRequest('素材ID不合法')
+    throw badRequest('资料ID不合法')
   }
 
   return assetId
@@ -181,7 +181,7 @@ function normalizeAssetType(value) {
     return assetType
   }
 
-  throw badRequest('素材类型不合法')
+  throw badRequest('资料类型不合法')
 }
 
 function normalizeAssetFilterType(value) {
@@ -202,7 +202,7 @@ function normalizeAssetVisibility(value, fallback = 'private') {
     return visibility
   }
 
-  throw badRequest('素材公开范围不合法')
+    throw badRequest('资料公开范围不合法')
 }
 
 function normalizeAssetFilterVisibility(value) {
@@ -224,11 +224,11 @@ function normalizeOptionalCourseId(value) {
 function normalizeAssetTitle(value) {
   const assetTitle = typeof value === 'string' ? value.trim() : ''
   if (!assetTitle) {
-    throw badRequest('素材标题不能为空')
+    throw badRequest('资料标题不能为空')
   }
 
   if (assetTitle.length > 200) {
-    throw badRequest('素材标题不能超过200个字符')
+    throw badRequest('资料标题不能超过200个字符')
   }
 
   return assetTitle
@@ -246,11 +246,11 @@ function stripHtmlTags(value) {
 function normalizeAssetContent(value, required = false) {
   const assetContent = typeof value === 'string' ? value.trim() : ''
   if (required && !stripHtmlTags(assetContent)) {
-    throw badRequest('素材内容不能为空')
+    throw badRequest('资料内容不能为空')
   }
 
   if (assetContent.length > 5000) {
-    throw badRequest('素材内容不能超过5000个字符')
+    throw badRequest('资料内容不能超过5000个字符')
   }
 
   return assetContent
@@ -539,7 +539,7 @@ async function ensureAssetLibraryReady() {
   )
 
   if (!rows.length) {
-    throw badRequest('当前数据库尚未初始化素材库表，请先执行素材库升级 SQL')
+    throw badRequest('当前数据库尚未初始化资料库表，请先执行资料库升级 SQL')
   }
 }
 
@@ -556,7 +556,7 @@ async function ensureAssetLibraryVisibilityReady() {
   )
 
   if (!rows.length) {
-    throw badRequest('当前数据库缺少素材公开范围字段，请先执行教师中心简化升级 SQL')
+    throw badRequest('当前数据库缺少资料公开范围字段，请先执行教师中心简化升级 SQL')
   }
 }
 
@@ -864,7 +864,7 @@ async function getOwnedAssetRow(assetId, teacherId) {
   )
 
   if (!rows.length) {
-    throw notFound('素材不存在或无权操作')
+    throw notFound('资料不存在或无权操作')
   }
 
   return rows[0]
@@ -940,7 +940,7 @@ function mapPrepAttachmentItem(item) {
   return {
     id: attachmentId,
     sourceType,
-    sourceLabel: sourceType === 'asset' ? '个人素材' : '本地上传',
+    sourceLabel: sourceType === 'asset' ? '我的资料' : '本地上传',
     assetId,
     type,
     title: item.title || fileName || '未命名附件',
@@ -1550,22 +1550,22 @@ export async function createTeacherAsset({ teacherId, payload, file }) {
     const courseId = normalizeOptionalCourseId(payload.courseId)
     const visibility = normalizeAssetVisibility(payload.visibility)
     const title = normalizeAssetTitle(payload.title)
-    const description = normalizeDescription(payload.description, '素材说明')
+    const description = normalizeDescription(payload.description, '资料说明')
     const content = normalizeAssetContent(payload.content, ASSET_CONTENT_TYPES.has(type))
     const course = courseId ? await getOwnedCourseRow(courseId, teacherId) : null
 
     if (ASSET_FILE_TYPES.has(type) && !file) {
       const requiredFileLabels = {
-        image: '图片素材必须上传文件',
-        audio: '音频素材必须上传文件',
-        video: '视频素材必须上传文件',
-        file: '文件素材必须上传文件',
+        image: '图片资料必须上传文件',
+        audio: '音频资料必须上传文件',
+        video: '视频资料必须上传文件',
+        file: '文件资料必须上传文件',
       }
-      throw badRequest(requiredFileLabels[type] || '文件类素材必须上传文件')
+      throw badRequest(requiredFileLabels[type] || '文件类资料必须上传文件')
     }
 
     if (ASSET_CONTENT_TYPES.has(type) && file) {
-      throw badRequest('当前素材类型不需要上传文件')
+      throw badRequest('当前资料类型不需要上传文件')
     }
 
     const storedPath = file ? buildStoredFilePath(file.path) : null
@@ -1650,7 +1650,7 @@ export async function getTeacherAssetDownloadData({ teacherId, assetId }) {
   const asset = await getOwnedAssetRow(normalizedAssetId, teacherId)
 
   if (!ASSET_FILE_TYPES.has(asset.type)) {
-    throw badRequest('当前素材类型不支持下载')
+    throw badRequest('当前资料类型不支持下载')
   }
 
   const resolvedPath = await resolveStoredFilePath(asset.filePath)
@@ -1660,7 +1660,7 @@ export async function getTeacherAssetDownloadData({ teacherId, assetId }) {
       assetId: normalizedAssetId,
       storedPath: asset.filePath,
     })
-    throw notFound('素材文件不存在')
+    throw notFound('资料文件不存在')
   }
 
   logger.info('teacher_asset_download_ready', {
@@ -1683,7 +1683,7 @@ export async function getTeacherAssetPreviewData({ teacherId, assetId }) {
   const asset = await getOwnedAssetRow(normalizedAssetId, teacherId)
 
   if (!ASSET_FILE_TYPES.has(asset.type)) {
-    throw badRequest('当前素材类型不支持预览')
+    throw badRequest('当前资料类型不支持预览')
   }
 
   const resolvedPath = await resolveStoredFilePath(asset.filePath)
@@ -1693,7 +1693,7 @@ export async function getTeacherAssetPreviewData({ teacherId, assetId }) {
       assetId: normalizedAssetId,
       storedPath: asset.filePath,
     })
-    throw notFound('素材文件不存在')
+    throw notFound('资料文件不存在')
   }
 
   logger.info('teacher_asset_preview_ready', {
@@ -1719,7 +1719,7 @@ export async function updateTeacherAsset({ teacherId, assetId, payload }) {
   const title = normalizeAssetTitle(payload.title)
   const courseId = normalizeOptionalCourseId(payload.courseId)
   const visibility = normalizeAssetVisibility(payload.visibility, asset.visibility || 'private')
-  const description = normalizeDescription(payload.description, '素材说明')
+  const description = normalizeDescription(payload.description, '资料说明')
   const content = normalizeAssetContent(payload.content, ASSET_CONTENT_TYPES.has(asset.type))
   const course = courseId ? await getOwnedCourseRow(courseId, teacherId) : null
 
@@ -1814,7 +1814,7 @@ export async function addTeacherPrepAssetAttachments({ teacherId, prepId, payloa
 
   const assetIds = normalizeAssetIdList(payload.assetIds)
   if (!assetIds.length) {
-    throw badRequest('请先选择要关联的个人素材')
+    throw badRequest('请先选择要关联的资料')
   }
 
   const placeholders = assetIds.map(() => '?').join(', ')
@@ -1826,7 +1826,7 @@ export async function addTeacherPrepAssetAttachments({ teacherId, prepId, payloa
   )
 
   if (assetRows.length !== assetIds.length) {
-    throw notFound('部分个人素材不存在或无权操作')
+    throw notFound('部分资料不存在或无权操作')
   }
 
   const [existingRows] = await pool.query(
